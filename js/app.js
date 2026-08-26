@@ -2,16 +2,16 @@
  * app.js -- orchestration and rendering.
  *
  * Pipeline order, stated once because it matters:
- *   pack -> generate class -> infer -> cluster -> analyse items -> validate
+ *   pack -> class (simulated or imported) -> infer -> cluster -> item analysis
  * Item analysis takes the inference result because it asks a leave-one-out
  * question of it. Validation takes the planted truth, which nothing upstream of
- * it is permitted to see.
+ * it is permitted to see, and which an imported class simply does not have.
  *
  * Nothing here knows what subject is loaded.
  */
 
 import { allPacks, getPack, addPack, defaultPack } from './packs/index.js';
-import { correctIndex, misById, validatePack } from './pack.js';
+import { correctIndex, misById } from './pack.js';
 import { generateClass, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, PARAMS } from './infer.js';
 import { clusterStudents, describeClusters } from './cluster.js';
@@ -19,6 +19,12 @@ import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAl
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
 import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
+import { infoButton, wireExplainers } from './explain.js';
+import { openStudent, openQuestion, closeDrawer } from './drawer.js';
+import {
+  templateCsv, answerKeyCsv, quizHtml, download, openPrintable,
+  parseResponses, groupsCsv, OMITTED
+} from './importer.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -32,7 +38,6 @@ function el(tag, cls, text) {
 
 const ROW_H = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row'), 10) || 19;
 
-/** Misconception id -> stable colour slot, assigned per pack in declared order. */
 let colourOf = {};
 function assignColours(pack) {
   colourOf = {};
@@ -40,9 +45,17 @@ function assignColours(pack) {
 }
 
 const state = {
-  pack: null, cls: null, inf: null, cl: null, groups: null,
-  stats: null, sorted: false, rows: [], apiKey: null
+  pack: null, cls: null, inf: null, cl: null, groups: null, stats: null,
+  sorted: false, rows: [], apiKey: null,
+  imported: null,     // { students, responses } when the class is the teacher's own
+  filterMis: null,    // highlight one misconception across the matrix
+  itemFilter: 'problem'
 };
+
+const ctx = () => ({
+  pack: state.pack, cls: state.cls, inf: state.inf, cl: state.cl,
+  groups: state.groups, stats: state.stats, colourOf
+});
 
 /* ======================================================================== */
 /*  Run                                                                     */
@@ -50,28 +63,42 @@ const state = {
 
 function run() {
   const pack = state.pack;
-  const seed = Math.max(1, parseInt($('#seed').value, 10) || 7);
-  const size = Math.min(120, Math.max(12, parseInt($('#size').value, 10) || 28));
-
   assignColours(pack);
 
-  const cls = generateClass(pack, { seed, size });
+  let cls;
+  if (state.imported) {
+    cls = {
+      students: state.imported.students,
+      responses: state.imported.responses,
+      truth: null,                 // an imported class has no ground truth
+      pack,
+      meta: { seed: null, size: state.imported.students.length, nItems: pack.items.length, packId: pack.id, imported: true }
+    };
+  } else {
+    const seed = Math.max(1, parseInt($('#seed').value, 10) || 7);
+    const size = Math.min(120, Math.max(12, parseInt($('#size').value, 10) || 28));
+    cls = generateClass(pack, { seed, size });
+  }
+
   const inf = inferMisconceptions(pack, cls.responses);
   const cl = clusterStudents(inf.posterior, { seed: 42 });
   const groups = describeClusters(inf.posterior, cl.labels, inf.misIds, cl);
   const stats = analyseItems(pack, cls.responses, inf);
 
-  Object.assign(state, { cls, inf, cl, groups, stats, sorted: false });
+  Object.assign(state, { cls, inf, cl, groups, stats, sorted: false, filterMis: null });
 
   renderPackLine();
   renderSummary();
   renderMatrix();
   renderGroups();
+  renderStudents();
   renderItems();
   renderValidation();
   renderMethod();
+  wireExplainers();
 
-  $('#reorder').textContent = 'Sort into failure modes';
+  $('#reorder').textContent = 'Sort into groups';
+  $('#clear-filter').hidden = true;
 }
 
 function renderPackLine() {
@@ -79,19 +106,17 @@ function renderPackLine() {
   const line = $('#pack-line');
   line.textContent =
     `${pack.name} · ${pack.subject}${pack.level ? ' · ' + pack.level : ''} — ` +
-    `${pack.misconceptions.length} misconceptions · ${pack.items.length} items · ` +
-    `class seed ${cls.meta.seed}`;
-  if (pack.source === 'generated') {
-    line.appendChild(el('span', 'gen-flag', 'generated this session'));
-  }
+    `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
+    (cls.meta.imported ? `${cls.students.length} students imported` : `sample class, variant ${cls.meta.seed}`);
+  if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));
 }
 
 /* ======================================================================== */
-/*  Summary strip                                                           */
+/*  Summary                                                                 */
 /* ======================================================================== */
 
 function renderSummary() {
-  const { pack, cls, inf, cl, groups, stats } = state;
+  const { pack, cls, inf, groups, stats } = state;
   const host = $('#summary');
   host.innerHTML = '';
 
@@ -102,28 +127,37 @@ function renderSummary() {
   const bad = problemItems(stats);
   const scores = totalScores(pack, cls.responses);
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const byId = misById(pack);
 
   const cards = [
-    { v: String(cls.students.length), k: 'students analysed' },
-    { v: String(real.length), k: `shared failure mode${real.length === 1 ? '' : 's'}`, cls: 'ok' },
-    { v: biggest ? `${biggest.size}` : '—',
-      k: biggest ? `largest group · ${biggest.signature[0]?.id ?? ''}` : 'no groups found' },
-    { v: prev ? `${Math.round(prev.expected)}` : '—',
-      k: prev ? `hold ${prev.id} · most prevalent` : 'no misconception found' },
+    { v: String(cls.students.length), k: 'students' },
+    { v: String(real.length), k: `reteach group${real.length === 1 ? '' : 's'}`, cls: 'ok', go: 'groups' },
+    { v: biggest ? String(biggest.size) : '—',
+      k: biggest ? `in the biggest group` : 'no groups found', go: 'groups' },
+    // The short labels are often notation ("x^a . x^b to x^(ab)"), which reads
+    // badly inside a sentence. The name goes in the note below the strip instead.
+    { v: prev ? String(Math.round(prev.expected)) : '—',
+      k: 'share the top misunderstanding', go: 'matrix' },
     { v: `${Math.round((avg / pack.items.length) * 100)}%`, k: 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
-      cls: bad.length ? 'warn' : 'ok' },
-    { v: secure ? String(secure.size) : '0', k: 'no stable misconception' }
+      cls: bad.length ? 'warn' : 'ok', go: 'items' },
+    { v: secure ? String(secure.size) : '0', k: 'need no reteach', go: 'groups' }
   ];
 
   cards.forEach(c => {
-    const n = el('div', 'sum');
+    const n = el(c.go ? 'button' : 'div', `sum${c.go ? ' sum-go' : ''}`);
     n.appendChild(el('div', `sum-v${c.cls ? ' ' + c.cls : ''}`, c.v));
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
+    if (c.go) n.addEventListener('click', () => showView(c.go));
     host.appendChild(n);
   });
+
+  const topName = prev ? (byId[prev.id]?.name ?? prev.id) : null;
+  $('#strip-note').textContent = real.length
+    ? `Start with the biggest group. ${topName ? `The single most widespread problem is “${topName}”.` : ''}`
+    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.';
 }
 
 /* ======================================================================== */
@@ -142,20 +176,32 @@ function renderMatrix() {
 
   cls.responses.forEach((row, s) => {
     const r = el('div', 'm-row');
-    r.appendChild(el('span', 'm-name', cls.students[s].name));
+    r.dataset.student = String(s);
+
+    const name = el('button', 'm-name', cls.students[s].name);
+    name.title = `${cls.students[s].name} — click for the full evidence trail`;
+    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s); });
+    r.appendChild(name);
 
     row.forEach((choice, i) => {
       const item = pack.items[i];
-      const c = el('span', 'm-cell');
+      const c = el('button', 'm-cell');
+      c.dataset.item = String(i);
+
       let what;
-      if (choice === ci[i]) {
+      if (choice === OMITTED || choice == null) {
+        c.classList.add('omit');
+        what = 'not answered';
+      } else if (choice === ci[i]) {
         what = 'correct';
       } else {
         const mis = item.opts[choice].mis;
-        if (mis) { c.style.background = colourOf[mis]; what = mis; }
-        else { c.classList.add('slip'); what = 'slip, no pattern'; }
+        if (mis) { c.style.background = colourOf[mis]; c.dataset.mis = mis; what = mis; }
+        else { c.classList.add('slip'); what = 'wrong, no pattern'; }
       }
-      c.title = `${cls.students[s].name} · ${item.id} — chose "${item.opts[choice].t}" (${what})`;
+
+      c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose “${item.opts[choice].t}”` : 'left blank'} (${what})`;
+      c.addEventListener('click', e => { e.stopPropagation(); openQuestion(ctx(), i); });
       r.appendChild(c);
     });
 
@@ -167,9 +213,14 @@ function renderMatrix() {
   host.style.height = `${cls.responses.length * ROW_H() + 6}px`;
   layout(cls.responses.map((_, i) => i));
   renderLegend();
+  setMatrixNote(false);
+}
 
-  $('#matrix-note').textContent =
-    'Rows are in roll order, which is to say arbitrary. The structure is already in this picture — it is just not visible yet.';
+function setMatrixNote(sorted) {
+  const real = state.groups.filter(g => !g.isSecure).length;
+  $('#matrix-note').textContent = sorted
+    ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes are the questions where a whole group made the same mistake for the same reason.`
+    : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
 }
 
 function layout(order) {
@@ -203,7 +254,7 @@ function sortRows() {
     bar.style.background = colour;
     host.appendChild(bar);
 
-    const tag = el('div', 'band-tag', b.g.isSecure ? 'secure' : (b.g.signature[0]?.id ?? ''));
+    const tag = el('div', 'band-tag', b.g.isSecure ? 'no reteach' : (b.g.signature[0]?.id ?? ''));
     tag.style.top = `${b.start * h - 1}px`;
     host.appendChild(tag);
 
@@ -213,11 +264,7 @@ function sortRows() {
     setTimeout(() => { bar.classList.add('on'); tag.classList.add('on'); }, 30);
   });
 
-  const real = state.groups.filter(g => !g.isSecure);
-  $('#matrix-note').textContent =
-    `Same data, rows reordered by inferred profile. ${state.cls.students.length} students, ` +
-    `${real.length} shared failure mode${real.length === 1 ? '' : 's'} — the vertical stripes are the ` +
-    `questions where a whole group answered the same wrong way for the same reason.`;
+  setMatrixNote(true);
 }
 
 function toggleSort() {
@@ -227,16 +274,37 @@ function toggleSort() {
   if (!state.sorted) {
     sortRows();
     state.sorted = true;
-    btn.textContent = 'Back to roll order';
+    btn.textContent = 'Back to register order';
   } else {
     host.classList.remove('sorted');
     host.querySelectorAll('.band, .band-tag').forEach(n => n.classList.remove('on'));
     layout(state.cls.responses.map((_, i) => i));
     state.sorted = false;
-    btn.textContent = 'Sort into failure modes';
-    $('#matrix-note').textContent =
-      'Rows are in roll order, which is to say arbitrary. The structure is already in this picture — it is just not visible yet.';
+    btn.textContent = 'Sort into groups';
+    setMatrixNote(false);
     setTimeout(() => host.querySelectorAll('.band, .band-tag').forEach(n => n.remove()), 480);
+  }
+}
+
+/** Dim everything that is not the chosen misconception. */
+function applyFilter(mid) {
+  state.filterMis = mid;
+  const host = $('#matrix');
+  host.classList.toggle('filtered', !!mid);
+  host.querySelectorAll('.m-cell').forEach(c => {
+    c.classList.toggle('lit', !!mid && c.dataset.mis === mid);
+  });
+  $$('.leg').forEach(l => l.classList.toggle('is-on', !!mid && l.dataset.mis === mid));
+  $('#clear-filter').hidden = !mid;
+
+  if (mid) {
+    const byId = misById(state.pack);
+    const n = state.cls.responses.reduce((acc, row) =>
+      acc + (row.some((c, i) => c >= 0 && state.pack.items[i].opts[c].mis === mid) ? 1 : 0), 0);
+    $('#matrix-note').textContent =
+      `Showing only “${byId[mid]?.name ?? mid}”. ${n} of ${state.cls.students.length} students made this mistake at least once.`;
+  } else {
+    setMatrixNote(state.sorted);
   }
 }
 
@@ -248,28 +316,32 @@ function renderLegend() {
   prevalence(state.inf.posterior, state.inf.misIds).forEach(p => {
     const m = byId[p.id];
     if (!m) return;
-    const n = el('span', 'leg');
+    const n = el('button', 'leg');
+    n.dataset.mis = p.id;
     const sw = el('span', 'sw');
     sw.style.background = colourOf[p.id];
     n.appendChild(sw);
     n.appendChild(el('span', 'leg-n', p.id));
     n.appendChild(el('span', null, m.short || m.name));
+    n.appendChild(el('span', 'leg-c', String(p.confident)));
     n.title = m.belief || m.name;
+    n.addEventListener('click', () => applyFilter(state.filterMis === p.id ? null : p.id));
     host.appendChild(n);
   });
 
-  [[ 'var(--correct)', 'correct' ], [ 'var(--slip)', 'wrong, but no pattern' ]].forEach(([bg, label]) => {
-    const n = el('span', 'leg');
-    const sw = el('span', 'sw');
-    sw.style.background = bg;
-    n.appendChild(sw);
-    n.appendChild(el('span', null, label));
-    host.appendChild(n);
-  });
+  [['var(--correct)', 'correct'], ['var(--slip)', 'wrong, no pattern'], ['transparent', 'not answered', true]]
+    .forEach(([bg, label, dashed]) => {
+      const n = el('span', 'leg leg-static');
+      const sw = el('span', `sw${dashed ? ' sw-omit' : ''}`);
+      if (!dashed) sw.style.background = bg;
+      n.appendChild(sw);
+      n.appendChild(el('span', null, label));
+      host.appendChild(n);
+    });
 }
 
 /* ======================================================================== */
-/*  Failure modes                                                           */
+/*  Groups                                                                  */
 /* ======================================================================== */
 
 function renderGroups() {
@@ -280,16 +352,19 @@ function renderGroups() {
   const secure = state.groups.find(g => g.isSecure);
   const n = state.cls.students.length;
 
-  $('#groups-sub').textContent =
-    `${n} students, but not ${n} problems. Clustering the inferred profiles finds ` +
-    `${real.length} shared failure mode${real.length === 1 ? '' : 's'}` +
-    (secure ? `, plus ${secure.size} student${secure.size === 1 ? '' : 's'} with no stable misconception.` : '.') +
-    ` Silhouette ${state.cl.silhouette.toFixed(2)}; groups below ${state.cl.minClusterSize ?? 3} students are not reported as failure modes.`;
+  const sub = $('#groups-sub');
+  sub.textContent =
+    `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
+    `${real.length} group${real.length === 1 ? '' : 's'} here` +
+    (secure ? `, plus ${secure.size} who need no reteach.` : '.') +
+    ` One lesson can serve a whole group, because they are wrong for the same reason.`;
+  sub.appendChild(el('span', 'x-anchor', ' '));
+  sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
-  state.groups.forEach(g => host.appendChild(groupCard(g)));
+  state.groups.forEach((g, i) => host.appendChild(groupCard(g, i)));
 }
 
-function groupCard(g) {
+function groupCard(g, idx) {
   const byId = misById(state.pack);
   const card = el('div', `group${g.isSecure ? ' secure' : ''}`);
   const total = state.cls.students.length;
@@ -298,16 +373,16 @@ function groupCard(g) {
   if (!g.isSecure && g.signature[0]) card.style.setProperty('--gc', colourOf[g.signature[0].id]);
 
   const nline = el('div', 'group-n');
-  nline.appendChild(el('span', null, `${g.size} student${g.size === 1 ? '' : 's'}`));
-  nline.appendChild(el('span', null, `${Math.round((g.size / total) * 100)}%`));
+  nline.appendChild(el('span', null, g.isSecure ? 'No reteach needed' : `Group ${idx + 1}`));
+  nline.appendChild(el('span', null, `${g.size} student${g.size === 1 ? '' : 's'} · ${Math.round((g.size / total) * 100)}%`));
   top.appendChild(nline);
 
   if (g.isSecure) {
-    top.appendChild(el('h3', null, 'No stable misconception'));
+    top.appendChild(el('h3', null, 'No stable misunderstanding'));
     card.appendChild(top);
     const body = el('div', 'group-body');
     body.appendChild(el('p', 'belief',
-      'These students make mistakes, but the mistakes do not repeat and do not point anywhere. That is a slip profile rather than a failure mode: it calls for practice, not reteaching.'));
+      'These students make mistakes, but the mistakes do not repeat and do not point anywhere. That is carelessness rather than a misunderstanding: they need practice and attention, not a reteach.'));
     body.appendChild(roster(g));
     card.appendChild(body);
     return card;
@@ -316,28 +391,32 @@ function groupCard(g) {
   const details = g.signature.slice(0, 4).map(s => byId[s.id]).filter(Boolean);
   g.misDetails = details;
 
-  const h = el('h3', null, g.aiPlan?.headline || details[0]?.name || 'Shared misconception');
-  if (g.aiPlan) h.appendChild(el('span', 'pill pill-ai', 'adapted'));
+  const h = el('h3', null, g.aiPlan?.headline || details[0]?.name || 'Shared misunderstanding');
+  if (g.aiPlan) h.appendChild(el('span', 'pill pill-ai', 'rewritten'));
   top.appendChild(h);
 
   const chips = el('div', 'chips');
   g.signature.slice(0, 4).forEach(s => {
-    const c = el('span', 'chip');
+    const c = el('button', 'chip');
     const sw = el('span', 'sw');
     sw.style.background = colourOf[s.id];
     c.appendChild(sw);
-    c.appendChild(el('span', null, `${s.id} ${Math.round(s.inMean * 100)}%`));
+    c.appendChild(el('span', null, `${s.id} · ${Math.round(s.inMean * 100)}%`));
     const m = byId[s.id];
-    c.title = `${m?.name ?? s.id} — mean probability ${s.inMean.toFixed(2)} in this group against ${s.outMean.toFixed(2)} elsewhere`;
+    c.title = `${m?.name ?? s.id} — click to highlight on the class map`;
+    c.addEventListener('click', () => { showView('matrix'); applyFilter(s.id); });
     chips.appendChild(c);
   });
   top.appendChild(chips);
   card.appendChild(top);
 
   const body = el('div', 'group-body');
-  if (details[0]?.belief) body.appendChild(el('p', 'belief', details[0].belief));
+  if (details[0]?.belief) {
+    body.appendChild(el('div', 'lab', 'What they believe'));
+    body.appendChild(el('p', 'belief', details[0].belief));
+  }
 
-  body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — adapted for this group' : 'Reteach'));
+  body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — rewritten for this group' : 'Reteach'));
   body.appendChild(el('p', 'plan', g.aiPlan?.plan || details[0]?.reteach || ''));
 
   const checks = g.aiPlan?.verify || details[0]?.verify || [];
@@ -354,11 +433,89 @@ function groupCard(g) {
 }
 
 function roster(g) {
-  return el('div', 'roster', g.members.map(m => state.cls.students[m].name).join(', '));
+  const box = el('div', 'roster');
+  box.appendChild(el('div', 'lab', 'Who'));
+  const list = el('div', 'roster-names');
+  g.members.forEach(m => {
+    const b = el('button', 'rname', state.cls.students[m].name);
+    b.addEventListener('click', () => openStudent(ctx(), m));
+    list.appendChild(b);
+  });
+  box.appendChild(list);
+  return box;
 }
 
 /* ======================================================================== */
-/*  Test quality                                                            */
+/*  Students                                                                */
+/* ======================================================================== */
+
+function renderStudents() {
+  const host = $('#students');
+  host.innerHTML = '';
+
+  const { pack, cls, inf, groups } = state;
+  const byId = misById(pack);
+  const ci = pack.items.map(correctIndex);
+  const q = ($('#student-search').value || '').trim().toLowerCase();
+
+  const rows = cls.students.map((st, s) => {
+    const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
+    const held = inf.misIds
+      .map((mid, k) => ({ mid, p: inf.posterior[s][k] }))
+      .filter(x => x.p >= PARAMS.decisionThreshold)
+      .sort((a, b) => b.p - a.p);
+    const group = groups.find(g => g.members.includes(s));
+    return { s, st, score, held, group };
+  });
+
+  // Most to act on first: students with the most confident misconceptions, then
+  // lowest score. A teacher opening this wants triage, not the register.
+  rows.sort((a, b) => (b.held.length - a.held.length) || (a.score - b.score));
+
+  const shown = q ? rows.filter(r => r.st.name.toLowerCase().includes(q)) : rows;
+
+  if (!shown.length) {
+    host.appendChild(el('p', 'note', 'No student by that name.'));
+    return;
+  }
+
+  shown.forEach(r => {
+    const card = el('button', 'stu');
+
+    const l = el('div', 'stu-l');
+    l.appendChild(el('div', 'stu-name', r.st.name));
+    l.appendChild(el('div', 'stu-meta',
+      r.group ? (r.group.isSecure ? 'No reteach needed' : `Group ${state.groups.indexOf(r.group) + 1}`) : ''));
+    card.appendChild(l);
+
+    const mid = el('div', 'stu-m');
+    if (r.held.length) {
+      r.held.slice(0, 3).forEach(x => {
+        const c = el('span', 'chip');
+        const sw = el('span', 'sw');
+        sw.style.background = colourOf[x.mid];
+        c.appendChild(sw);
+        c.appendChild(el('span', null, `${byId[x.mid]?.short || x.mid} · ${Math.round(x.p * 100)}%`));
+        mid.appendChild(c);
+      });
+      if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
+    } else {
+      mid.appendChild(el('span', 'chip chip-clear', 'No stable misunderstanding'));
+    }
+    card.appendChild(mid);
+
+    const rr = el('div', 'stu-r');
+    rr.appendChild(el('span', 'stu-score', `${r.score}/${pack.items.length}`));
+    rr.appendChild(el('span', 'stu-go', '→'));
+    card.appendChild(rr);
+
+    card.addEventListener('click', () => openStudent(ctx(), r.s));
+    host.appendChild(card);
+  });
+}
+
+/* ======================================================================== */
+/*  Questions                                                               */
 /* ======================================================================== */
 
 function renderItems() {
@@ -370,35 +527,46 @@ function renderItems() {
   const diag = diagnosticItems(stats);
   const strong = stats.filter(s => s.quality === 'strong').length;
 
-  $('#items-sub').textContent =
-    `The same response matrix scores your questions. ${strong} of ${pack.items.length} items discriminate well; ` +
-    `${bad.length} have a problem worth looking at. These are computed statistics, not opinions.`;
+  const sub = $('#items-sub');
+  sub.textContent =
+    `The same answers score your questions too. ${strong} of ${pack.items.length} are doing real work; ` +
+    `${bad.length} ${bad.length === 1 ? 'has' : 'have'} a problem worth a look. Click any question to see how the class answered it.`;
 
-  bad.slice(0, 4).forEach(s => host.appendChild(itemCard(s)));
+  let list;
+  if (state.itemFilter === 'problem') list = bad;
+  else if (state.itemFilter === 'defended') list = diag;
+  else list = stats.slice().sort((a, b) => severityOf(b) - severityOf(a));
 
-  if (bad.length > 4) {
-    const extra = bad.length - 4;
-    host.appendChild(el('p', 'note',
-      `${extra} further item${extra === 1 ? '' : 's'} carry a marginal flag, mostly low discrimination — which at ${cls.students.length} students is often just sample noise. The ones above are ranked by severity.`));
+  if (!list.length) {
+    host.appendChild(el('p', 'note', state.itemFilter === 'problem'
+      ? 'Nothing to flag — every question on this paper is pulling its weight.'
+      : 'Nothing in this category.'));
   }
 
-  const box = $('#defended');
-  box.innerHTML = '';
-  if (diag.length) {
-    box.appendChild(el('h4', null,
-      `${diag.length} item${diag.length === 1 ? '' : 's'} look weak by the usual statistic, and should be kept anyway`));
-    box.appendChild(el('p', null,
-      'Point-biserial discrimination asks whether students who did well overall also got this item right, which presumes the test measures one underlying thing. A diagnostic instrument deliberately does not. An item targeting a misconception held by one group is missed by that group whatever their ability elsewhere, so it can correlate weakly — even negatively — with total score while being the most informative question on the page.'));
-    box.appendChild(el('p', 'mono',
-      diag.slice(0, 4).map(d => `${d.id} r=${d.discrimination.toFixed(2)} agreement=${Math.round(d.modelAgreement * 100)}%`).join('   ')));
+  if (state.itemFilter === 'defended' && list.length) {
+    const box = el('div', 'defended');
+    box.appendChild(el('h4', null, 'These look weak by the usual measure. Keep them.'));
+    const p = el('p', null,
+      'The standard check asks whether students who did well overall also got the question right. That assumes the test measures one thing. This one does not: a question aimed at one misunderstanding is missed by exactly the students who hold it, whatever their ability elsewhere. Before calling anything broken, the tool checks whether the rest of the paper agrees with the question.');
+    box.appendChild(p);
+    const anchor = el('span', 'x-anchor', ' ');
+    anchor.appendChild(infoButton('diagnosing'));
+    box.appendChild(anchor);
+    host.appendChild(box);
   }
 
-  $('#alpha-note').textContent =
-    `Cronbach's alpha across the whole instrument: ${interpretAlpha(cronbachAlpha(pack, cls.responses))}`;
+  list.forEach(s => host.appendChild(itemCard(s)));
+
+  const alpha = cronbachAlpha(pack, cls.responses);
+  const note = $('#alpha-note');
+  note.textContent = `How consistent is the paper overall? ${interpretAlpha(alpha)} `;
+  const a = el('span', 'x-anchor', ' ');
+  a.appendChild(infoButton('consistency'));
+  note.appendChild(a);
 }
 
 function itemCard(s) {
-  const card = el('div', `item ${s.quality}`);
+  const card = el('button', `item ${s.quality}`);
 
   const top = el('div', 'item-top');
   const stem = el('div', 'item-stem');
@@ -406,16 +574,22 @@ function itemCard(s) {
   stem.appendChild(el('span', null, s.stem));
   top.appendChild(stem);
 
-  const st = el('div', 'item-stats');
-  st.innerHTML = `difficulty <b>${s.difficulty.toFixed(2)}</b> &nbsp; discrimination <b>${s.discrimination.toFixed(2)}</b>`;
-  top.appendChild(st);
+  const verdict = {
+    strong: 'Working well', ok: 'Fine', diagnostic: 'Diagnosing, not ranking',
+    minor: 'Minor issue', weak: 'Worth rewriting', broken: 'Measuring backwards'
+  }[s.quality] || '';
+  top.appendChild(el('span', `verdict v-${s.quality}`, verdict));
   card.appendChild(top);
 
-  const flags = el('ul', 'flags');
-  s.flags.forEach(f => {
-    flags.appendChild(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null, f.text));
-  });
-  card.appendChild(flags);
+  if (s.flags.length) {
+    const flags = el('ul', 'flags');
+    s.flags.slice(0, 2).forEach(f => {
+      flags.appendChild(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null, f.text));
+    });
+    card.appendChild(flags);
+  } else if (s.note) {
+    card.appendChild(el('p', 'item-note', s.note));
+  }
 
   const bars = el('div', 'bars');
   s.options.forEach(o => {
@@ -427,11 +601,12 @@ function itemCard(s) {
     if (o.mis) fill.style.background = colourOf[o.mis];
     track.appendChild(fill);
     row.appendChild(track);
-    row.appendChild(el('span', 'bar-c', `${o.count} · ${Math.round(o.share * 100)}%`));
+    row.appendChild(el('span', 'bar-c', `${o.count}`));
     bars.appendChild(row);
   });
   card.appendChild(bars);
 
+  card.addEventListener('click', () => openQuestion(ctx(), s.index));
   return card;
 }
 
@@ -441,36 +616,51 @@ function itemCard(s) {
 
 function renderValidation() {
   const { inf, cls, cl } = state;
+  const host = $('#metrics');
+  const wrap = $('#confusion');
+  host.innerHTML = '';
+  wrap.innerHTML = '';
+
+  // An imported class has no hidden answer to compare against. Say so plainly
+  // rather than showing metrics that would be meaningless.
+  if (!cls.truth) {
+    $('#validation-note').textContent = '';
+    const box = el('div', 'empty');
+    box.appendChild(el('h4', null, 'Not available for your own class — and that is the point.'));
+    box.appendChild(el('p', null,
+      'These numbers work by comparing the analysis against misunderstandings that were planted before any answers existed. Your real students did not come with an answer key to their own heads, so there is nothing to score against.'));
+    box.appendChild(el('p', null,
+      'Switch the class back to “Sample class” to see how well the method recovers what it cannot see. Then judge whether you trust it on your own data.'));
+    host.appendChild(box);
+    return;
+  }
+
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   const cq = scoreClustering(cl.labels, cls.truth);
 
-  const host = $('#metrics');
-  host.innerHTML = '';
-
   [
-    { v: fmtPct(dq.recall), k: 'misconceptions found',
-      x: `Of every misconception actually planted in a student, ${fmtPct(dq.recall)} were recovered from their answers alone.` },
-    { v: fmtPct(dq.precision), k: 'diagnoses correct',
-      x: `Of every misconception attributed to a student, ${fmtPct(dq.precision)} were genuinely there. The rest are false accusations.` },
-    { v: dq.f1.toFixed(2), k: 'F1',
-      x: 'Harmonic mean of the two — one number for the quality of the per-student diagnosis.' },
-    { v: cq.ari.toFixed(2), k: 'group recovery (ARI)',
-      x: `Adjusted Rand index against the ${cq.plantedGroups} planted profiles. 1.00 is exact agreement, 0.00 is chance.` }
+    { v: fmtPct(dq.recall), k: 'misunderstandings found', key: 'recall',
+      x: `Of every misunderstanding actually planted in a student, ${fmtPct(dq.recall)} were recovered from their answers alone.` },
+    { v: fmtPct(dq.precision), k: 'diagnoses correct', key: 'precision',
+      x: `Of every misunderstanding the tool attributed to a student, ${fmtPct(dq.precision)} were genuinely there.` },
+    { v: dq.f1.toFixed(2), k: 'combined score', key: 'f1',
+      x: 'The two above in one number, so neither can be gamed by being reckless in one direction.' },
+    { v: cq.ari.toFixed(2), k: 'groups recovered', key: 'ari',
+      x: `Against the ${cq.plantedGroups} profiles the simulation planted. 1.00 is exact, 0.00 is chance.` }
   ].forEach(m => {
     const c = el('div', 'metric');
     c.appendChild(el('div', 'metric-v', m.v));
-    c.appendChild(el('div', 'metric-k', m.k));
+    const k = el('div', 'metric-k', m.k);
+    k.appendChild(infoButton(m.key));
+    c.appendChild(k);
     c.appendChild(el('div', 'metric-x', m.x));
     host.appendChild(c);
   });
 
   const { table, plantedIds } = confusion(cl.labels, cls.truth);
-  const wrap = $('#confusion');
-  wrap.innerHTML = '';
-
   const t = el('table');
   t.appendChild(el('caption', null,
-    'Discovered groups against the profiles the generator planted. One clear winner per row means the clustering rediscovered structure it was never told about.'));
+    'Groups the tool found, against the profiles the simulation planted. One clear winner per row means it rediscovered structure it was never shown.'));
 
   const thead = el('thead');
   const hr = el('tr');
@@ -482,24 +672,27 @@ function renderValidation() {
   const tb = el('tbody');
   table.forEach((row, i) => {
     const tr = el('tr');
-    tr.appendChild(el('th', null, i === cl.secureLabel ? 'secure' : `group ${i}`));
+    tr.appendChild(el('th', null, i === cl.secureLabel ? 'no reteach' : `group ${i + 1}`));
     const max = Math.max(...row);
     row.forEach(v => tr.appendChild(el('td', v === max && v > 0 ? 'hot' : null, String(v))));
     tb.appendChild(tr);
   });
   t.appendChild(tb);
   wrap.appendChild(t);
+
+  $('#validation-note').textContent =
+    'Change the class variant in the toolbar to re-roll a different sample class. The figures are computed live each time, so a bad run shows a bad number.';
 }
 
 function renderMethod() {
   $('#formula').textContent =
-    'logit P(holds m | responses) = logit P(m) + Σᵢ log [ P(rᵢ | m) / P(rᵢ | ¬m) ]';
+    'logit P(holds m | answers) = logit P(m) + Σ log [ P(answer | m) / P(answer | not m) ]';
   $('#params').textContent =
-    `prior ${PARAMS.prior} · P(distractor | holds) ${PARAMS.express} · P(correct | not holds) ${PARAMS.baseCorrect} · decision threshold ${PARAMS.decisionThreshold}`;
+    `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · correct without it ${PARAMS.baseCorrect} · reported above ${PARAMS.decisionThreshold}`;
 }
 
 /* ======================================================================== */
-/*  Pack selection                                                          */
+/*  Packs                                                                   */
 /* ======================================================================== */
 
 function renderPackOptions(selectedId) {
@@ -514,27 +707,41 @@ function renderPackOptions(selectedId) {
 }
 
 function switchPack(id) {
-  state.pack = getPack(id);
+  const next = getPack(id);
+  // An imported class was typed against a specific instrument. Carrying it over
+  // to a different one would silently misread every column.
+  if (state.imported && next.id !== state.pack.id) {
+    const keep = window.confirm(
+      `Your imported class was entered against “${state.pack.name}”. Switching subject will drop it and return to the sample class. Continue?`);
+    if (!keep) { renderPackOptions(state.pack.id); return; }
+    state.imported = null;
+    $('#source').value = 'sample';
+    document.body.classList.remove('has-import');
+  }
+  state.pack = next;
   renderPackOptions(state.pack.id);
   run();
 }
 
 /* ======================================================================== */
-/*  Generate a new subject                                                  */
+/*  Modals                                                                  */
 /* ======================================================================== */
 
-function openModal() {
+function openM(sel) { $(sel).hidden = false; }
+function closeM(sel) { $(sel).hidden = true; }
+
+/* ---- new subject ---- */
+
+function openSubject() {
   $('#modal-err').textContent = '';
   $('#modal-progress').hidden = true;
   $('#modal-progress').innerHTML = '';
   $('#modal-go').disabled = false;
   $('#modal-go').textContent = 'Build it';
   if (state.apiKey) $('#api-key').value = state.apiKey;
-  $('#modal').hidden = false;
+  openM('#modal');
   $('#topic').focus();
 }
-
-function closeModal() { $('#modal').hidden = true; }
 
 function progressStep(text, cls) {
   const box = $('#modal-progress');
@@ -550,7 +757,7 @@ async function doGenerate() {
   err.textContent = '';
 
   if (!topic) { err.textContent = 'Name a subject or topic first.'; return; }
-  if (!key) { err.textContent = 'An API key is needed to build a new subject. The built-in subjects need no key.'; return; }
+  if (!key) { err.textContent = 'A key is needed to build a new subject. The built-in subjects need no key.'; return; }
 
   state.apiKey = key;
   setKey(key);
@@ -564,17 +771,16 @@ async function doGenerate() {
     const { pack, report, attempts } = await generatePack(key, topic, {
       onProgress: p => progressStep(p.message)
     });
-
     if (report.warnings.length) {
-      progressStep(`Validated with ${report.warnings.length} warning${report.warnings.length === 1 ? '' : 's'}.`, 'done');
+      progressStep(`Checked, with ${report.warnings.length} warning${report.warnings.length === 1 ? '' : 's'}.`, 'done');
     }
-    progressStep(`Ready — ${pack.misconceptions.length} misconceptions, ${pack.items.length} items, ${attempts} pass${attempts === 1 ? '' : 'es'}.`, 'done');
+    progressStep(`Ready — ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions, ${attempts} pass${attempts === 1 ? '' : 'es'}.`, 'done');
 
     addPack(pack);
-    setTimeout(() => {
-      closeModal();
-      switchPack(pack.id);
-    }, 700);
+    state.imported = null;
+    $('#source').value = 'sample';
+    document.body.classList.remove('has-import');
+    setTimeout(() => { closeM('#modal'); state.pack = pack; renderPackOptions(pack.id); run(); }, 700);
   } catch (e) {
     err.textContent = e.message;
     go.disabled = false;
@@ -582,8 +788,89 @@ async function doGenerate() {
   }
 }
 
+/* ---- import a class ---- */
+
+function openImport() {
+  $('#import-report').hidden = true;
+  $('#import-report').innerHTML = '';
+  openM('#import');
+  $('#import-text').focus();
+}
+
+function reportImport(res) {
+  const box = $('#import-report');
+  box.hidden = false;
+  box.innerHTML = '';
+  box.className = `import-report ${res.ok ? 'good' : 'bad'}`;
+
+  if (res.ok) {
+    box.appendChild(el('div', 'ir-h',
+      `Read ${res.responses.length} student${res.responses.length === 1 ? '' : 's'} × ${state.pack.items.length} questions, matched by ${res.matchedBy}.`));
+  } else {
+    box.appendChild(el('div', 'ir-h', 'Could not read this yet.'));
+  }
+  res.errors.forEach(e => box.appendChild(el('div', 'ir-e', e)));
+  res.warnings.forEach(w => box.appendChild(el('div', 'ir-w', w)));
+  return res.ok;
+}
+
+function doImport() {
+  const res = parseResponses(state.pack, $('#import-text').value);
+  if (!reportImport(res)) return;
+
+  state.imported = { students: res.students, responses: res.responses };
+  document.body.classList.add('has-import');
+  $('#source').value = 'import';
+  closeM('#import');
+  run();
+  showView('groups');
+}
+
+/** Build a paste-ready example from the current sample class. */
+function demoPaste() {
+  const pack = state.pack;
+  const cls = state.cls;
+  const letters = 'ABCDEFGH';
+  const head = ['Student', ...pack.items.map(i => i.id)].join(',');
+  const rows = cls.students.slice(0, 12).map((st, s) =>
+    [st.name, ...cls.responses[s].map(c => (c >= 0 ? letters[c] : ''))].join(','));
+  $('#import-text').value = [head, ...rows].join('\n');
+}
+
+/* ---- materials ---- */
+
+function wireMaterials() {
+  $('#mat-quiz').addEventListener('click', () => {
+    if (!openPrintable(quizHtml(state.pack))) alert('Allow pop-ups to print the questions.');
+  });
+  $('#mat-key').addEventListener('click', () => {
+    if (!openPrintable(quizHtml(state.pack, { withKey: true }))) alert('Allow pop-ups to print the key.');
+  });
+  $('#mat-sheet').addEventListener('click', () => {
+    download(`${state.pack.id}-answer-sheet.csv`, templateCsv(state.pack));
+  });
+  $('#mat-keycsv').addEventListener('click', () => {
+    download(`${state.pack.id}-answer-key.csv`, answerKeyCsv(state.pack));
+  });
+}
+
 /* ======================================================================== */
-/*  Optional plan adaptation                                                */
+/*  Plan output                                                             */
+/* ======================================================================== */
+
+function exportPlan() {
+  download(`${state.pack.id}-reteach-plan.csv`,
+    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack)));
+}
+
+function printPlan() {
+  showView('groups');
+  closeDrawer();
+  window.print();
+}
+
+/* ======================================================================== */
+/*  Plan rewriting                                                          */
 /* ======================================================================== */
 
 async function adaptPlans() {
@@ -596,7 +883,7 @@ async function adaptPlans() {
 
   const btn = $('#regen');
   btn.disabled = true;
-  btn.textContent = 'Adapting…';
+  btn.textContent = 'Rewriting…';
 
   const real = state.groups.filter(g => !g.isSecure);
   const results = await Promise.all(real.map(g =>
@@ -606,10 +893,11 @@ async function adaptPlans() {
   let ok = 0;
   results.forEach((p, i) => { if (!p._error) { real[i].aiPlan = p; ok++; } });
   renderGroups();
+  wireExplainers();
 
   btn.disabled = false;
-  btn.textContent = ok === real.length ? 'Adapted for this class' : `Adapted ${ok} of ${real.length}`;
-  setTimeout(() => { btn.textContent = 'Adapt plans with AI'; }, 5000);
+  btn.textContent = ok === real.length ? 'Rewritten for this class' : `Rewrote ${ok} of ${real.length}`;
+  setTimeout(() => { btn.textContent = 'Rewrite for this class'; }, 5000);
 }
 
 /* ======================================================================== */
@@ -625,7 +913,7 @@ function showView(name) {
   $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
 
   // Rows are absolutely positioned, so they need re-laying out whenever the
-  // matrix goes from display:none back to visible at a possibly new width.
+  // matrix returns from display:none at a possibly different width.
   if (name === 'matrix' && state.cls) {
     layout(state.sorted ? state.groups.flatMap(g => g.members) : state.cls.responses.map((_, i) => i));
   }
@@ -637,17 +925,49 @@ function showView(name) {
 
 $('#run').addEventListener('click', run);
 $('#reorder').addEventListener('click', toggleSort);
+$('#clear-filter').addEventListener('click', () => applyFilter(null));
 $('#pack').addEventListener('change', e => switchPack(e.target.value));
-$('#new-subject').addEventListener('click', openModal);
-$('#regen').addEventListener('click', adaptPlans);
-$('#modal-cancel').addEventListener('click', closeModal);
+$('#new-subject').addEventListener('click', openSubject);
+$('#materials').addEventListener('click', () => openM('#mats'));
+$('#mats-close').addEventListener('click', () => closeM('#mats'));
+
+$('#source').addEventListener('change', e => {
+  if (e.target.value === 'import') { openImport(); e.target.value = state.imported ? 'import' : 'sample'; }
+  else if (state.imported) {
+    state.imported = null;
+    document.body.classList.remove('has-import');
+    run();
+  }
+});
+
+$('#modal-cancel').addEventListener('click', () => closeM('#modal'));
 $('#modal-go').addEventListener('click', doGenerate);
-$('#modal').addEventListener('click', e => { if (e.target === $('#modal')) closeModal(); });
 $('#topic').addEventListener('keydown', e => { if (e.key === 'Enter') doGenerate(); });
 $('#api-key').addEventListener('keydown', e => { if (e.key === 'Enter') doGenerate(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+
+$('#import-cancel').addEventListener('click', () => closeM('#import'));
+$('#import-go').addEventListener('click', doImport);
+$('#dl-template').addEventListener('click', () => download(`${state.pack.id}-answer-sheet.csv`, templateCsv(state.pack)));
+$('#paste-demo').addEventListener('click', demoPaste);
+
+$('#print-plan').addEventListener('click', printPlan);
+$('#export-plan').addEventListener('click', exportPlan);
+$('#regen').addEventListener('click', adaptPlans);
+$('#student-search').addEventListener('input', renderStudents);
+
+$$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  $$('.modal').forEach(m => { m.hidden = true; });
+});
 
 $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+$$('#item-filter .seg-b').forEach(b => b.addEventListener('click', () => {
+  $$('#item-filter .seg-b').forEach(x => x.classList.toggle('is-on', x === b));
+  state.itemFilter = b.dataset.f;
+  renderItems();
+  wireExplainers();
+}));
 
 [$('#seed'), $('#size')].forEach(inp =>
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') run(); }));
@@ -659,27 +979,24 @@ window.addEventListener('resize', () => {
 
 /**
  * The tab strip sticks directly beneath the app bar, so it needs the bar's real
- * height. Hard-coding it is wrong twice over: it drifts when the webfont
- * settles, and the bar wraps to two or three rows at narrow widths. Measure it
- * instead, and keep measuring.
+ * height. Hard-coding it is wrong twice over: it drifts when the webfont settles,
+ * and the bar wraps to more rows at narrow widths. Measure it, and keep measuring.
  */
 function syncBarHeight() {
   const h = Math.round($('.bar').getBoundingClientRect().height);
   // Reject readings taken mid-reflow: a zero or absurd height would pin the tab
-  // strip somewhere useless and there is no later event guaranteed to correct it.
+  // strip somewhere useless and no later event is guaranteed to correct it.
   if (h < 30 || h > 400) return;
   document.documentElement.style.setProperty('--bar-h', `${h}px`);
 }
 syncBarHeight();
 if ('ResizeObserver' in window) new ResizeObserver(syncBarHeight).observe($('.bar'));
 if (document.fonts?.ready) document.fonts.ready.then(syncBarHeight);
-// ResizeObserver can be throttled while the tab is not compositing, and the bar
-// re-wraps at narrow widths, so pair it with the resize event rather than
-// trusting either alone.
 window.addEventListener('resize', syncBarHeight);
 window.addEventListener('orientationchange', syncBarHeight);
 window.addEventListener('load', syncBarHeight);
 
+wireMaterials();
 state.pack = defaultPack();
 renderPackOptions(state.pack.id);
 run();

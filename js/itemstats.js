@@ -58,6 +58,10 @@ export function analyseItems(pack, responses, inference = null) {
     const counts = item.opts.map((_, oi) =>
       responses.reduce((n, row) => n + (row[i] === oi ? 1 : 0), 0)
     );
+    // Blanks match no option, so they drop out of the counts naturally. Track
+    // them explicitly: an item a third of the class skipped is telling you
+    // something, and its option shares will not sum to 100% without this.
+    const omitted = responses.reduce((n, row) => n + (row[i] == null || row[i] < 0 ? 1 : 0), 0);
     const options = item.opts.map((o, oi) => ({
       index: oi,
       text: o.t,
@@ -149,6 +153,8 @@ export function analyseItems(pack, responses, inference = null) {
       flags.push({ kind: 'uninformative', text: `None of this item's wrong answers correspond to a known misconception, and ${Math.round(p * 100)}% correct is not statistically distinguishable from guessing at ${Math.round(chance * 100)}% (z = ${zAboveChance.toFixed(2)}). It yields neither a ranking nor a diagnosis.` });
     }
 
+    if (omitted / nStudents >= 0.20) flags.push({ kind: 'skipped', text: Math.round((omitted / nStudents) * 100) + '% of the class left this blank, which usually means it ran long, sat past a time limit, or read as unanswerable.' });
+
     const dead = options.filter(o => o.dead);
     if (dead.length) flags.push({ kind: 'dead-distractor', text: `${dead.length} option${dead.length > 1 ? 's were' : ' was'} chosen by almost nobody (${dead.map(o => `"${o.text}"`).join(', ')}), so the item is effectively shorter than it looks.` });
 
@@ -194,6 +200,7 @@ export function analyseItems(pack, responses, inference = null) {
       difficulty: p,
       discrimination: r,
       diagnosticShare,
+      omitted,
       modelAgreement,
       agreementN,
       signalMis,
@@ -216,6 +223,7 @@ const FLAG_SEVERITY = {
   'negative-discrimination': 2,
   'at-chance': 2,
   'no-discrimination': 1,   // marginal: often just a small sample
+  'skipped': 2,
   'dead-distractor': 0
 };
 

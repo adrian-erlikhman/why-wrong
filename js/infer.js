@@ -98,6 +98,25 @@ export function inferMisconceptions(pack, responses) {
 
       probing[mid].forEach(({ it, i }) => {
         const choice = row[i];
+
+        // An unanswered question is not a wrong answer. It carries no evidence
+        // in either direction, so it contributes nothing to the log-odds --
+        // rather than being scored against the student, which would invent a
+        // diagnosis out of a blank cell. It is still listed, because a teacher
+        // reading the audit trail should see that the question went unanswered.
+        if (choice == null || choice < 0) {
+          contributions.push({
+            itemId: it.id,
+            choice: -1,
+            chose: null,
+            omitted: true,
+            isDiagnostic: false,
+            isCorrect: false,
+            logOdds: 0
+          });
+          return;
+        }
+
         const { withMis, withoutMis } = likelihoods(it, mid, choice);
         const delta = Math.log(withMis / withoutMis);
         lo += delta;
@@ -105,6 +124,7 @@ export function inferMisconceptions(pack, responses) {
           itemId: it.id,
           choice,
           chose: it.opts[choice].t,
+          omitted: false,
           isDiagnostic: distractorsFor(it, mid).includes(choice),
           isCorrect: choice === correctIndex(it),
           logOdds: delta

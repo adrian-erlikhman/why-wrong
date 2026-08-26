@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why Wrong — find the misconception behind every wrong answer</title>
-<meta name="description" content="Diagnostic analysis for classroom assessment. Infers the specific misconception behind each wrong answer, groups a class into shared failure modes, and audits whether the test measured anything. Works for any subject.">
+<meta name="description" content="Marks a class set, works out the specific misconception behind each wrong answer, groups students into the few failure modes they actually share, and tells you which of your questions measured anything. Any subject.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -25,17 +25,27 @@
         <label for="pack">Subject</label>
         <select id="pack"></select>
       </div>
-      <button id="new-subject" class="btn btn-quiet" title="Build a diagnostic instrument for any topic">
-        New subject
-      </button>
-      <div class="field">
-        <label for="size">Students</label>
+      <button id="new-subject" class="btn btn-quiet">New subject</button>
+
+      <span class="bar-div" aria-hidden="true"></span>
+
+      <div class="field field-select">
+        <label for="source">Class</label>
+        <select id="source">
+          <option value="sample">Sample class</option>
+          <option value="import">Paste my class…</option>
+        </select>
+      </div>
+      <div class="field sample-only">
+        <label for="size">Size</label>
         <input id="size" type="number" value="28" min="12" max="120">
       </div>
-      <div class="field">
-        <label for="seed">Class</label>
+      <div class="field sample-only">
+        <label for="seed">Variant</label>
         <input id="seed" type="number" value="7" min="1" max="9999">
       </div>
+
+      <button id="materials" class="btn btn-quiet">Materials</button>
       <button id="run" class="btn btn-primary">Analyse</button>
     </div>
   </div>
@@ -46,10 +56,17 @@
   <div class="wrap">
     <h1>&ldquo;You got it wrong&rdquo; is the least useful sentence in education.</h1>
     <p class="lede">
-      A red X tells a student nothing and a teacher less. Why Wrong reads a class&rsquo;s answer
-      sheets and works out the specific misconception behind each wrong answer, the handful of
-      failure modes the class actually shares, and which of your questions measured anything at all.
+      A red X tells a student nothing and a teacher less. Give Why Wrong a marked class set and it
+      works out the <b>specific misunderstanding</b> behind each wrong answer, the few groups your
+      class actually splits into, and which of your questions measured anything at all.
     </p>
+
+    <ol class="steps">
+      <li><span class="steps-n">1</span> Pick a subject, or build one for any topic</li>
+      <li><span class="steps-n">2</span> Print the questions, or paste answers you already have</li>
+      <li><span class="steps-n">3</span> Get groups, reteach plans, and an audit of the paper</li>
+    </ol>
+
     <p class="hero-meta" id="pack-line"></p>
   </div>
 </section>
@@ -58,27 +75,19 @@
 <section class="strip">
   <div class="wrap">
     <div class="summary" id="summary"></div>
+    <p class="strip-note" id="strip-note"></p>
   </div>
 </section>
 
 <!-- =============================== TABS ================================ -->
 <nav class="tabs" aria-label="Analysis views">
   <div class="wrap tabs-in" role="tablist">
-    <button class="tab is-active" role="tab" data-view="matrix" aria-selected="true">
-      <span class="tab-n">01</span> Class matrix
-    </button>
-    <button class="tab" role="tab" data-view="groups" aria-selected="false">
-      <span class="tab-n">02</span> Failure modes
-    </button>
-    <button class="tab" role="tab" data-view="items" aria-selected="false">
-      <span class="tab-n">03</span> Test quality
-    </button>
-    <button class="tab" role="tab" data-view="validation" aria-selected="false">
-      <span class="tab-n">04</span> Validation
-    </button>
-    <button class="tab" role="tab" data-view="method" aria-selected="false">
-      <span class="tab-n">05</span> Method
-    </button>
+    <button class="tab is-active" role="tab" data-view="matrix" aria-selected="true"><span class="tab-n">01</span> Class map</button>
+    <button class="tab" role="tab" data-view="groups" aria-selected="false"><span class="tab-n">02</span> Reteach groups</button>
+    <button class="tab" role="tab" data-view="students" aria-selected="false"><span class="tab-n">03</span> Students</button>
+    <button class="tab" role="tab" data-view="items" aria-selected="false"><span class="tab-n">04</span> Your questions</button>
+    <button class="tab" role="tab" data-view="validation" aria-selected="false"><span class="tab-n">05</span> Does it work?</button>
+    <button class="tab" role="tab" data-view="method" aria-selected="false"><span class="tab-n">06</span> Method</button>
   </div>
 </nav>
 
@@ -88,47 +97,87 @@
   <section class="view is-active" id="view-matrix" role="tabpanel">
     <div class="view-head">
       <div>
-        <h2>Every wrong answer, and what it reveals.</h2>
+        <h2>Every wrong answer, and what it tells you.</h2>
         <p class="sub">
-          One row per student, one column per question. Cells are coloured by the
-          <b>misconception the answer reveals</b> &mdash; not by right or wrong.
+          One row per student, one column per question. A cell is coloured by <b>the misunderstanding
+          that answer reveals</b> &mdash; not by right or wrong. Pale cells are correct; grey cells are
+          wrong but random, with no pattern behind them.
         </p>
       </div>
-      <button id="reorder" class="btn btn-primary">Sort into failure modes</button>
+      <button id="reorder" class="btn btn-primary">Sort into groups</button>
+    </div>
+
+    <div class="hint">
+      <b>Click a row</b> to see one student and the exact evidence behind their diagnosis.
+      <b>Click a column</b> to see how the class answered that question.
+      <b>Click a colour below</b> to show only that misunderstanding.
     </div>
 
     <div class="board">
       <div class="board-scroll">
-        <div id="matrix" class="matrix" role="img" aria-label="Class response matrix"></div>
+        <div id="matrix" class="matrix" role="img" aria-label="Class response map"></div>
       </div>
     </div>
 
     <p class="note" id="matrix-note"></p>
+
+    <div class="legend-head">
+      <span>Colour key &mdash; ordered by how many students are affected</span>
+      <button id="clear-filter" class="btn btn-tiny" hidden>Show all</button>
+    </div>
     <div id="legend" class="legend"></div>
   </section>
 
-  <!-- --------------------------- FAILURE MODES ---------------------- -->
+  <!-- --------------------------- GROUPS ----------------------------- -->
   <section class="view" id="view-groups" role="tabpanel">
     <div class="view-head">
       <div>
-        <h2 id="groups-h">What the class actually shares.</h2>
+        <h2>What the class actually shares.</h2>
         <p class="sub" id="groups-sub"></p>
       </div>
-      <button id="regen" class="btn btn-quiet">Adapt plans with AI</button>
+      <div class="head-actions">
+        <button id="print-plan" class="btn btn-quiet">Print plan</button>
+        <button id="export-plan" class="btn btn-quiet">Export CSV</button>
+        <button id="regen" class="btn btn-quiet">Rewrite for this class</button>
+      </div>
     </div>
     <div id="groups" class="groups"></div>
   </section>
 
-  <!-- --------------------------- TEST QUALITY ----------------------- -->
+  <!-- --------------------------- STUDENTS --------------------------- -->
+  <section class="view" id="view-students" role="tabpanel">
+    <div class="view-head">
+      <div>
+        <h2>Every student, and what to do about them.</h2>
+        <p class="sub">
+          Sorted by how much there is to act on. Click any student for the full evidence trail behind
+          their diagnosis &mdash; every question that pointed to it, and every question that argued
+          against it.
+        </p>
+      </div>
+      <div class="head-actions">
+        <input id="student-search" class="search" type="search" placeholder="Find a student…" aria-label="Find a student">
+      </div>
+    </div>
+    <div id="students" class="students"></div>
+  </section>
+
+  <!-- --------------------------- QUESTIONS -------------------------- -->
   <section class="view" id="view-items" role="tabpanel">
     <div class="view-head">
       <div>
-        <h2>Now about your test.</h2>
+        <h2>Now about your questions.</h2>
         <p class="sub" id="items-sub"></p>
+      </div>
+      <div class="head-actions">
+        <div class="seg" id="item-filter" role="group" aria-label="Filter questions">
+          <button class="seg-b is-on" data-f="problem">Worth a look</button>
+          <button class="seg-b" data-f="defended">Keep these</button>
+          <button class="seg-b" data-f="all">All</button>
+        </div>
       </div>
     </div>
     <div id="items" class="items"></div>
-    <div id="defended" class="defended"></div>
     <p class="note" id="alpha-note"></p>
   </section>
 
@@ -138,14 +187,16 @@
       <div>
         <h2>Does any of this actually work?</h2>
         <p class="sub">
-          The class is simulated, and that is the point. Every student was given a hidden profile of
-          real misconceptions, and their answers were generated from it. The pipeline never sees that
-          profile. These are the numbers for how much of it came back, computed live on the class above.
+          A fair question, and the sample class exists to answer it. Every simulated student was given
+          a hidden set of misunderstandings <em>before</em> any answers existed, and their answers were
+          generated from it. The analysis never sees that hidden set. Below is how much of it came back,
+          computed live on the class you are looking at.
         </p>
       </div>
     </div>
     <div id="metrics" class="metrics"></div>
     <div id="confusion" class="confusion"></div>
+    <p class="note" id="validation-note"></p>
   </section>
 
   <!-- ------------------------------ METHOD -------------------------- -->
@@ -154,55 +205,66 @@
       <div>
         <h2>Four stages. Two of them are not a language model.</h2>
         <p class="sub">
-          The division of labour is deliberate: a model writes the instrument, because authoring one
-          is knowledge-intensive work it is genuinely good at. Everything downstream is arithmetic,
-          because arithmetic is more reliable and can be checked.
+          The division of labour is deliberate. A model writes the questions, because knowing how
+          students go wrong in a subject is knowledge-intensive work it is genuinely good at. Every
+          judgement about <em>your</em> students is arithmetic, because arithmetic is reliable and can
+          be checked &mdash; and you can check it, on any student, on any question.
         </p>
       </div>
     </div>
 
     <ol class="method">
       <li>
-        <h3>Distractor mapping <span class="pill pill-ai">model-authored</span></h3>
+        <h3>Questions built to diagnose <span class="pill pill-ai">model-authored</span></h3>
         <p>
-          Every wrong option is tagged with the misconception that produces it. This is how real
-          concept inventories are built &mdash; the Force Concept Inventory in physics is the
-          canonical example &mdash; and it is what makes a wrong answer informative rather than
-          merely negative. Built-in packs are hand-written; new subjects are generated, then validated
-          against the same structural contract before anything is allowed to run.
+          On an ordinary test the wrong answers are filler. Here every wrong option is tied to one
+          specific misunderstanding, so choosing it means something. This is how genuine concept
+          inventories are built &mdash; the Force Concept Inventory in physics is the standard example
+          &mdash; and it is the reason a wrong answer can carry information rather than just costing a mark.
+        </p>
+        <p>
+          Built-in subjects are hand-written. New ones are generated, then checked against the same
+          structural contract &mdash; enough questions per misunderstanding, every wrong option mapped,
+          exactly one right answer &mdash; and repaired until they pass. Nothing runs on an instrument
+          that failed the check.
         </p>
       </li>
       <li>
-        <h3>Per-student inference <span class="pill">no model</span></h3>
+        <h3>Working out what each student believes <span class="pill">no model</span></h3>
         <p>
-          A misconception is latent: you never observe it, only answers it makes more likely. A student
-          who holds one still answers correctly sometimes, and a student who doesn&rsquo;t still slips
-          onto that option occasionally &mdash; so a single item cannot diagnose anyone. Evidence is
-          accumulated across every probing item as a log-odds update.
+          You never observe a misunderstanding directly, only answers that make it more likely. A
+          student who holds one still gets the question right sometimes; a student who doesn&rsquo;t
+          still slips onto that option occasionally. So no single question can diagnose anybody, and
+          evidence is accumulated across every question that tests the same point.
         </p>
         <p class="mono-block" id="formula"></p>
         <p class="params" id="params"></p>
-      </li>
-      <li>
-        <h3>Class structure <span class="pill">no model</span></h3>
         <p>
-          Each student becomes a point in misconception space. Students with no confident misconception
-          are separated out <b>before</b> clustering &mdash; they are not a failure mode, they are the
-          students who are fine, and leaving them in drags every centroid toward the origin. The rest
-          are compared by <b>direction rather than magnitude</b>, so a student who expresses a
-          misconception weakly still groups with those who express it strongly.
-        </p>
-        <p>
-          The number of groups is chosen by silhouette, filtered by a floor on group size. That floor
-          is a teaching constraint rather than a statistical one: a group of two is not a failure mode
-          you can plan a lesson around, it is two students.
+          Because the arithmetic is a sum of one term per question, it comes apart again the same way.
+          That is exactly what the evidence trail on each student is: not an explanation written
+          afterwards, but the actual sum that produced the number.
         </p>
       </li>
       <li>
-        <h3>Prescription <span class="pill pill-ai">model-adapted</span></h3>
+        <h3>Finding the groups <span class="pill">no model</span></h3>
         <p>
-          Each failure mode gets a reteach aimed at the specific belief, plus verification items.
-          Because those items exist, the loop closes: reteach, re-run, watch the group shrink.
+          Students who are wrong in the same way get grouped together, by <em>what they believe</em>
+          rather than by score &mdash; so two students with very different grades can land in the same
+          group, which is the whole point. Students with no stable misunderstanding are set aside first,
+          because they are not a failure mode, they are the students who are fine.
+        </p>
+        <p>
+          How many groups is decided by the data, with a floor on group size. That floor is a teaching
+          constraint rather than a statistical one: a group of two is not something you can plan a
+          lesson around, it is two students.
+        </p>
+      </li>
+      <li>
+        <h3>What to do on Monday <span class="pill pill-ai">model-adapted</span></h3>
+        <p>
+          Each group gets a reteach aimed at the specific belief, plus three questions to check it
+          landed. Because those questions exist, the loop closes: reteach, re-run, watch the group
+          shrink.
         </p>
       </li>
     </ol>
@@ -214,31 +276,32 @@
   <div class="wrap">
     <p>
       Built for the Prometheus August AI Challenge. Everything runs in your browser &mdash; no server,
-      no account, no data leaves the page.
+      no account, and no class data ever leaves this page.
     </p>
     <p><a href="https://github.com/adrian-erlikhman/why-wrong">Source on GitHub</a></p>
   </div>
 </footer>
 
-<!-- ============================== MODALS =============================== -->
+<!-- =========================== SUBJECT MODAL =========================== -->
 <div id="modal" class="modal" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <h3 id="modal-title">Build an instrument for any subject</h3>
-    <p id="modal-body">
-      Name a topic and a model will write the misconception taxonomy and a distractor-mapped item
-      bank for it. The result is validated against the same structural contract as the built-in
-      subjects, and repaired if it falls short, before any analysis runs.
+    <h3 id="modal-title">Build questions for any topic</h3>
+    <p>
+      Name a topic and a model will write the misunderstandings students actually have in it, plus a
+      question bank where every wrong option is tied to one of them. The result is checked against the
+      same structural rules as the built-in subjects, and repaired if it falls short, before any
+      analysis runs.
     </p>
 
     <div class="modal-field">
       <label for="topic">Subject or topic</label>
-      <input id="topic" type="text" placeholder="e.g. Photosynthesis and cellular respiration, Grade 10" autocomplete="off">
+      <input id="topic" type="text" placeholder="e.g. Photosynthesis and respiration, Grade 10" autocomplete="off">
     </div>
 
     <div class="modal-field">
       <label for="api-key">Anthropic API key</label>
       <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off">
-      <p class="hint">Held in this tab only. Never stored, never logged, sent nowhere except api.anthropic.com.</p>
+      <p class="hint-s">Held in this tab only. Never stored, never logged, sent nowhere except api.anthropic.com.</p>
     </div>
 
     <div class="modal-progress" id="modal-progress" hidden></div>
@@ -247,6 +310,62 @@
     <div class="modal-actions">
       <button id="modal-cancel" class="btn btn-quiet">Cancel</button>
       <button id="modal-go" class="btn btn-primary">Build it</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ IMPORT MODAL =========================== -->
+<div id="import" class="modal" hidden>
+  <div class="modal-card modal-wide" role="dialog" aria-modal="true" aria-labelledby="import-title">
+    <h3 id="import-title">Paste your class</h3>
+    <p>
+      One row per student, one column per question. Copy straight out of a spreadsheet. Answers can be
+      letters (<span class="mono">A B C D</span>), numbers (<span class="mono">1 2 3 4</span>), or the
+      answer text itself. Leave a cell blank if a student skipped it &mdash; blanks count as no evidence
+      rather than as a wrong answer.
+    </p>
+
+    <div class="import-tools">
+      <button id="dl-template" class="btn btn-tiny">Download blank sheet</button>
+      <button id="paste-demo" class="btn btn-tiny">Fill with an example</button>
+    </div>
+
+    <textarea id="import-text" spellcheck="false" placeholder="Student,Q01,Q02,Q03&#10;Ada L.,A,C,B&#10;Ben O.,A,,D"></textarea>
+
+    <div class="import-report" id="import-report" hidden></div>
+
+    <div class="modal-actions">
+      <button id="import-cancel" class="btn btn-quiet">Cancel</button>
+      <button id="import-go" class="btn btn-primary">Analyse this class</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================== MATERIALS MODAL ========================= -->
+<div id="mats" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="mats-title">
+    <h3 id="mats-title">Materials</h3>
+    <p>Everything you need to run this with a real class, on paper.</p>
+    <div class="mats-list">
+      <button class="mat" id="mat-quiz">
+        <span class="mat-t">Print the questions</span>
+        <span class="mat-d">The full instrument, formatted for paper, with a name line.</span>
+      </button>
+      <button class="mat" id="mat-key">
+        <span class="mat-t">Print the answer key</span>
+        <span class="mat-d">Same questions with the correct answer marked, for marking by hand.</span>
+      </button>
+      <button class="mat" id="mat-sheet">
+        <span class="mat-t">Download a blank answer sheet</span>
+        <span class="mat-d">A spreadsheet with a column per question. Type answers in, paste it back.</span>
+      </button>
+      <button class="mat" id="mat-keycsv">
+        <span class="mat-t">Download the key as a spreadsheet</span>
+        <span class="mat-d">Item, topic, question and correct answer, for your own marking sheet.</span>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button id="mats-close" class="btn btn-quiet">Close</button>
     </div>
   </div>
 </div>

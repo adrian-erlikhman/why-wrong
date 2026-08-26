@@ -21,6 +21,50 @@ Built for the Prometheus August AI Challenge (August 2026).
 
 ---
 
+## Using it with a real class
+
+The loop closes in both directions, on paper.
+
+1. **Pick a subject**, or build one for any topic you teach.
+2. **Materials** prints the questions and the answer key, or downloads a blank
+   answer sheet as a spreadsheet with one column per question.
+3. Give it. Mark it, or don't — you only need which option each student picked.
+4. **Class → Paste my class** and paste the sheet back in. Letters, numbers, or
+   the answer text all work; blanks are read as unanswered rather than wrong.
+5. Get reteach groups, a plan per group, and an audit of your questions.
+   **Print plan** puts the groups on paper; **Export CSV** puts them in a
+   spreadsheet.
+
+Nothing is uploaded. There is no account, no server, and the class data never
+leaves the tab.
+
+### Every diagnosis opens up
+
+A tool that says *"Milo holds the sign-distribution misconception, 87%"* and
+offers no way to check has asked for faith — and a teacher who cannot check
+will, correctly, ignore it the first time it says something surprising.
+
+So click any student. You get the confidence for each misunderstanding and,
+under it, **the questions that produced that number**: which ones pointed to it,
+which argued against it, and what they actually chose. Because the model is a
+sum of one term per question, that trail is not an explanation written
+afterwards — it is the arithmetic itself, taken apart again.
+
+Click any question instead and you get how the class answered it, which
+misunderstanding each wrong option corresponds to, and **the names of the
+students who picked it**.
+
+### Other things worth knowing
+
+- **Click a colour** in the key to show only that misunderstanding across the
+  whole class map.
+- **Every statistic has a "?"** next to it. Plain-language explanation of what it
+  means, and what to do about the number in front of you.
+- Groups are formed by *what students believe*, not by score — two students with
+  very different grades routinely land in the same group, which is the point.
+- Students with no stable misunderstanding are separated out rather than forced
+  into a group. They are not a failure mode; they need practice, not a reteach.
+
 ## The idea
 
 Most assessment tooling reports *that* a student was wrong. What changes
@@ -195,6 +239,9 @@ js/infer.js            naive Bayes misconception inference
 js/cluster.js          cosine k-means, silhouette, adjusted Rand index
 js/itemstats.js        item analysis + leave-one-out model agreement
 js/validate.js         recovery scoring against planted truth
+js/drawer.js           per-student evidence trail, per-question breakdown
+js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
+js/explain.js          inline glossary written for teachers
 js/llm.js              optional reteach adaptation
 js/app.js              orchestration and rendering
 test/pipeline.test.mjs runs every built-in pack
@@ -216,6 +263,10 @@ test/pipeline.test.mjs runs every built-in pack
 - At 28 students, per-item statistics are noisy. Several items pick up marginal
   low-discrimination flags that are sample noise, which is why findings are
   ranked by severity and the marginal ones are collapsed.
+- Unanswered questions are treated as carrying no evidence either way, rather
+  than as wrong. That is the honest default, but it means a student who skipped
+  half the paper gets a thinner diagnosis rather than a worse one, and the tool
+  does not currently say so loudly enough on the student card.
 - Misconceptions are treated as conditionally independent. Real ones co-occur
   causally — M07 and M11 are plausibly the same underlying failure — and a model
   with a dependency structure would do better.
