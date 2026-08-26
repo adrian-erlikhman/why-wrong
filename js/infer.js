@@ -22,7 +22,7 @@
  * facts, and a reader should be able to see and challenge them.
  */
 
-import { ITEMS, MISCONCEPTIONS, correctIndex, distractorsFor } from './curriculum.js';
+import { correctIndex, distractorsFor, misIds as packMisIds } from './pack.js';
 
 export const PARAMS = {
   prior: 0.25,          // P(a given student holds a given misconception) before evidence
@@ -74,8 +74,9 @@ function likelihoods(item, mid, choice) {
  *   posterior[s][m] in [0,1]; evidence[s][m] lists the per-item contributions,
  *   which is what lets the UI justify a diagnosis item by item.
  */
-export function inferMisconceptions(responses) {
-  const misIds = MISCONCEPTIONS.map(m => m.id);
+export function inferMisconceptions(pack, responses) {
+  const misIds = packMisIds(pack);
+  const ITEMS = pack.items;
 
   // Precompute which items probe which misconception.
   const probing = {};

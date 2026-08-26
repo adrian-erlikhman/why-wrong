@@ -1,25 +1,25 @@
 /**
- * curriculum.js
- * ---------------------------------------------------------------------------
- * The diagnostic instrument.
+ * packs/algebra1.js -- Algebra 1: exponents, signs, fractions, linear equations.
  *
- * Every item below is a *distractor-mapped* multiple choice question: each
- * wrong option is not filler, it is the answer a student produces if they hold
- * one specific, named misconception. This is the design principle behind real
- * concept inventories (the Force Concept Inventory in physics is the canonical
- * example) and behind misconception-tagged mathematics banks. It is what makes
- * inference possible: a wrong answer then carries information about *which*
- * mental model is broken, not merely that something is.
+ * A subject pack is a self-contained diagnostic instrument: a taxonomy of named
+ * misconceptions, an item bank whose every wrong option is mapped to one of
+ * them, and a set of archetypes describing which misconceptions tend to travel
+ * together in a real classroom.
  *
- * Options tagged `mis: null` are "slips" -- arithmetic noise any student can
- * produce, which therefore carry no diagnostic signal.
- *
- * Each misconception is probed by at least 2 items, so the inference layer has
- * to aggregate evidence across items rather than reading a diagnosis off a
- * single response.
+ * Nothing downstream knows this pack is about algebra. Swap it for biology or
+ * for something a language model wrote thirty seconds ago and the inference,
+ * clustering and item analysis behave identically.
  */
 
-export const MISCONCEPTIONS = [
+export default {
+  id: 'algebra-1',
+  name: 'Algebra 1',
+  subject: 'Mathematics',
+  level: 'Grade 8-9',
+  blurb: 'Exponent rules, signed arithmetic, fraction operations and one-step equations -- the cluster of topics where procedural fluency most often hides a broken rule.',
+  source: 'built-in',
+
+  misconceptions: [
   {
     id: 'M01',
     name: 'Negative exponent means negative result',
@@ -116,13 +116,9 @@ export const MISCONCEPTIONS = [
     reteach: 'The same distribution error as M05 arriving from the other direction, and it is why Pythagorean answers come back wrong. Compute inside first, always: sqrt(9+16)=sqrt(25)=5. A 3-4-5 triangle drawn to scale shows immediately that the hypotenuse is not 7.',
     verify: ['Compute sqrt(9+16).', 'Does sqrt(a+b) = sqrt(a)+sqrt(b)? Test with a=9, b=16.', 'A right triangle has legs 6 and 8. Find the hypotenuse.']
   }
-];
+],
 
-/**
- * Item bank. `opts` are in fixed order; `c` marks the correct option and `mis`
- * names the misconception a distractor diagnoses (null = undiagnostic slip).
- */
-export const ITEMS = [
+  items: [
   { id: 'Q01', topic: 'Exponents', stem: 'Evaluate 2^-3.',
     opts: [ {t:'1/8', c:true}, {t:'-8', mis:'M01'}, {t:'-6', mis:'M02'}, {t:'6', mis:'M02'} ] },
   { id: 'Q02', topic: 'Exponents', stem: 'Evaluate 5^-2.',
@@ -207,24 +203,36 @@ export const ITEMS = [
     opts: [ {t:'5', c:true}, {t:'1', mis:null}, {t:'0', mis:null}, {t:'25', mis:null} ], _weak: 'trivial' },
   { id: 'Q36', topic: 'Expanding', stem: 'What is the value of the expression above?',
     opts: [ {t:'Cannot be determined', c:true}, {t:'0', mis:null}, {t:'1', mis:null}, {t:'x', mis:null} ], _weak: 'ambiguous' }
-];
+],
 
-export const MIS_BY_ID = Object.fromEntries(MISCONCEPTIONS.map(m => [m.id, m]));
-export const ITEM_BY_ID = Object.fromEntries(ITEMS.map(i => [i.id, i]));
-
-/** Items carrying a distractor mapped to misconception `mid`. */
-export function itemsProbing(mid) {
-  return ITEMS.filter(it => it.opts.some(o => o.mis === mid));
-}
-
-/** Index of the correct option for an item. */
-export function correctIndex(item) {
-  return item.opts.findIndex(o => o.c);
-}
-
-/** Option indices on `item` that diagnose misconception `mid`. */
-export function distractorsFor(item, mid) {
-  const out = [];
-  item.opts.forEach((o, i) => { if (o.mis === mid) out.push(i); });
-  return out;
-}
+  archetypes: [
+  {
+    id: 'A',
+    label: 'Exponent rules',
+    blurb: 'Holds the two exponent rules but cannot tell them apart, and reads exponentiation as multiplication.',
+    core: ['M02', 'M03', 'M04'],
+    weight: 0.28
+  },
+  {
+    id: 'B',
+    label: 'Signs and negatives',
+    blurb: 'Loses sign information across brackets, across the equals sign, and when subtracting a negative.',
+    core: ['M07', 'M08', 'M10', 'M11'],
+    weight: 0.29
+  },
+  {
+    id: 'C',
+    label: 'Illegal distribution',
+    blurb: 'Distributes operations that do not distribute: exponents and roots over sums, denominators across terms.',
+    core: ['M05', 'M06', 'M09', 'M12'],
+    weight: 0.25
+  },
+  {
+    id: 'D',
+    label: 'Broadly secure',
+    blurb: 'No stable misconception. Errors are slips, and scattered rather than patterned.',
+    core: [],
+    weight: 0.18
+  }
+]
+};

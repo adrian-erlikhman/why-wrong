@@ -8,6 +8,12 @@ answer, groups the class into the handful of failure modes it actually shares,
 and then turns the lens around to audit which of the teacher's questions
 measured anything at all.
 
+**Works for any subject.** Two curated instruments ship built in (Algebra 1 and
+Evolution & Inheritance). For anything else, name a topic and a model writes the
+misconception taxonomy and a distractor-mapped item bank for it, which is then
+validated against the same structural contract before a single number is
+computed.
+
 Built for the Prometheus August AI Challenge (August 2026).
 
 **Live:** https://adrianerlikhman.is-a.dev/why-wrong/
@@ -37,9 +43,24 @@ From there the tool answers three questions:
 
 Four stages. **Two of them are not a language model.**
 
-**1 · Distractor mapping.** 36 algebra items, 12 named misconceptions, each
-probed by at least 3 items. Wrong options that carry no diagnostic meaning are
-tagged as slips so they contribute no signal.
+**1 · Distractor mapping** *(model-authored for generated subjects)*
+A *subject pack* is a self-contained instrument: named misconceptions, an item
+bank whose every wrong option maps to one of them, and archetypes describing
+which misconceptions travel together. Wrong options carrying no diagnostic
+meaning are tagged as slips so they contribute no signal.
+
+Authoring one is the genuinely knowledge-intensive part of this exercise: it
+needs someone who knows not just the content but the characteristic ways
+students get it wrong. That is a task a language model is actually good at, so
+for a new subject the model writes the instrument — and only the instrument. It
+never sees a student response, never decides who holds what, never groups a
+class, never judges an item. **The model builds the ruler; deterministic code
+does the measuring.**
+
+Generated packs are untrusted until `validatePack` says otherwise, because a
+malformed pack would not throw — it would produce confident nonsense. Generation
+is a loop: generate, validate, feed the specific structural failures back for
+repair.
 
 **2 · Per-student inference** *(no LLM — `js/infer.js`)*
 A misconception is latent. A student who holds one still answers correctly
@@ -57,7 +78,7 @@ parameters are exported and shown in the UI rather than buried, because they are
 assumptions rather than facts.
 
 **3 · Class structure** *(no LLM — `js/cluster.js`)*
-Each student becomes a point in 12-dimensional misconception space. Two design
+Each student becomes a point in misconception space. Two design
 decisions matter more than the choice of algorithm:
 
 - Students with no confident misconception are **separated out before**
@@ -118,13 +139,13 @@ downstream stage.
 So the pipeline has a ground truth to be scored against, computed live on
 whatever seed is loaded:
 
-| Metric | Mean over 40 seeds |
-| --- | --- |
-| Diagnosis precision | 91.3% |
-| Diagnosis recall | 82.7% |
-| Diagnosis F1 | **0.867** |
-| Cluster recovery (Adjusted Rand Index) | **0.676** |
-| Correct *k* recovered | 27/40 seeds |
+| Metric (mean over 40 seeds) | Algebra 1 | Evolution & Inheritance |
+| --- | --- | --- |
+| Diagnosis precision | 91.3% | 96.3% |
+| Diagnosis recall | 82.7% | 69.3% |
+| Diagnosis F1 | **0.867** | **0.804** |
+| Group recovery (Adjusted Rand Index) | **0.680** | **0.540** |
+| Correct number of groups recovered | 37/40 | 30/40 |
 
 Two deliberately defective questions are planted in the item bank — one trivial,
 one ambiguously worded — and marked nowhere in the data. The item analysis has to
@@ -143,8 +164,9 @@ Deliberately at the edge, not the centre. Everything above is deterministic
 numeric code, and the reteach plans that ship are written by hand — so the page
 is fully functional with no key, no network, and no account.
 
-Optionally, paste an Anthropic API key and the reteach plans are rewritten for
-the specific *combination* of misconceptions a given cluster holds and its size.
+Two optional uses, both requiring a key. **Authoring a new subject** is the
+substantial one, described above. The smaller one rewrites a reteach plan for the
+specific *combination* of misconceptions a given group holds and its size.
 That's an appropriate use of a language model — generating prose conditioned on
 structured input — rather than asking it to do the diagnosis, which arithmetic
 does more reliably. The key is held in the tab only, never stored, and sent
@@ -161,17 +183,21 @@ npx http-server . -p 4173 -c-1
 ## Layout
 
 ```
-index.html            single page
+index.html             single page, tabbed workspace
 css/style.css
-js/curriculum.js      12 misconceptions, 36 distractor-mapped items, reteach content
-js/simulate.js        generative class model + planted ground truth
-js/infer.js           naive Bayes misconception inference
-js/cluster.js         cosine k-means, silhouette, adjusted Rand index
-js/itemstats.js       classical item analysis + leave-one-out model agreement
-js/validate.js        recovery scoring against planted truth
-js/llm.js             optional Anthropic rewrite layer
-js/app.js             orchestration and rendering
-test/pipeline.test.mjs
+js/pack.js             the subject-pack contract + validation
+js/packs/index.js      registry of built-in packs
+js/packs/algebra1.js   12 misconceptions, 36 items
+js/packs/biology.js     8 misconceptions, 24 items
+js/generate.js         model-authored packs for any subject, with a repair loop
+js/simulate.js         generative class model + planted ground truth
+js/infer.js            naive Bayes misconception inference
+js/cluster.js          cosine k-means, silhouette, adjusted Rand index
+js/itemstats.js        item analysis + leave-one-out model agreement
+js/validate.js         recovery scoring against planted truth
+js/llm.js              optional reteach adaptation
+js/app.js              orchestration and rendering
+test/pipeline.test.mjs runs every built-in pack
 ```
 
 ## Honest limitations
@@ -180,7 +206,13 @@ test/pipeline.test.mjs
   costs external validity: the response model is my model of how students err,
   so recovery figures describe the pipeline's consistency with that model, not
   its accuracy on a real classroom.
-- The item bank is one topic (Algebra 1) and hand-authored.
+- Built-in item banks are hand-authored and cover two topics. A generated pack
+  is only as good as the model that wrote it: the contract checks it is
+  *structurally* sound (every misconception probed enough times, every
+  distractor mapped, exactly one correct option) but cannot check that a
+  distractor really is what that misconception produces. Treat a generated
+  instrument as a first draft for a teacher to review, not a finished
+  assessment.
 - At 28 students, per-item statistics are noisy. Several items pick up marginal
   low-discrimination flags that are sample noise, which is why findings are
   ranked by severity and the marginal ones are collapsed.

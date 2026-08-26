@@ -23,7 +23,7 @@
  * practice: r >= 0.30 good, 0.15-0.30 marginal, < 0.15 not discriminating.
  */
 
-import { ITEMS, correctIndex } from './curriculum.js';
+import { correctIndex } from './pack.js';
 import { posteriorWithout, PARAMS } from './infer.js';
 
 function pearson(x, y) {
@@ -42,7 +42,8 @@ function pearson(x, y) {
 /**
  * @returns {Array} one record per item, in item order.
  */
-export function analyseItems(responses, inference = null) {
+export function analyseItems(pack, responses, inference = null) {
+  const ITEMS = pack.items;
   const nStudents = responses.length;
   const ci = ITEMS.map(correctIndex);
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));
@@ -245,7 +246,8 @@ export function diagnosticItems(stats) {
  * things, which is the design intent. It is not evidence the test is bad.
  * `interpretAlpha` says so rather than leaving the number to be misread.
  */
-export function cronbachAlpha(responses) {
+export function cronbachAlpha(pack, responses) {
+  const ITEMS = pack.items;
   const ci = ITEMS.map(correctIndex);
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));
   const k = ITEMS.length;
