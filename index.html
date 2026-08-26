@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Wrong — misconception analysis for classroom assessment</title>
+<meta name="description" content="Finds the specific misconception behind each wrong answer, groups a class into shared failure modes, and audits the quality of the test itself.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="mark">Why Wrong</div>
+    <h1>&ldquo;You got it wrong&rdquo; is the least useful sentence in education.</h1>
+    <p class="lede">
+      A red X tells a student nothing and a teacher less. Every wrong answer on this
+      test is mapped to a specific, named misconception &mdash; so instead of a score,
+      you get the mental model that produced it, the handful of failure modes your
+      class actually shares, and an audit of which of your questions measured anything.
+    </p>
+    <div class="hero-actions">
+      <button id="run" class="btn btn-primary">Analyse a class</button>
+      <label class="seed-field">
+        seed
+        <input id="seed" type="number" value="7" min="1" max="9999" aria-label="Random seed">
+      </label>
+      <label class="seed-field">
+        students
+        <input id="size" type="number" value="28" min="12" max="120" aria-label="Class size">
+      </label>
+    </div>
+    <p class="provenance" id="provenance"></p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ============================ THE MATRIX ============================ -->
+  <section class="panel" id="matrix-panel">
+    <div class="panel-head">
+      <div>
+        <h2>1 &middot; The response matrix</h2>
+        <p class="sub" id="matrix-sub">
+          One row per student, one column per question. Cells are coloured by the
+          <em>misconception the answer reveals</em>, not by right or wrong.
+        </p>
+      </div>
+      <button id="reorder" class="btn" disabled>Sort into failure modes</button>
+    </div>
+
+    <div class="matrix-shell">
+      <div class="matrix-scroll">
+        <div id="matrix" class="matrix" role="img" aria-label="Class response matrix"></div>
+      </div>
+    </div>
+
+    <div id="legend" class="legend"></div>
+    <p class="caption" id="matrix-caption"></p>
+  </section>
+
+  <!-- ========================== FAILURE MODES =========================== -->
+  <section class="panel" id="clusters-panel" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>2 &middot; What the class actually shares</h2>
+        <p class="sub" id="clusters-sub"></p>
+      </div>
+      <div class="ai-controls">
+        <button id="regen" class="btn btn-ghost" title="Optional: rewrite the reteach plans with Claude">Rewrite plans with AI</button>
+      </div>
+    </div>
+    <div id="clusters" class="clusters"></div>
+  </section>
+
+  <!-- ========================= TEST QUALITY ============================= -->
+  <section class="panel" id="items-panel" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>3 &middot; Now about your test</h2>
+        <p class="sub" id="items-sub"></p>
+      </div>
+    </div>
+    <div id="items" class="items"></div>
+    <div id="diagnostic-items" class="diagnostic-note"></div>
+    <p class="caption" id="alpha-caption"></p>
+  </section>
+
+  <!-- ========================== VALIDATION ============================== -->
+  <section class="panel" id="validation-panel" hidden>
+    <div class="panel-head">
+      <div>
+        <h2>4 &middot; Does any of this actually work?</h2>
+        <p class="sub">
+          The class is simulated, which is the point: every student was given a hidden
+          profile of real misconceptions, and their answers were generated from it. The
+          pipeline never sees that profile. These numbers are how much of it came back,
+          computed live on the class above.
+        </p>
+      </div>
+    </div>
+    <div id="validation" class="validation"></div>
+    <div id="confusion" class="confusion"></div>
+  </section>
+
+  <!-- ============================ METHOD =============================== -->
+  <section class="panel" id="method-panel">
+    <div class="panel-head">
+      <div>
+        <h2>Method</h2>
+        <p class="sub">Four stages. Two of them are not a language model.</p>
+      </div>
+    </div>
+    <ol class="method">
+      <li>
+        <h3>Distractor mapping</h3>
+        <p>
+          Every wrong option on the test is tagged with the misconception that produces
+          it. This is how real concept inventories are built &mdash; the Force Concept
+          Inventory in physics is the canonical example &mdash; and it is what makes a
+          wrong answer informative rather than merely negative.
+        </p>
+      </li>
+      <li>
+        <h3>Per-student inference <span class="tag">no LLM</span></h3>
+        <p>
+          A misconception is latent: you never observe it, only answers it makes more
+          likely. A student who holds one still gets the item right sometimes, and a
+          student who does not still slips onto that option occasionally. So evidence is
+          accumulated across every probing item as a log-odds update &mdash; naive Bayes
+          over item responses &mdash; rather than read off a single wrong answer.
+        </p>
+        <p class="params" id="params"></p>
+      </li>
+      <li>
+        <h3>Class structure <span class="tag">no LLM</span></h3>
+        <p>
+          Each student becomes a point in 12-dimensional misconception space. Students
+          with no confident misconception are separated out first &mdash; they are not a
+          failure mode, they are the students who are fine. The rest are clustered by
+          <em>direction</em> rather than magnitude, so a student who expresses the sign
+          misconceptions weakly still groups with those who express them strongly.
+          k is chosen by silhouette, with ties broken toward fewer groups, because a
+          teacher can act on three groups and not on eleven.
+        </p>
+      </li>
+      <li>
+        <h3>Prescription</h3>
+        <p>
+          Each failure mode gets a reteach aimed at the specific belief, plus verification
+          items to check it landed. Because those verification items exist, the loop
+          closes: reteach, re-run, watch the cluster shrink.
+        </p>
+      </li>
+    </ol>
+  </section>
+
+</main>
+
+<footer class="wrap foot">
+  <p>
+    Built for the Prometheus August AI Challenge. The analysis runs entirely in your
+    browser &mdash; no server, no account, no data leaves the page.
+    <a href="https://github.com/adrian-erlikhman/why-wrong">Source</a>.
+  </p>
+</footer>
+
+<div id="key-modal" class="modal" hidden>
+  <div class="modal-card">
+    <h3>Rewrite plans with Claude</h3>
+    <p>
+      The analysis above is complete without this. Optionally, paste an Anthropic API key
+      to have the reteach plans rewritten for your specific class profile. The key is held
+      in this tab only, is never stored or transmitted anywhere except Anthropic, and is
+      discarded when you close the page.
+    </p>
+    <input id="api-key" type="password" placeholder="sk-ant-..." autocomplete="off">
+    <div class="modal-actions">
+      <button id="key-cancel" class="btn btn-ghost">Cancel</button>
+      <button id="key-go" class="btn btn-primary">Rewrite</button>
+    </div>
+    <p class="modal-err" id="key-err"></p>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
