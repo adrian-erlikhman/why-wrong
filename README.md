@@ -10,7 +10,7 @@ measured anything at all.
 
 Built for the Prometheus August AI Challenge (August 2026).
 
-**Live:** https://adrian-erlikhman.github.io/why-wrong/
+**Live:** https://adrianerlikhman.is-a.dev/why-wrong/
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
 ---
