@@ -19,6 +19,9 @@ Built for the Prometheus August AI Challenge (August 2026).
 **Live:** https://adrianerlikhman.is-a.dev/why-wrong/
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
+Deep links: `?view=groups` (or `students`, `items`, `validation`, `method`) opens a tab
+directly; `?sorted=1` starts with the class map already sorted into groups.
+
 ---
 
 ## Using it with a real class

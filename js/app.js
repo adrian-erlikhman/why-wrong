@@ -21,6 +21,7 @@ import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
+import { heroBackdrop, countUp, tabIndicator } from './ui.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED
@@ -146,7 +147,9 @@ function renderSummary() {
 
   cards.forEach(c => {
     const n = el(c.go ? 'button' : 'div', `sum${c.go ? ' sum-go' : ''}`);
-    n.appendChild(el('div', `sum-v${c.cls ? ' ' + c.cls : ''}`, c.v));
+    const v = el('div', `sum-v${c.cls ? ' ' + c.cls : ''}`);
+    countUp(v, c.v);
+    n.appendChild(v);
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
@@ -997,6 +1000,17 @@ window.addEventListener('orientationchange', syncBarHeight);
 window.addEventListener('load', syncBarHeight);
 
 wireMaterials();
+heroBackdrop($('#hero-bg'));
+tabIndicator($('.tabs-in'));
 state.pack = defaultPack();
 renderPackOptions(state.pack.id);
 run();
+
+// Deep links: ?view=groups opens a tab directly, ?sorted=1 starts with the map
+// already sorted. Handy for sharing a view and for the demo.
+{
+  const q = new URLSearchParams(location.search);
+  const v = q.get('view');
+  if (v && $(`#view-${v}`)) showView(v);
+  if (q.get('sorted') === '1' && !state.sorted) toggleSort();
+}
