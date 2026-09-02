@@ -21,7 +21,6 @@ import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
-import { heroBackdrop, countUp, tabIndicator } from './ui.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED
@@ -147,9 +146,7 @@ function renderSummary() {
 
   cards.forEach(c => {
     const n = el(c.go ? 'button' : 'div', `sum${c.go ? ' sum-go' : ''}`);
-    const v = el('div', `sum-v${c.cls ? ' ' + c.cls : ''}`);
-    countUp(v, c.v);
-    n.appendChild(v);
+    n.appendChild(el('div', `sum-v${c.cls ? ' ' + c.cls : ''}`, c.v));
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
@@ -1000,8 +997,6 @@ window.addEventListener('orientationchange', syncBarHeight);
 window.addEventListener('load', syncBarHeight);
 
 wireMaterials();
-heroBackdrop($('#hero-bg'));
-tabIndicator($('.tabs-in'));
 state.pack = defaultPack();
 renderPackOptions(state.pack.id);
 run();
