@@ -27,6 +27,7 @@
  */
 
 import { validatePack, itemsProbing, MIN_PROBES } from './pack.js';
+import { apiFailure, networkFailure } from './llm.js';
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-5';
@@ -97,21 +98,23 @@ Respond with JSON only. No prose, no code fence, no commentary.
 }
 
 async function callModel(apiKey, messages, maxTokens = 16000) {
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages })
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Anthropic API ${res.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`);
+  let res;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages })
+    });
+  } catch {
+    throw networkFailure();
   }
+
+  if (!res.ok) throw await apiFailure(res);
   const data = await res.json();
   return (data.content || []).map(c => c.text || '').join('').trim();
 }

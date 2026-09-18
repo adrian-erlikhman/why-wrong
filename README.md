@@ -19,8 +19,13 @@ Built for the Prometheus August AI Challenge (August 2026).
 **Live:** https://adrian-erlikhman.github.io/why-wrong/
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
+A first visit opens a short guided tour of the real page (the map, the sort, a
+reteach group, the test audit, the recovery numbers); the **Demo** button
+replays it.
+
 Deep links: `?view=groups` (or `students`, `items`, `validation`, `method`) opens a tab
-directly; `?sorted=1` starts with the class map already sorted into groups.
+directly; `?sorted=1` starts with the class map already sorted into groups. Deep
+links never open the tour; `?demo=1` forces it and `?demo=0` suppresses it.
 
 ---
 
@@ -33,7 +38,11 @@ The loop closes in both directions, on paper.
    answer sheet as a spreadsheet with one column per question.
 3. Give it. Mark it, or don't — you only need which option each student picked.
 4. **Class → Paste my class** and paste the sheet back in. Letters, numbers, or
-   the answer text all work; blanks are read as unanswered rather than wrong.
+   the answer text all work (a Google Forms export included); blanks are read
+   as unanswered rather than wrong. Letters and numbers mean what is printed on
+   the paper: each question's options are shuffled, seeded by its id, so the
+   key is not "A" every time and the printout, the answer key and the paste-back
+   always agree.
 5. Get reteach groups, a plan per group, and an audit of your questions.
    **Print plan** puts the groups on paper; **Export CSV** puts them in a
    spreadsheet.
@@ -245,9 +254,11 @@ js/validate.js         recovery scoring against planted truth
 js/drawer.js           per-student evidence trail, per-question breakdown
 js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
 js/explain.js          inline glossary written for teachers
-js/llm.js              optional reteach adaptation
+js/llm.js              optional reteach adaptation, plain-language API errors
+js/tour.js             first-visit intro and guided tour
 js/app.js              orchestration and rendering
-test/pipeline.test.mjs runs every built-in pack
+og.png                 link-preview card
+test/pipeline.test.mjs runs every built-in pack, plus the paper round trip
 ```
 
 ## Honest limitations

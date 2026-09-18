@@ -17,6 +17,7 @@
 import { correctIndex, misById } from './pack.js';
 import { PARAMS } from './infer.js';
 import { infoButton } from './explain.js';
+import { paperOrder } from './importer.js';
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -247,12 +248,16 @@ export function openQuestion(ctx, i) {
   }
 
   // --- who chose what ------------------------------------------------------
+  // In printed order, lettered as on the paper.
   wrap.appendChild(el('div', 'dr-h', 'How the class answered'));
-  st.options.forEach(o => {
+  paperOrder(item).map(oi => st.options[oi]).forEach((o, k) => {
     const row = el('div', `opt${o.correct ? ' opt-correct' : ''}`);
 
     const head = el('div', 'opt-head');
-    head.appendChild(el('span', 'opt-t', o.text));
+    const t = el('span', 'opt-t');
+    t.appendChild(el('span', 'opt-l', 'ABCDEFGH'[k]));
+    t.appendChild(document.createTextNode(o.text));
+    head.appendChild(t);
     head.appendChild(el('span', 'opt-n', `${o.count} · ${Math.round(o.share * 100)}%`));
     row.appendChild(head);
 

@@ -15,12 +15,49 @@
  * answer text itself; some cells will be blank because a student skipped a
  * question. All of that is accepted, and anything genuinely unreadable is
  * reported by row and column rather than silently coerced into a number.
+ *
+ * Letters and numbers refer to the order options are printed in on paper,
+ * which is not the order they are stored in -- see paperOrder().
  */
+
+import { makeRng, shuffled } from './rng.js';
 
 const LETTERS = 'ABCDEFGH';
 
 /** Omitted answer. Distinct from wrong: it carries no evidence either way. */
 export const OMITTED = -1;
+
+/* ------------------------------------------------------------ paper order */
+
+// Packs store the correct option first (the built-in ones do, and generate.js
+// asks the model to), so printing in stored order would make the key "A" on
+// every question. Each item is shuffled instead, seeded by its id: the printed
+// quiz, the answer key, the example paste and the paste-back parser all agree,
+// on every machine, with nothing stored. The salt only picks which shuffle; it
+// was chosen because it spreads both built-in keys evenly across A-D.
+const PAPER_SALT = 2026;
+const orderCache = new WeakMap();
+
+function idSeed(id) {
+  let h = 2166136261 ^ PAPER_SALT;          // FNV-1a
+  for (const ch of String(id)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+/** Stored option index printed at each position: order[k] is letter k's option. */
+export function paperOrder(item) {
+  let order = orderCache.get(item);
+  if (!order) {
+    order = shuffled(makeRng(idSeed(item.id)), item.opts.map((_, i) => i));
+    orderCache.set(item, order);
+  }
+  return order;
+}
+
+/** The letter a stored option is printed under. */
+export function paperLetter(item, optIndex) {
+  return LETTERS[paperOrder(item).indexOf(optIndex)] ?? '?';
+}
 
 /* ------------------------------------------------------------------ export */
 
@@ -41,7 +78,7 @@ export function templateCsv(pack, names = []) {
 export function answerKeyCsv(pack) {
   const rows = pack.items.map(it => {
     const ci = it.opts.findIndex(o => o.c);
-    return [it.id, it.topic || '', it.stem, LETTERS[ci], it.opts[ci].t];
+    return [it.id, it.topic || '', it.stem, paperLetter(it, ci), it.opts[ci].t];
   });
   return [['Item', 'Topic', 'Question', 'Key', 'Correct answer'], ...rows]
     .map(r => r.map(csvCell).join(',')).join('\n');
@@ -50,9 +87,10 @@ export function answerKeyCsv(pack) {
 /** A printable paper version of the instrument. */
 export function quizHtml(pack, { withKey = false } = {}) {
   const items = pack.items.map((it, n) => {
-    const opts = it.opts.map((o, oi) => {
+    const opts = paperOrder(it).map((oi, k) => {
+      const o = it.opts[oi];
       const mark = withKey && o.c ? ' <b>&larr; key</b>' : '';
-      return `<li><span class="l">${LETTERS[oi]}.</span> ${escapeHtml(o.t)}${mark}</li>`;
+      return `<li><span class="l">${LETTERS[k]}.</span> ${escapeHtml(o.t)}${mark}</li>`;
     }).join('');
     return `<li class="q"><div class="stem"><span class="qn">${n + 1}.</span> ${escapeHtml(it.stem)}</div><ul class="opts">${opts}</ul></li>`;
   }).join('');
@@ -144,32 +182,66 @@ function detectDelim(rows) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+const isBlank = v => !v || v === '-' || v === '.';
+const asLetter = (v, n) => {
+  const li = v.length === 1 ? LETTERS.indexOf(v.toUpperCase()) : -1;
+  return li >= 0 && li < n ? li : null;
+};
+const asNumber = (v, n) => {
+  if (!/^\d+$/.test(v)) return null;
+  const num = parseInt(v, 10);
+  if (num >= 1 && num <= n) return num - 1;
+  return num === 0 && n > 0 ? 0 : null;
+};
+
 /**
- * Turn one cell into an option index for `item`.
- * Accepts a letter, a 1-based number, or the option text itself.
+ * How a sheet codes its answers: 'letters', 'numbers' or 'text'. A cell like
+ * "2" is ambiguous on its own -- option 2, or the answer "2"? -- and a Forms
+ * export of an algebra quiz is full of them. So the sheet is judged as a whole,
+ * by what most of its filled cells look like, and ambiguous cells are read that
+ * way. Whatever is unambiguous still reads in any coding.
+ */
+function detectCoding(pack, rows, cols) {
+  let letters = 0, numbers = 0, other = 0;
+  rows.forEach(row => pack.items.forEach((it, i) => {
+    const v = String(row[cols[i]] ?? '').trim();
+    if (isBlank(v)) return;
+    if (asLetter(v, it.opts.length) !== null) letters++;
+    else if (asNumber(v, it.opts.length) !== null) numbers++;
+    else other++;
+  }));
+  if (other > letters && other > numbers) return 'text';
+  return numbers > letters ? 'numbers' : 'letters';
+}
+
+/**
+ * Turn one cell into an option index for `item`. Accepts a letter or a 1-based
+ * number (both as printed on paper), or the option text itself; `coding` says
+ * which reading wins when more than one fits.
  * @returns {number|null} index, OMITTED for blank, or null if unreadable.
  */
-function readCell(raw, item) {
+function readCell(raw, item, coding = 'letters') {
   const v = String(raw ?? '').trim();
-  if (!v || v === '-' || v === '.') return OMITTED;
+  if (isBlank(v)) return OMITTED;
 
   const n = item.opts.length;
-
-  if (v.length === 1) {
-    const li = LETTERS.indexOf(v.toUpperCase());
-    if (li >= 0 && li < n) return li;
-  }
-
-  if (/^\d+$/.test(v)) {
-    const num = parseInt(v, 10);
-    if (num >= 1 && num <= n) return num - 1;
-    if (num === 0 && n > 0) return 0;
-  }
-
+  const order = paperOrder(item);
   const norm = s => String(s).toLowerCase().replace(/\s+/g, '');
-  const exact = item.opts.findIndex(o => norm(o.t) === norm(v));
-  if (exact >= 0) return exact;
 
+  const readings = {
+    letters: () => { const k = asLetter(v, n); return k === null ? null : order[k]; },
+    numbers: () => { const k = asNumber(v, n); return k === null ? null : order[k]; },
+    text: () => { const i = item.opts.findIndex(o => norm(o.t) === norm(v)); return i >= 0 ? i : null; }
+  };
+  const tries = {
+    letters: ['letters', 'numbers', 'text'],
+    numbers: ['numbers', 'text', 'letters'],
+    text: ['text', 'letters', 'numbers']
+  }[coding];
+  for (const t of tries) {
+    const idx = readings[t]();
+    if (idx !== null) return idx;
+  }
   return null;
 }
 
@@ -231,6 +303,7 @@ export function parseResponses(pack, text) {
 
   if (errors.length) return { ok: false, errors, warnings, students: [], responses: [] };
 
+  const coding = detectCoding(pack, table.slice(1), cols);
   const students = [];
   const responses = [];
   let omitted = 0;
@@ -245,7 +318,7 @@ export function parseResponses(pack, text) {
 
     pack.items.forEach((it, i) => {
       const cell = row[cols[i]];
-      const idx = readCell(cell, it);
+      const idx = readCell(cell, it, coding);
       if (idx === null) {
         bad.push(`row ${r + 1} (${name}), ${it.id}: “${String(cell).slice(0, 14)}”`);
         out.push(OMITTED);
@@ -272,7 +345,7 @@ export function parseResponses(pack, text) {
 
   return {
     ok: errors.length === 0,
-    errors, warnings, students, responses, omitted,
+    errors, warnings, students, responses, omitted, coding,
     matchedBy: matchedById ? 'question id' : 'column order'
   };
 }

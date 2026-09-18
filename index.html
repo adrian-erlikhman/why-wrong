@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Why Wrong — find the misconception behind every wrong answer</title>
 <meta name="description" content="Marks a class set, works out the specific misconception behind each wrong answer, groups students into the few failure modes they actually share, and tells you which of your questions measured anything. Any subject.">
+<link rel="canonical" href="https://adrian-erlikhman.github.io/why-wrong/">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233ef2a4'/%3E%3Crect x='17' y='8' width='7' height='7' rx='2' fill='%2306130d'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Why Wrong">
+<meta property="og:title" content="Why Wrong — find the misconception behind every wrong answer">
+<meta property="og:description" content="Works out the specific misunderstanding behind each wrong answer, groups a class by what it actually believes, and audits which questions measured anything. Runs in your browser.">
+<meta property="og:url" content="https://adrian-erlikhman.github.io/why-wrong/">
+<meta property="og:image" content="https://adrian-erlikhman.github.io/why-wrong/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -15,39 +26,58 @@
 
 <!-- ============================== APP BAR ============================== -->
 <header class="bar">
-  <div class="bar-in">
+  <div class="bar-top">
     <a class="brand" href="./">
       <span class="brand-mark" aria-hidden="true"></span>
       Why&nbsp;Wrong
     </a>
+    <span class="brand-tag">Find the misconception behind every wrong answer</span>
 
-    <div class="bar-controls">
-      <div class="field field-select">
-        <label for="pack">Subject</label>
-        <select id="pack"></select>
-      </div>
-      <button id="new-subject" class="btn btn-quiet">New subject</button>
+    <div class="bar-end">
+      <button id="demo" class="btn btn-quiet btn-icon" type="button">
+        <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M4 2.2v11.6L13.4 8z" fill="currentColor"/></svg>
+        Demo
+      </button>
+      <a class="btn btn-quiet src-link" href="https://github.com/adrian-erlikhman/why-wrong">Source <span aria-hidden="true">&#8599;</span></a>
+      <button id="bar-toggle" class="btn btn-quiet btn-icon bar-toggle" type="button" aria-expanded="false" aria-controls="toolbar">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4.5h7M13 4.5h1M2 11.5h1M7 11.5h7"/><circle cx="11" cy="4.5" r="1.8"/><circle cx="5" cy="11.5" r="1.8"/></svg>
+        Setup
+      </button>
+    </div>
+  </div>
 
-      <span class="bar-div" aria-hidden="true"></span>
-
-      <div class="field field-select">
-        <label for="source">Class</label>
-        <select id="source">
-          <option value="sample">Sample class</option>
-          <option value="import">Paste my class…</option>
-        </select>
-      </div>
-      <div class="field sample-only">
-        <label for="size">Size</label>
-        <input id="size" type="number" value="28" min="12" max="120">
-      </div>
-      <div class="field sample-only">
-        <label for="seed">Variant</label>
-        <input id="seed" type="number" value="7" min="1" max="9999">
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar-in">
+      <div class="tool-group">
+        <div class="field field-select">
+          <label for="pack">Subject</label>
+          <select id="pack"></select>
+        </div>
+        <button id="new-subject" class="btn btn-quiet" type="button">+ New subject</button>
       </div>
 
-      <button id="materials" class="btn btn-quiet">Materials</button>
-      <button id="run" class="btn btn-primary">Analyse</button>
+      <div class="tool-group">
+        <div class="field field-select">
+          <label for="source">Class</label>
+          <select id="source">
+            <option value="sample">Sample class</option>
+            <option value="import">Paste my class…</option>
+          </select>
+        </div>
+        <div class="field field-num sample-only">
+          <label for="size">Size</label>
+          <input id="size" type="number" value="28" min="12" max="120">
+        </div>
+        <div class="field field-num sample-only">
+          <label for="seed">Variant</label>
+          <input id="seed" type="number" value="7" min="1" max="9999">
+        </div>
+      </div>
+
+      <div class="tool-group tool-end">
+        <button id="materials" class="btn btn-quiet" type="button">Materials</button>
+        <button id="run" class="btn btn-primary" type="button">Analyse</button>
+      </div>
     </div>
   </div>
 </header>
@@ -61,8 +91,6 @@
       works out the <b>specific misunderstanding</b> behind each wrong answer, the few groups your
       class actually splits into, and which of your questions measured anything at all.
     </p>
-
-
     <p class="hero-meta" id="pack-line"></p>
   </div>
 </section>
@@ -103,11 +131,11 @@
       <button id="reorder" class="btn btn-primary">Sort into groups</button>
     </div>
 
-    <div class="hint">
-      <b>Click a row</b> to see one student and the exact evidence behind their diagnosis.
-      <b>Click a column</b> to see how the class answered that question.
-      <b>Click a colour below</b> to show only that misunderstanding.
-    </div>
+    <ul class="hint">
+      <li><b>Click a row</b> for one student&rsquo;s diagnosis and the evidence behind it</li>
+      <li><b>Click a column</b> to see how the class answered that question</li>
+      <li><b>Click a colour</b> in the key to show only that misunderstanding</li>
+    </ul>
 
     <div class="board">
       <div class="board-scroll">
@@ -269,14 +297,46 @@
 </main>
 
 <footer class="foot">
-  <div class="wrap">
-    <p>
-      Built for the Prometheus August AI Challenge. Everything runs in your browser &mdash; no server,
-      no account, and no class data ever leaves this page.
-    </p>
-    <p><a href="https://github.com/adrian-erlikhman/why-wrong">Source on GitHub &rarr;</a></p>
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <p>
+        <b>Why Wrong</b> &mdash; built for the Prometheus August AI Challenge. Everything runs in your
+        browser: no server, no account, and no class data ever leaves this page.
+      </p>
+    </div>
+    <nav class="foot-links" aria-label="More">
+      <button class="linkish" type="button" data-demo>Take the tour</button>
+      <a href="https://github.com/adrian-erlikhman/why-wrong">Source on GitHub</a>
+    </nav>
   </div>
 </footer>
+
+<!-- ============================ INTRO / DEMO =========================== -->
+<div id="intro" class="modal" hidden>
+  <div class="modal-card intro-card" role="dialog" aria-modal="true" aria-labelledby="intro-title">
+    <div class="intro-kicker"><span class="brand-mark" aria-hidden="true"></span> Why Wrong &middot; 45-second tour</div>
+    <h3 id="intro-title">Find the misunderstanding behind every wrong answer.</h3>
+    <p>
+      A red X only says a student was wrong. Why Wrong works out <em>why</em> &mdash; which specific
+      misunderstanding each wrong answer reveals &mdash; then groups the class by what it believes and
+      checks which of your questions measured anything.
+    </p>
+    <ol class="intro-steps">
+      <li><span><b>The class map.</b> Every answer, coloured by what it reveals.</span></li>
+      <li><span><b>One click sorts the class</b> into the few groups it really forms.</span></li>
+      <li><span><b>A reteach for each group,</b> and an audit of the test itself.</span></li>
+    </ol>
+    <p class="intro-note">Running live in your browser on a sample class. No account, no API key.</p>
+    <div class="modal-actions">
+      <button id="intro-skip" class="btn btn-quiet" type="button">Explore on my own</button>
+      <button id="intro-go" class="btn btn-primary btn-icon" type="button">
+        <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M4 2.2v11.6L13.4 8z" fill="currentColor"/></svg>
+        Start the tour
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- =========================== SUBJECT MODAL =========================== -->
 <div id="modal" class="modal" hidden>
@@ -310,6 +370,30 @@
   </div>
 </div>
 
+<!-- ============================= KEY MODAL ============================= -->
+<div id="keymodal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="key-title">
+    <h3 id="key-title">Rewrite the plans for this class</h3>
+    <p>
+      A model rewrites each group&rsquo;s reteach for the exact mix of misunderstandings that group
+      shares. That step needs an Anthropic API key &mdash; everything else on this page works without one.
+    </p>
+
+    <div class="modal-field">
+      <label for="key-input">Anthropic API key</label>
+      <input id="key-input" type="password" placeholder="sk-ant-..." autocomplete="off">
+      <p class="hint-s">Held in this tab only. Never stored, never logged, sent nowhere except api.anthropic.com.</p>
+    </div>
+
+    <p class="modal-err" id="key-err"></p>
+
+    <div class="modal-actions">
+      <button id="key-cancel" class="btn btn-quiet">Cancel</button>
+      <button id="key-go" class="btn btn-primary">Rewrite</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============================ IMPORT MODAL =========================== -->
 <div id="import" class="modal" hidden>
   <div class="modal-card modal-wide" role="dialog" aria-modal="true" aria-labelledby="import-title">
@@ -317,8 +401,9 @@
     <p>
       One row per student, one column per question. Copy straight out of a spreadsheet. Answers can be
       letters (<span class="mono">A B C D</span>), numbers (<span class="mono">1 2 3 4</span>), or the
-      answer text itself. Leave a cell blank if a student skipped it &mdash; blanks count as no evidence
-      rather than as a wrong answer.
+      answer text itself &mdash; letters and numbers as printed on the paper from <b>Materials</b>.
+      Leave a cell blank if a student skipped it &mdash; blanks count as no evidence rather than as a
+      wrong answer.
     </p>
 
     <div class="import-tools">

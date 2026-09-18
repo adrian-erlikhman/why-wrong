@@ -21,9 +21,10 @@ import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
+import { initTour } from './tour.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, download, openPrintable,
-  parseResponses, groupsCsv, OMITTED
+  parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter
 } from './importer.js';
 
 const $ = s => document.querySelector(s);
@@ -37,6 +38,11 @@ function el(tag, cls, text) {
 }
 
 const ROW_H = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row'), 10) || 19;
+
+const VERDICTS = {
+  strong: 'Working well', ok: 'Fine', diagnostic: 'Diagnosing, not ranking',
+  minor: 'Minor issue', weak: 'Worth rewriting', broken: 'Measuring backwards'
+};
 
 let colourOf = {};
 function assignColours(pack) {
@@ -200,7 +206,7 @@ function renderMatrix() {
         else { c.classList.add('slip'); what = 'wrong, no pattern'; }
       }
 
-      c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose “${item.opts[choice].t}”` : 'left blank'} (${what})`;
+      c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose ${paperLetter(item, choice)} “${item.opts[choice].t}”` : 'left blank'} (${what})`;
       c.addEventListener('click', e => { e.stopPropagation(); openQuestion(ctx(), i); });
       r.appendChild(c);
     });
@@ -210,7 +216,6 @@ function renderMatrix() {
     state.rows.push(r);
   });
 
-  host.style.height = `${cls.responses.length * ROW_H() + 6}px`;
   layout(cls.responses.map((_, i) => i));
   renderLegend();
   setMatrixNote(false);
@@ -223,11 +228,17 @@ function setMatrixNote(sorted) {
     : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
 }
 
+let laidRowH = 0;
+
 function layout(order) {
   const h = ROW_H();
   order.forEach((student, pos) => {
     state.rows[student].style.transform = `translateY(${pos * h}px)`;
   });
+  // Row height is a CSS variable that changes at breakpoints, so the board's
+  // height has to follow it rather than be fixed once at render time.
+  $('#matrix').style.height = `${order.length * h + 6}px`;
+  laidRowH = h;
 }
 
 function sortRows() {
@@ -574,11 +585,7 @@ function itemCard(s) {
   stem.appendChild(el('span', null, s.stem));
   top.appendChild(stem);
 
-  const verdict = {
-    strong: 'Working well', ok: 'Fine', diagnostic: 'Diagnosing, not ranking',
-    minor: 'Minor issue', weak: 'Worth rewriting', broken: 'Measuring backwards'
-  }[s.quality] || '';
-  top.appendChild(el('span', `verdict v-${s.quality}`, verdict));
+  top.appendChild(el('span', `verdict v-${s.quality}`, VERDICTS[s.quality] || ''));
   card.appendChild(top);
 
   if (s.flags.length) {
@@ -591,10 +598,16 @@ function itemCard(s) {
     card.appendChild(el('p', 'item-note', s.note));
   }
 
+  // Options in the order they are printed on paper, lettered to match.
+  const item = state.pack.items[s.index];
   const bars = el('div', 'bars');
-  s.options.forEach(o => {
+  paperOrder(item).map(oi => s.options[oi]).forEach((o, k) => {
     const row = el('div', `bar-row${o.correct ? ' correct' : ''}`);
-    row.appendChild(el('span', 'bar-t', o.text));
+    const t = el('span', 'bar-t');
+    t.appendChild(el('span', 'opt-l', 'ABCDEFGH'[k]));
+    t.appendChild(document.createTextNode(o.text));
+    t.title = o.text;
+    row.appendChild(t);
     const track = el('span', 'bar-track');
     const fill = el('span', 'bar-fill');
     fill.style.width = `${Math.max(1.5, o.share * 100)}%`;
@@ -699,7 +712,9 @@ function renderPackOptions(selectedId) {
   const sel = $('#pack');
   sel.innerHTML = '';
   allPacks().forEach(p => {
-    const o = el('option', null, `${p.name} — ${p.subject}`);
+    // The subject is already in the line under the headline; the name alone
+    // keeps the toolbar to one row.
+    const o = el('option', null, p.name);
     o.value = p.id;
     if (p.id === selectedId) o.selected = true;
     sel.appendChild(o);
@@ -804,8 +819,9 @@ function reportImport(res) {
   box.className = `import-report ${res.ok ? 'good' : 'bad'}`;
 
   if (res.ok) {
+    const readAs = { letters: 'letters', numbers: 'option numbers', text: 'answer text' }[res.coding];
     box.appendChild(el('div', 'ir-h',
-      `Read ${res.responses.length} student${res.responses.length === 1 ? '' : 's'} × ${state.pack.items.length} questions, matched by ${res.matchedBy}.`));
+      `Read ${res.responses.length} student${res.responses.length === 1 ? '' : 's'} × ${state.pack.items.length} questions, matched by ${res.matchedBy}, answers read as ${readAs}.`));
   } else {
     box.appendChild(el('div', 'ir-h', 'Could not read this yet.'));
   }
@@ -830,10 +846,9 @@ function doImport() {
 function demoPaste() {
   const pack = state.pack;
   const cls = state.cls;
-  const letters = 'ABCDEFGH';
   const head = ['Student', ...pack.items.map(i => i.id)].join(',');
   const rows = cls.students.slice(0, 12).map((st, s) =>
-    [st.name, ...cls.responses[s].map(c => (c >= 0 ? letters[c] : ''))].join(','));
+    [st.name, ...cls.responses[s].map((c, i) => (c >= 0 ? paperLetter(pack.items[i], c) : ''))].join(','));
   $('#import-text').value = [head, ...rows].join('\n');
 }
 
@@ -873,14 +888,41 @@ function printPlan() {
 /*  Plan rewriting                                                          */
 /* ======================================================================== */
 
-async function adaptPlans() {
-  if (!state.apiKey) {
-    const key = window.prompt('Anthropic API key (held in this tab only, never stored):');
-    if (!key) return;
-    state.apiKey = key.trim();
-    setKey(state.apiKey);
-  }
+/** Ask for a key in a proper dialog; `message` explains a failed attempt. */
+function openKeyModal(message = '') {
+  $('#key-err').textContent = message;
+  $('#key-input').value = state.apiKey || '';
+  $('#key-go').disabled = false;
+  $('#key-go').textContent = message ? 'Try again' : 'Rewrite';
+  openM('#keymodal');
+  $('#key-input').focus();
+}
 
+async function submitKey() {
+  const key = $('#key-input').value.trim();
+  if (!key) {
+    $('#key-err').textContent = 'Paste a key first. Everything else on the page works without one.';
+    return;
+  }
+  state.apiKey = key;
+  setKey(key);
+  const go = $('#key-go');
+  go.disabled = true;
+  go.textContent = 'Rewriting…';
+  $('#key-err').textContent = '';
+  const failed = await rewriteGroups();
+  if (failed) openKeyModal(failed);
+  else closeM('#keymodal');
+}
+
+async function adaptPlans() {
+  if (!state.apiKey) { openKeyModal(); return; }
+  const failed = await rewriteGroups();
+  if (failed) openKeyModal(failed);
+}
+
+/** Rewrite every group's plan. Returns the reason if not one of them came back. */
+async function rewriteGroups() {
   const btn = $('#regen');
   btn.disabled = true;
   btn.textContent = 'Rewriting…';
@@ -898,6 +940,7 @@ async function adaptPlans() {
   btn.disabled = false;
   btn.textContent = ok === real.length ? 'Rewritten for this class' : `Rewrote ${ok} of ${real.length}`;
   setTimeout(() => { btn.textContent = 'Rewrite for this class'; }, 5000);
+  return real.length && !ok ? results[0]._error : null;
 }
 
 /* ======================================================================== */
@@ -955,6 +998,18 @@ $('#export-plan').addEventListener('click', exportPlan);
 $('#regen').addEventListener('click', adaptPlans);
 $('#student-search').addEventListener('input', renderStudents);
 
+$('#key-cancel').addEventListener('click', () => closeM('#keymodal'));
+$('#key-go').addEventListener('click', submitKey);
+$('#key-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitKey(); });
+
+// On a phone the toolbar folds away behind "Setup", so the page opens on the
+// analysis rather than on five rows of controls.
+function setToolbar(open) {
+  document.body.classList.toggle('toolbar-open', open);
+  $('#bar-toggle').setAttribute('aria-expanded', String(open));
+}
+$('#bar-toggle').addEventListener('click', () => setToolbar(!document.body.classList.contains('toolbar-open')));
+
 $$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }));
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
@@ -974,27 +1029,56 @@ $$('#item-filter .seg-b').forEach(b => b.addEventListener('click', () => {
 
 window.addEventListener('resize', () => {
   if (!state.cls) return;
-  layout(state.sorted ? state.groups.flatMap(g => g.members) : state.cls.responses.map((_, i) => i));
+  // Crossing a breakpoint changes the row height, and the group bands were
+  // drawn at the old one, so a sorted map is redrawn rather than just moved.
+  if (state.sorted && ROW_H() !== laidRowH) sortRows();
+  else layout(state.sorted ? state.groups.flatMap(g => g.members) : state.cls.responses.map((_, i) => i));
 });
 
-/**
- * The tab strip sticks directly beneath the app bar, so it needs the bar's real
- * height. Hard-coding it is wrong twice over: it drifts when the webfont settles,
- * and the bar wraps to more rows at narrow widths. Measure it, and keep measuring.
- */
-function syncBarHeight() {
-  const h = Math.round($('.bar').getBoundingClientRect().height);
-  // Reject readings taken mid-reflow: a zero or absurd height would pin the tab
-  // strip somewhere useless and no later event is guaranteed to correct it.
-  if (h < 30 || h > 400) return;
-  document.documentElement.style.setProperty('--bar-h', `${h}px`);
+/* ======================================================================== */
+/*  Tour                                                                    */
+/* ======================================================================== */
+
+/** What the tour says about the class on screen, computed rather than canned. */
+function tourFacts() {
+  const real = state.groups.filter(g => !g.isSecure);
+  const byId = misById(state.pack);
+  const bad = problemItems(state.stats);
+  const top = real[0];
+  const f = {
+    students: state.cls.students.length,
+    groups: real.length,
+    topSize: top?.size ?? 0,
+    topName: top ? (byId[top.signature[0]?.id]?.name ?? null) : null,
+    items: state.pack.items.length,
+    bad: bad.length,
+    worstId: bad[0]?.id,
+    worstVerdict: bad[0] ? VERDICTS[bad[0].quality] : null,
+    recall: null,
+    precision: null
+  };
+  if (state.cls.truth) {
+    const dq = scoreDiagnosis(diagnose(state.inf.posterior, state.inf.misIds), state.cls.truth, state.inf.misIds);
+    f.recall = fmtPct(dq.recall);
+    f.precision = fmtPct(dq.precision);
+  }
+  return f;
 }
-syncBarHeight();
-if ('ResizeObserver' in window) new ResizeObserver(syncBarHeight).observe($('.bar'));
-if (document.fonts?.ready) document.fonts.ready.then(syncBarHeight);
-window.addEventListener('resize', syncBarHeight);
-window.addEventListener('orientationchange', syncBarHeight);
-window.addEventListener('load', syncBarHeight);
+
+const tour = initTour({
+  facts: tourFacts,
+  show: showView,
+  setSorted: on => { if (on !== state.sorted) toggleSort(); },
+  openToolbar: () => setToolbar(true),
+  openImport,
+  closeDrawer
+});
+$('#demo').addEventListener('click', tour.openIntro);
+$$('[data-demo]').forEach(b => b.addEventListener('click', tour.start));
+
+/* ======================================================================== */
+/*  Start                                                                   */
+/* ======================================================================== */
 
 wireMaterials();
 state.pack = defaultPack();
@@ -1009,3 +1093,5 @@ run();
   if (v && $(`#view-${v}`)) showView(v);
   if (q.get('sorted') === '1' && !state.sorted) toggleSort();
 }
+
+tour.maybeOpen();

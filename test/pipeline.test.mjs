@@ -15,6 +15,7 @@ import { inferMisconceptions, diagnose } from '../js/infer.js';
 import { clusterStudents, describeClusters } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml } from '../js/importer.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -90,6 +91,40 @@ for (const pack of BUILT_IN) {
     const flaggedIds = new Set(bad.map(b => b.id));
     planted.forEach(id => check(`planted defective item ${id} is flagged`, flaggedIds.has(id)));
   }
+
+  // ------------------------------------------------------- paper round trip
+  // What a teacher copies off the printed paper has to read back as exactly
+  // the answers that were given, and the printed key must not be one letter.
+  console.log('\n-- paper round trip --');
+  check('paper order is a permutation for every item', pack.items.every(it => {
+    const o = paperOrder(it);
+    return o.length === it.opts.length && new Set(o).size === o.length;
+  }));
+
+  const keyRow = pack.items.map(it => paperLetter(it, it.opts.findIndex(o => o.c)));
+  const keyCounts = [...'ABCD'].map(l => keyRow.filter(k => k === l).length);
+  console.log(`  printed key  ${[...'ABCD'].map((l, k) => `${l}:${keyCounts[k]}`).join('  ')}`);
+  check('printed key spreads across the letters (none above 40%)',
+    Math.max(...keyCounts) <= Math.ceil(pack.items.length * 0.4), keyCounts.join('/'));
+
+  const keyed = [...quizHtml(pack, { withKey: true })
+    .matchAll(/<span class="l">([A-H])\.<\/span>[^<]*<b>&larr; key<\/b>/g)].map(m => m[1]);
+  check('printed answer key marks the same letters', keyed.join('') === keyRow.join(''));
+
+  const header = ['Student', ...pack.items.map(i => i.id)].join(',');
+  const asCsv = enc => [header, ...cls.responses.map((row, s) =>
+    [cls.students[s].name, ...row.map((c, i) => enc(pack.items[i], c))].join(','))].join('\n');
+  const readsBack = res => res.ok &&
+    res.responses.every((row, s) => row.every((c, i) => c === cls.responses[s][i]));
+  check('letters copied off the paper read back exactly',
+    readsBack(parseResponses(pack, asCsv((it, c) => paperLetter(it, c)))));
+  check('numbers copied off the paper read back exactly',
+    readsBack(parseResponses(pack, asCsv((it, c) => String(paperOrder(it).indexOf(c) + 1)))));
+  check('answer text reads back exactly',
+    readsBack(parseResponses(pack, asCsv((it, c) => `"${it.opts[c].t.replace(/"/g, '""')}"`))));
+  const perfect = parseResponses(pack, `${header}\nKey,${keyRow.join(',')}`);
+  check('the printed key scores full marks',
+    perfect.ok && totalScores(pack, perfect.responses)[0] === pack.items.length);
 
   // -------------------------------------------------------- recovery sweep
   console.log('\n-- recovery across 40 seeds --');

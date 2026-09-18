@@ -29,6 +29,33 @@ export function hasKey() { return !!apiKey; }
 export function clearKey() { apiKey = null; }
 
 /**
+ * A failed API call, as a sentence a teacher can act on. The raw error body is
+ * JSON ({type: "error", error: {type, message}}), which is noise to anyone who
+ * is not a developer; the status code says what actually went wrong.
+ */
+export async function apiFailure(res) {
+  let detail = '';
+  try { detail = (await res.json())?.error?.message || ''; } catch { /* body was not JSON */ }
+  const why = detail ? `: ${detail}` : '.';
+  const say = {
+    400: `The API turned the request down${why}`,
+    401: 'Anthropic did not accept that API key. Check it was pasted in full (it starts with sk-ant-) and has not been revoked.',
+    403: `That key is not allowed to make this request${why}`,
+    404: `The model this tool uses is not available to that key${why}`,
+    413: 'The request was too large for the API.',
+    429: 'That key has hit its rate limit. Wait a minute, then try again.'
+  }[res.status] ?? (res.status >= 500
+    ? 'Anthropic’s API is overloaded or having trouble right now. Try again in a minute.'
+    : `The API returned an error${why}`);
+  return new Error(`${say} (HTTP ${res.status})`);
+}
+
+/** fetch() itself rejecting: the request never got an answer at all. */
+export function networkFailure() {
+  return new Error('Could not reach api.anthropic.com. Check your connection, or whether a browser extension is blocking it, and try again.');
+}
+
+/**
  * Rewrite one cluster's reteach plan.
  * @param {object} cluster  { size, signature: [{id, inMean}], misDetails: [...] }
  * @returns {Promise<{headline: string, plan: string, verify: string[]}>}
@@ -55,25 +82,27 @@ Write a single focused reteach plan for this group specifically. Requirements:
 Respond as JSON only, with this exact shape:
 {"headline": "<6 words or fewer naming the root cause>", "plan": "<2-4 sentences>", "verify": ["<q1>", "<q2>", "<q3>"]}`;
 
-  const res = await fetch(ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`Anthropic API ${res.status}${detail ? `: ${detail.slice(0, 180)}` : ''}`);
+  let res;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+  } catch {
+    throw networkFailure();
   }
+
+  if (!res.ok) throw await apiFailure(res);
 
   const data = await res.json();
   const text = (data.content || []).map(c => c.text || '').join('').trim();
