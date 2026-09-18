@@ -17,6 +17,7 @@ computed.
 Built for the Prometheus August AI Challenge (August 2026).
 
 **Live:** https://adrianerlikhman.is-a.dev/why-wrong/
+(served from the [site repo](https://github.com/adrian-erlikhman/adrianerlikhman.is-a.dev/tree/main/why-wrong) — see [Deployment](#deployment))
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
 Deep links: `?view=groups` (or `students`, `items`, `validation`, `method`) opens a tab
@@ -277,3 +278,29 @@ test/pipeline.test.mjs runs every built-in pack
 ## License
 
 MIT
+
+---
+
+## Deployment
+
+The live copy is served from the **site repo**, at
+[`adrianerlikhman.is-a.dev/why-wrong/`](https://github.com/adrian-erlikhman/adrianerlikhman.is-a.dev/tree/main/why-wrong),
+alongside `eDNAtlas/` and `linkedin-games-unlimited/`.
+
+It has to live there. `adrianerlikhman.is-a.dev` is claimed by that repo's root
+`CNAME`, and a GitHub Pages hostname is served by exactly one site — so the
+`/why-wrong/` path is answered by the site repo, never by this repo's own Pages
+build. Publishing here alone leaves the advertised URL a 404.
+
+**This repo stays the source of truth.** After changing anything under
+`index.html`, `css/` or `js/`, re-sync the deployed copy:
+
+```sh
+rsync -a --delete \
+  --exclude .git --exclude test --exclude package.json \
+  --exclude LICENSE --exclude README.md --exclude .gitignore --exclude .nojekyll \
+  ./ ../adrianerlikhman.is-a.dev/why-wrong/
+```
+
+Everything is relative-path and `.nojekyll` is committed, so the app runs
+unchanged from any subpath.
