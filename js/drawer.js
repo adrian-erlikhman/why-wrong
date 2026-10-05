@@ -124,7 +124,7 @@ export function openStudent(ctx, s) {
 
   // --- what to do ----------------------------------------------------------
   const top = acted[0] && byId[acted[0].mid];
-  if (top) {
+  if (top?.reteach) {
     wrap.appendChild(el('div', 'dr-h', 'What to do'));
     wrap.appendChild(el('p', 'dr-plan', top.reteach));
     if (top.verify?.length) {

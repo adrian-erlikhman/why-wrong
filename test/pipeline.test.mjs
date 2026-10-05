@@ -8,14 +8,14 @@
  * same thresholds apply to all of them.
  */
 
-import { BUILT_IN } from '../js/packs/index.js';
+import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES } from '../js/pack.js';
 import { generateClass, totalScores } from '../js/simulate.js';
 import { inferMisconceptions, diagnose } from '../js/infer.js';
 import { clusterStudents, describeClusters } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
-import { paperOrder, paperLetter, parseResponses, quizHtml } from '../js/importer.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml } from '../js/importer.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -154,6 +154,50 @@ for (const pack of BUILT_IN) {
   check('mean ARI above 0.40', mean(agg.ari) > 0.40, mean(agg.ari).toFixed(3));
   planted.forEach(id =>
     check(`${id} caught in >=85% of seeds`, plantedHits[id] >= 34, `${plantedHits[id]}/40`));
+}
+
+// --------------------------------------------------- a teacher's own test
+// A test that is already on paper keeps its order: her "A" has to be our "A",
+// or every answer she pastes is read as a different option.
+{
+  console.log(`\n${'='.repeat(66)}\nA teacher's own test (keepOrder)\n${'='.repeat(66)}`);
+  const own = structuredClone(BUILT_IN[1]);
+  own.id = 'teacher-test';
+  own.keepOrder = true;
+  own.items.forEach(it => { it.id = `T-${it.id}`; });
+  addPack(own);
+  check('every item prints in stored order', own.items.every(it =>
+    paperOrder(it).every((oi, k) => oi === k)));
+  check('the key letter is the stored position', own.items.every(it =>
+    paperLetter(it, it.opts.findIndex(o => o.c)) === 'ABCDEFGH'[it.opts.findIndex(o => o.c)]));
+  const c = generateClass(own, { seed: 3, size: 28 });
+  const csv = [['Student', ...own.items.map(i => i.id)].join(','),
+    ...c.responses.map((row, s) => [`S${String(s + 1).padStart(2, '0')}`,
+      ...row.map(ch => (ch >= 0 ? 'ABCDEFGH'[ch] : ''))].join(','))].join('\n');
+  const back = parseResponses(own, csv);
+  check('her letters read back as the options she printed', back.ok &&
+    back.responses.every((row, s) => row.every((ch, i) => ch === c.responses[s][i])));
+
+  // Her file carries names and tags only: no reteach plans, no archetypes, a
+  // true/false question, and wrong options left unlabelled as slips.
+  const bare = {
+    id: 'bare-test', name: 'Bare test', keepOrder: true,
+    misconceptions: [{ id: 'X1', name: 'Motion needs a force' }, { id: 'X2', name: 'No motion means no force' }],
+    items: [
+      ...[1, 2, 3, 4].map(n => ({ id: `B${n}`, stem: `Question ${n}`, opts: [
+        { t: `right ${n}`, c: true }, { t: `x1 ${n}`, mis: 'X1' }, { t: `x2 ${n}`, mis: 'X2' }, { t: `slip ${n}` }] })),
+      { id: 'B5', stem: 'True or false?', opts: [{ t: 'True', mis: 'X2' }, { t: 'False', c: true }] }
+    ]
+  };
+  check('a bare file with a true/false question validates', validatePack(bare).ok, validatePack(bare).errors.join('; '));
+  addPack(bare);
+  const bc = generateClass(bare, { seed: 5, size: 26 });
+  const bi = inferMisconceptions(bare, bc.responses);
+  check('inference on it gives real probabilities', bi.posterior.flat().every(p => p >= 0 && p <= 1));
+  const sheet = reviewHtml(bare);
+  check('the review sheet lists every misconception and question',
+    bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
+  check('the review sheet marks unlabelled options as slips', (sheet.match(/careless slip<\/span>/g) || []).length === 4);
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);

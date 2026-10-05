@@ -363,6 +363,13 @@
     <div class="modal-progress" id="modal-progress" hidden></div>
     <p class="modal-err" id="modal-err"></p>
 
+    <div class="modal-field">
+      <label for="pack-open">Or open a test file</label>
+      <button id="pack-open" class="btn btn-quiet" type="button">Open a .json file…</button>
+      <input id="pack-file" type="file" accept=".json,application/json" hidden>
+      <p class="hint-s">For a teacher's own test, already tagged. It is read in this tab and never uploaded, and her option order is kept as printed.</p>
+    </div>
+
     <div class="modal-actions">
       <button id="modal-cancel" class="btn btn-quiet">Cancel</button>
       <button id="modal-go" class="btn btn-primary">Build it</button>
@@ -435,6 +442,10 @@
       <button class="mat" id="mat-key">
         <span class="mat-t">Print the answer key</span>
         <span class="mat-d">Same questions with the correct answer marked, for marking by hand.</span>
+      </button>
+      <button class="mat" id="mat-review">
+        <span class="mat-t">Print the labels for the teacher to check</span>
+        <span class="mat-d">Every wrong answer with its misconception and a line to agree or fix it, plus a page for her predictions before any results.</span>
       </button>
       <button class="mat" id="mat-sheet">
         <span class="mat-t">Download a blank answer sheet</span>

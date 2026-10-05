@@ -24,6 +24,9 @@ export function getPack(id) {
 }
 
 export function addPack(pack) {
+  // A pack built from a teacher's own test keeps her option order on every
+  // item, or her "A" and ours would differ and every diagnosis would be wrong.
+  if (pack.keepOrder) pack.items.forEach(it => { it.keepOrder = true; });
   registry.set(pack.id, pack);
   return pack;
 }

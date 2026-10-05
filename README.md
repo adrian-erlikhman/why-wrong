@@ -50,6 +50,22 @@ The loop closes in both directions, on paper.
 Nothing is uploaded. There is no account, no server, and the class data never
 leaves the tab.
 
+### A teacher's own test
+
+A test that already exists on paper can be used as it is. Write it as a pack
+file (JSON: misconceptions, and each question's options in her printed order,
+with every wrong option tagged or left untagged as a slip), then **+ New
+subject → Open a .json file**. The file is read in the tab and never uploaded,
+and her option order is kept, so her "A" is the tool's "A". True/false
+questions work.
+
+**Materials → Print the labels for the teacher to check** gives her every
+wrong answer with its label and a line to agree or fix it, plus a first page
+for her predictions, written before she sees any result. Answers come back as
+one row per student (S01, S02…) and one letter per question.
+
+Keep teachers' tests in `local/`, which git ignores: the repo is public.
+
 ### Every diagnosis opens up
 
 A tool that says *"Milo holds the sign-distribution misconception, 87%"* and

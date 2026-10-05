@@ -44,11 +44,16 @@ function idSeed(id) {
   return h >>> 0;
 }
 
-/** Stored option index printed at each position: order[k] is letter k's option. */
+/**
+ * Stored option index printed at each position: order[k] is letter k's option.
+ * An item marked keepOrder is a teacher's own question, already on paper in
+ * her order, so its letters are the stored order and nothing is shuffled.
+ */
 export function paperOrder(item) {
   let order = orderCache.get(item);
   if (!order) {
-    order = shuffled(makeRng(idSeed(item.id)), item.opts.map((_, i) => i));
+    const stored = item.opts.map((_, i) => i);
+    order = item.keepOrder ? stored : shuffled(makeRng(idSeed(item.id)), stored);
     orderCache.set(item, order);
   }
   return order;
@@ -117,6 +122,74 @@ export function quizHtml(pack, { withKey = false } = {}) {
 <h1>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</h1>
 <div class="meta">${escapeHtml(pack.subject)}${pack.level ? ' · ' + escapeHtml(pack.level) : ''} · ${pack.items.length} questions</div>
 ${withKey ? '' : '<div class="name">Name: ______________________________  Class: ____________  Date: ____________</div>'}
+<ol class="qs">${items}</ol>
+</body></html>`;
+}
+
+/**
+ * The labels, on paper, for the teacher to check before any answers are read:
+ * every wrong option with the misconception it is tagged with, and a line to
+ * agree or fix it. Her predictions go on the first page, written before she
+ * sees a result, so the comparison afterwards is against what she expected
+ * rather than what the tool said.
+ */
+export function reviewHtml(pack) {
+  const mis = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
+  const predict = pack.misconceptions.map(m =>
+    `<li><span class="box"></span><b>${escapeHtml(m.name)}</b>${m.belief ? `<div class="bel">${escapeHtml(m.belief)}</div>` : ''}</li>`).join('');
+
+  const items = pack.items.map((it, n) => {
+    const opts = paperOrder(it).map((oi, k) => {
+      const o = it.opts[oi];
+      const label = o.c ? '<span class="key">correct answer</span>'
+        : o.mis ? `<span class="tag">${escapeHtml(mis[o.mis]?.name ?? o.mis)}</span>`
+        : '<span class="tag none">no label: a careless slip</span>';
+      const check = o.c ? '' : '<div class="chk"><span class="box"></span>agree &nbsp; <span class="box"></span>fix: ______________________________</div>';
+      return `<li><span class="l">${LETTERS[k]}.</span> ${escapeHtml(o.t)}<div class="lab">&rarr; ${label}</div>${check}</li>`;
+    }).join('');
+    return `<li class="q"><div class="stem"><span class="qn">${n + 1}.</span> ${escapeHtml(it.stem)}</div><ul class="opts">${opts}</ul></li>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${escapeHtml(pack.name)} — labels to check</title>
+<style>
+  body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
+  h1{font-size:20px;margin:0 0 2px}
+  h2{font-size:16px;margin:26px 0 6px}
+  .meta{font-size:12px;color:#555;margin-bottom:6px}
+  p{margin:6px 0 12px}
+  ol.qs,ul.pred{padding-left:0;list-style:none;margin:0}
+  ul.pred li{margin-bottom:9px;page-break-inside:avoid}
+  .bel{font-size:12.5px;color:#444;margin-left:26px}
+  li.q{margin-bottom:20px;page-break-inside:avoid}
+  .stem{margin-bottom:5px}
+  .qn{font-weight:bold;margin-right:5px}
+  ul.opts{list-style:none;padding-left:22px;margin:0}
+  ul.opts li{margin-bottom:7px}
+  .l{display:inline-block;width:1.3em;color:#666}
+  .lab{margin-left:1.3em;font-size:13px}
+  .tag{font-style:italic}
+  .tag.none,.key{color:#666}
+  .chk{margin-left:1.3em;font-size:12.5px;color:#333}
+  .box{display:inline-block;width:11px;height:11px;border:1px solid #333;margin-right:6px;vertical-align:-1px}
+  .lines{border-bottom:1px solid #999;height:26px}
+  .brk{page-break-before:always}
+  @media print{body{margin:0}.noprint{display:none}}
+  .noprint{margin-bottom:20px}
+  button{font:inherit;padding:6px 13px;cursor:pointer}
+</style></head><body>
+<div class="noprint"><button onclick="window.print()">Print</button></div>
+<h1>${escapeHtml(pack.name)} — labels to check</h1>
+<div class="meta">${escapeHtml(pack.subject || '')}${pack.level ? ' · ' + escapeHtml(pack.level) : ''} · ${pack.items.length} questions · ${pack.misconceptions.length} misconceptions</div>
+
+<h2>1 · Before you see any results</h2>
+<p>Tick the 2 or 3 misconceptions you expect to be most common in this class. If yours isn't listed, write it below.</p>
+<ul class="pred">${predict}</ul>
+<p>Other: </p><div class="lines"></div>
+<p>Class / period: ______________ &nbsp; Date: ______________</p>
+
+<h2 class="brk">2 · The labels</h2>
+<p>Each wrong answer is labelled with the misconception that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
 <ol class="qs">${items}</ol>
 </body></html>`;
 }

@@ -78,8 +78,9 @@ export function validatePack(pack) {
     else itemIds.add(it.id);
 
     if (!it.stem) errors.push(`${label} has no stem.`);
-    if (!Array.isArray(it.opts) || it.opts.length < 3) {
-      errors.push(`${label} needs at least 3 options.`);
+    // Two options is a true/false question: one wrong answer, still a probe.
+    if (!Array.isArray(it.opts) || it.opts.length < 2) {
+      errors.push(`${label} needs at least 2 options.`);
       return;
     }
 

@@ -11,7 +11,7 @@
  */
 
 import { allPacks, getPack, addPack, defaultPack } from './packs/index.js';
-import { correctIndex, misById } from './pack.js';
+import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, PARAMS } from './infer.js';
 import { clusterStudents, describeClusters } from './cluster.js';
@@ -23,7 +23,7 @@ import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
 import {
-  templateCsv, answerKeyCsv, quizHtml, download, openPrintable,
+  templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter
 } from './importer.js';
 
@@ -427,8 +427,13 @@ function groupCard(g, idx) {
     body.appendChild(el('p', 'belief', details[0].belief));
   }
 
-  body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — rewritten for this group' : 'Reteach'));
-  body.appendChild(el('p', 'plan', g.aiPlan?.plan || details[0]?.reteach || ''));
+  // A teacher's own test may carry no reteach plans yet; leave the heading out
+  // rather than show it over nothing.
+  const plan = g.aiPlan?.plan || details[0]?.reteach;
+  if (plan) {
+    body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — rewritten for this group' : 'Reteach'));
+    body.appendChild(el('p', 'plan', plan));
+  }
 
   const checks = g.aiPlan?.verify || details[0]?.verify || [];
   if (checks.length) {
@@ -758,6 +763,39 @@ function openSubject() {
   $('#topic').focus();
 }
 
+/* ---- a teacher's own test, from a file ---- */
+
+// A file is a test that already exists on paper, so its option order is kept
+// unless the file says otherwise. It is read here and goes nowhere else.
+async function openPackFile(file) {
+  const err = $('#modal-err');
+  err.textContent = '';
+  let pack;
+  try {
+    pack = JSON.parse(await file.text());
+  } catch {
+    err.textContent = `${file.name} is not readable JSON.`;
+    return;
+  }
+  const report = validatePack(pack);
+  if (!report.ok) {
+    err.textContent = `${file.name} can't be used: ${report.errors.slice(0, 3).join(' ')}${report.errors.length > 3 ? ` (${report.errors.length - 3} more)` : ''}`;
+    return;
+  }
+  if (pack.keepOrder !== false) pack.keepOrder = true;
+  pack.id = pack.id || `file-${file.name.replace(/\.json$/i, '')}`;
+  pack.name = pack.name || file.name;
+  pack.source = 'file';
+  addPack(pack);
+  state.imported = null;
+  $('#source').value = 'sample';
+  document.body.classList.remove('has-import');
+  closeM('#modal');
+  state.pack = pack;
+  renderPackOptions(pack.id);
+  run();
+}
+
 function progressStep(text, cls) {
   const box = $('#modal-progress');
   box.hidden = false;
@@ -860,6 +898,9 @@ function wireMaterials() {
   });
   $('#mat-key').addEventListener('click', () => {
     if (!openPrintable(quizHtml(state.pack, { withKey: true }))) alert('Allow pop-ups to print the key.');
+  });
+  $('#mat-review').addEventListener('click', () => {
+    if (!openPrintable(reviewHtml(state.pack))) alert('Allow pop-ups to print the labels.');
   });
   $('#mat-sheet').addEventListener('click', () => {
     download(`${state.pack.id}-answer-sheet.csv`, templateCsv(state.pack));
@@ -985,6 +1026,12 @@ $('#source').addEventListener('change', e => {
 
 $('#modal-cancel').addEventListener('click', () => closeM('#modal'));
 $('#modal-go').addEventListener('click', doGenerate);
+$('#pack-open').addEventListener('click', () => $('#pack-file').click());
+$('#pack-file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) openPackFile(f);
+});
 $('#topic').addEventListener('keydown', e => { if (e.key === 'Enter') doGenerate(); });
 $('#api-key').addEventListener('keydown', e => { if (e.key === 'Enter') doGenerate(); });
 
