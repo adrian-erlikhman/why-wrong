@@ -22,6 +22,7 @@ import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
+import { mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter
@@ -94,6 +95,7 @@ function run() {
   Object.assign(state, { cls, inf, cl, groups, stats, sorted: false, filterMis: null });
 
   renderPackLine();
+  renderExample();
   renderSummary();
   renderMatrix();
   renderGroups();
@@ -115,6 +117,64 @@ function renderPackLine() {
     `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
     (cls.meta.imported ? `${cls.students.length} students imported` : `sample class, variant ${cls.meta.seed}`);
   if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));
+}
+
+/* ======================================================================== */
+/*  Worked example                                                          */
+/* ======================================================================== */
+
+/**
+ * The hero's card: one real question from the class on screen, every option
+ * labelled with what choosing it means. It is the question that best shows the
+ * class's most widespread misunderstanding, so it changes with the class.
+ */
+function renderExample() {
+  const { pack, cls, inf } = state;
+  const host = $('#example');
+  const byId = misById(pack);
+  const count = (i, o) => cls.responses.reduce((n, row) => n + (row[i] === o ? 1 : 0), 0);
+
+  const top = prevalence(inf.posterior, inf.misIds)[0];
+  let at = 0, best = -1;
+  pack.items.forEach((item, i) => {
+    item.opts.forEach((o, k) => {
+      if (top && o.mis === top.id && count(i, k) > best) { best = count(i, k); at = i; }
+    });
+  });
+
+  const item = pack.items[at];
+  const n = cls.students.length;
+  const rows = paperOrder(item).map(k => {
+    const o = item.opts[k];
+    const c = count(at, k);
+    const kind = o.c ? 'is-correct' : (o.mis ? 'is-mis' : 'is-slip');
+    const fill = o.c ? '' : (o.mis ? ` background:${colourOf[o.mis]}` : '');
+    const why = o.c
+      ? 'Correct'
+      : o.mis
+        ? `<span class="sw" style="background:${colourOf[o.mis]}"></span>${mathHtml(byId[o.mis]?.name ?? o.mis)}`
+        : 'Wrong, with no misconception behind it';
+    return `<li class="ex-opt ${kind}">
+      <span class="ex-l">${paperLetter(item, k)}</span>
+      <span class="ex-t">${mathHtml(o.t)}</span>
+      <span class="ex-track"><span class="ex-fill" style="width:${Math.max(2, (c / n) * 100)}%;${fill}"></span></span>
+      <span class="ex-n">${c}</span>
+      <span class="ex-why">${why}</span>
+    </li>`;
+  }).join('');
+
+  host.innerHTML = `
+    <div class="ex-head">
+      <span><b>Question ${item.id}</b>${item.topic ? ' · ' + mathHtml(item.topic) : ''}</span>
+      <span>How ${cls.meta.imported ? 'your' : 'the sample'} class of ${n} answered</span>
+    </div>
+    <p class="ex-q">${mathHtml(item.stem)}</p>
+    <ol class="ex-opts">${rows}</ol>
+    <figcaption class="ex-foot">
+      Every wrong option is written to catch one misunderstanding. One answer proves nothing, so
+      Why Wrong adds up each student&rsquo;s answers across every question that tests the same idea
+      before it names one.
+    </figcaption>`;
 }
 
 /* ======================================================================== */
@@ -333,7 +393,7 @@ function renderLegend() {
     sw.style.background = colourOf[p.id];
     n.appendChild(sw);
     n.appendChild(el('span', 'leg-n', p.id));
-    n.appendChild(el('span', null, m.short || m.name));
+    n.appendChild(setMath(el('span'), m.short || m.name));
     n.appendChild(el('span', 'leg-c', String(p.confident)));
     n.title = m.belief || m.name;
     n.addEventListener('click', () => applyFilter(state.filterMis === p.id ? null : p.id));
@@ -424,7 +484,7 @@ function groupCard(g, idx) {
   const body = el('div', 'group-body');
   if (details[0]?.belief) {
     body.appendChild(el('div', 'lab', 'What they believe'));
-    body.appendChild(el('p', 'belief', details[0].belief));
+    body.appendChild(setMath(el('p', 'belief'), details[0].belief));
   }
 
   // A teacher's own test may carry no reteach plans yet; leave the heading out
@@ -432,14 +492,14 @@ function groupCard(g, idx) {
   const plan = g.aiPlan?.plan || details[0]?.reteach;
   if (plan) {
     body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — rewritten for this group' : 'Reteach'));
-    body.appendChild(el('p', 'plan', plan));
+    body.appendChild(setMath(el('p', 'plan'), plan));
   }
 
   const checks = g.aiPlan?.verify || details[0]?.verify || [];
   if (checks.length) {
     body.appendChild(el('div', 'lab', 'Check it landed'));
     const ul = el('ul', 'checks');
-    checks.forEach(v => ul.appendChild(el('li', null, v)));
+    checks.forEach(v => ul.appendChild(setMath(el('li'), v)));
     body.appendChild(ul);
   }
 
@@ -511,7 +571,7 @@ function renderStudents() {
         const sw = el('span', 'sw');
         sw.style.background = colourOf[x.mid];
         c.appendChild(sw);
-        c.appendChild(el('span', null, `${byId[x.mid]?.short || x.mid} · ${Math.round(x.p * 100)}%`));
+        c.appendChild(setMath(el('span'), `${byId[x.mid]?.short || x.mid} · ${Math.round(x.p * 100)}%`));
         mid.appendChild(c);
       });
       if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
@@ -587,7 +647,7 @@ function itemCard(s) {
   const top = el('div', 'item-top');
   const stem = el('div', 'item-stem');
   stem.appendChild(el('span', 'item-id', s.id));
-  stem.appendChild(el('span', null, s.stem));
+  stem.appendChild(setMath(el('span'), s.stem));
   top.appendChild(stem);
 
   top.appendChild(el('span', `verdict v-${s.quality}`, VERDICTS[s.quality] || ''));
@@ -610,7 +670,7 @@ function itemCard(s) {
     const row = el('div', `bar-row${o.correct ? ' correct' : ''}`);
     const t = el('span', 'bar-t');
     t.appendChild(el('span', 'opt-l', 'ABCDEFGH'[k]));
-    t.appendChild(document.createTextNode(o.text));
+    t.appendChild(setMath(el('span'), o.text));
     t.title = o.text;
     row.appendChild(t);
     const track = el('span', 'bar-track');
@@ -1064,6 +1124,14 @@ document.addEventListener('keydown', e => {
 });
 
 $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+
+// A nav link straight to one tab: open it and scroll so it starts under the tabs.
+$$('[data-to-view]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  showView(a.dataset.toView);
+  const y = $('.main').getBoundingClientRect().top + window.scrollY - $('.tabs').offsetHeight;
+  window.scrollTo({ top: y, behavior: 'smooth' });
+}));
 $$('#item-filter .seg-b').forEach(b => b.addEventListener('click', () => {
   $$('#item-filter .seg-b').forEach(x => x.classList.toggle('is-on', x === b));
   state.itemFilter = b.dataset.f;
@@ -1120,7 +1188,7 @@ const tour = initTour({
   openImport,
   closeDrawer
 });
-$('#demo').addEventListener('click', tour.openIntro);
+$('#demo').addEventListener('click', tour.start);
 $$('[data-demo]').forEach(b => b.addEventListener('click', tour.start));
 
 /* ======================================================================== */

@@ -18,6 +18,7 @@ import { correctIndex, misById } from './pack.js';
 import { PARAMS } from './infer.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
+import { setMath } from './notation.js';
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -126,11 +127,11 @@ export function openStudent(ctx, s) {
   const top = acted[0] && byId[acted[0].mid];
   if (top?.reteach) {
     wrap.appendChild(el('div', 'dr-h', 'What to do'));
-    wrap.appendChild(el('p', 'dr-plan', top.reteach));
+    wrap.appendChild(setMath(el('p', 'dr-plan'), top.reteach));
     if (top.verify?.length) {
       wrap.appendChild(el('div', 'dr-sub', 'Check it landed'));
       const ul = el('ul', 'checks');
-      top.verify.forEach(v => ul.appendChild(el('li', null, v)));
+      top.verify.forEach(v => ul.appendChild(setMath(el('li'), v)));
       wrap.appendChild(ul);
     }
   }
@@ -164,7 +165,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   meter.appendChild(fill);
   card.appendChild(meter);
 
-  if (m?.belief) card.appendChild(el('p', 'dg-belief', m.belief));
+  if (m?.belief) card.appendChild(setMath(el('p', 'dg-belief'), m.belief));
 
   // --- the audit trail -----------------------------------------------------
   const ev = ctx.inf.evidence[s][r.k];
@@ -182,7 +183,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
       const what = c.isCorrect
         ? 'answered correctly'
         : (c.isDiagnostic ? `chose “${c.chose}”` : `chose “${c.chose}” (unrelated slip)`);
-      row.appendChild(el('span', 'ev-what', what));
+      row.appendChild(setMath(el('span', 'ev-what'), what));
       row.appendChild(el('span', 'ev-w', c.logOdds > 0 ? 'supports' : 'argues against'));
       list.appendChild(row);
     });
@@ -207,7 +208,7 @@ export function openQuestion(ctx, i) {
 
   const wrap = el('div', 'dr');
   wrap.appendChild(el('div', 'dr-kicker', `Question ${item.id}${item.topic ? ' · ' + item.topic : ''}`));
-  wrap.appendChild(el('h3', 'dr-title', item.stem));
+  wrap.appendChild(setMath(el('h3', 'dr-title'), item.stem));
 
   const verdict = {
     strong: ['Working well', 'This question separates students who understand from those who do not.'],
@@ -256,7 +257,7 @@ export function openQuestion(ctx, i) {
     const head = el('div', 'opt-head');
     const t = el('span', 'opt-t');
     t.appendChild(el('span', 'opt-l', 'ABCDEFGH'[k]));
-    t.appendChild(document.createTextNode(o.text));
+    t.appendChild(setMath(el('span'), o.text));
     head.appendChild(t);
     head.appendChild(el('span', 'opt-n', `${o.count} · ${Math.round(o.share * 100)}%`));
     row.appendChild(head);
@@ -264,7 +265,7 @@ export function openQuestion(ctx, i) {
     const track = el('div', 'opt-track');
     const fill = el('span', 'opt-fill');
     fill.style.width = `${Math.max(1.5, o.share * 100)}%`;
-    if (o.correct) fill.style.background = 'var(--accent)';
+    if (o.correct) fill.style.background = 'var(--good)';
     else if (o.mis) fill.style.background = colourOf[o.mis];
     track.appendChild(fill);
     row.appendChild(track);

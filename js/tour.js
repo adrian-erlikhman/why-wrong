@@ -53,7 +53,7 @@ const STEPS = [
   },
   {
     title: 'Now try your own class',
-    view: 'matrix', target: '#toolbar', top: true, final: true,
+    view: 'matrix', target: '#toolbar', final: true,
     text: () => 'Pick a subject, or build one for any topic with New subject. Print the questions from Materials, give them to a class, then paste the answers back under Class to analyse your real students.'
   }
 ];

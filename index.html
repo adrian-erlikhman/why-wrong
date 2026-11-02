@@ -6,98 +6,158 @@
 <title>Why Wrong — find the misconception behind every wrong answer</title>
 <meta name="description" content="Marks a class set, works out the specific misconception behind each wrong answer, groups students into the few failure modes they actually share, and tells you which of your questions measured anything. Any subject.">
 <link rel="canonical" href="https://adrian-erlikhman.github.io/why-wrong/">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233ef2a4'/%3E%3Crect x='17' y='8' width='7' height='7' rx='2' fill='%2306130d'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%23fff' stroke='%23c3ccd8' stroke-width='1.5'/%3E%3Cpath d='M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z' fill='%23142033'/%3E%3Cpath d='M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3' fill='none' stroke='%23d1372b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Why Wrong">
 <meta property="og:title" content="Why Wrong — find the misconception behind every wrong answer">
 <meta property="og:description" content="Works out the specific misunderstanding behind each wrong answer, groups a class by what it actually believes, and audits which questions measured anything. Runs in your browser.">
 <meta property="og:url" content="https://adrian-erlikhman.github.io/why-wrong/">
-<meta property="og:image" content="https://adrian-erlikhman.github.io/why-wrong/og.png">
+<meta property="og:image" content="https://adrian-erlikhman.github.io/why-wrong/og.png?v=2026-11-02-pen">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#07090d">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,700&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- ============================== APP BAR ============================== -->
+<!-- ================================ NAV ================================ -->
 <header class="bar">
   <div class="bar-top">
-    <a class="brand" href="./">
-      <span class="brand-mark" aria-hidden="true"></span>
-      Why&nbsp;Wrong
-    </a>
-    <span class="brand-tag">Find the misconception behind every wrong answer</span>
+    <a class="brand" href="./">Why <span class="brand-u">Wrong<svg viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C14 1.5 20 8 33 4.5S52 7.5 64 4.2 84 7.2 98 3.6" fill="none" stroke="#d1372b" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span></a>
+    <nav class="nav-links" aria-label="Page">
+      <a href="#how">How it works</a>
+      <a href="#app">Try it</a>
+      <a href="#app" data-to-view="method">Method</a>
+    </nav>
 
     <div class="bar-end">
-      <button id="demo" class="btn btn-quiet btn-icon" type="button">
-        <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden="true"><path d="M4 2.2v11.6L13.4 8z" fill="currentColor"/></svg>
-        Demo
-      </button>
-      <a class="btn btn-quiet src-link" href="https://github.com/adrian-erlikhman/why-wrong">Source <span aria-hidden="true">&#8599;</span></a>
-      <button id="bar-toggle" class="btn btn-quiet btn-icon bar-toggle" type="button" aria-expanded="false" aria-controls="toolbar">
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4.5h7M13 4.5h1M2 11.5h1M7 11.5h7"/><circle cx="11" cy="4.5" r="1.8"/><circle cx="5" cy="11.5" r="1.8"/></svg>
-        Setup
-      </button>
-    </div>
-  </div>
-
-  <div class="toolbar" id="toolbar">
-    <div class="toolbar-in">
-      <div class="tool-group">
-        <div class="field field-select">
-          <label for="pack">Subject</label>
-          <select id="pack"></select>
-        </div>
-        <button id="new-subject" class="btn btn-quiet" type="button">+ New subject</button>
-      </div>
-
-      <div class="tool-group">
-        <div class="field field-select">
-          <label for="source">Class</label>
-          <select id="source">
-            <option value="sample">Sample class</option>
-            <option value="import">Paste my class…</option>
-          </select>
-        </div>
-        <div class="field field-num sample-only">
-          <label for="size">Size</label>
-          <input id="size" type="number" value="28" min="12" max="120">
-        </div>
-        <div class="field field-num sample-only">
-          <label for="seed">Variant</label>
-          <input id="seed" type="number" value="7" min="1" max="9999">
-        </div>
-      </div>
-
-      <div class="tool-group tool-end">
-        <button id="materials" class="btn btn-quiet" type="button">Materials</button>
-        <button id="run" class="btn btn-primary" type="button">Analyse</button>
-      </div>
+      <a class="btn btn-quiet src-link" href="https://github.com/adrian-erlikhman/why-wrong">GitHub</a>
+      <button id="demo" class="btn btn-primary" type="button">Take the tour</button>
     </div>
   </div>
 </header>
 
 <!-- =============================== HERO ================================ -->
 <section class="hero">
-  <div class="wrap">
-    <h1>&ldquo;You got it <span class="it">wrong</span>&rdquo; is the least useful sentence in education.</h1>
-    <p class="lede">
-      A red X tells a student nothing and a teacher less. Give Why Wrong a marked class set and it
-      works out the <b>specific misunderstanding</b> behind each wrong answer, the few groups your
-      class actually splits into, and which of your questions measured anything at all.
-    </p>
-    <p class="hero-meta" id="pack-line"></p>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">A free assessment tool for teachers</p>
+      <h1>Find the misconception behind every wrong answer.</h1>
+      <p class="lede">
+        A red X tells a student nothing and a teacher less. Give Why Wrong a marked class set and it
+        works out the <b>specific misunderstanding</b> behind each wrong answer, the few groups your
+        class actually splits into, and which of your questions measured anything at all.
+      </p>
+      <div class="hero-cta">
+        <button class="btn btn-primary btn-lg" type="button" data-demo>Take the 45-second tour</button>
+        <a class="btn btn-lg" href="#app">Try it on a sample class</a>
+      </div>
+      <p class="hero-trust">Runs in your browser. No account, and no class data leaves the page.</p>
+    </div>
+
+    <figure class="ex" id="example" aria-label="A worked example from the sample class"></figure>
   </div>
 </section>
 
-<!-- ============================== SUMMARY ============================== -->
-<section class="strip">
+<!-- ============================ HOW IT WORKS =========================== -->
+<section class="how" id="how">
   <div class="wrap">
+    <div class="sec-head">
+      <h2>How it works</h2>
+      <p>Three steps, from a multiple-choice quiz to a plan for Monday.</p>
+    </div>
+    <ol class="steps">
+      <li class="how-step">
+        <span class="how-n">1</span>
+        <h3>Give a quiz where every wrong answer means something</h3>
+        <p>
+          Each wrong option is written to catch one specific misunderstanding, the way concept
+          inventories such as the Force Concept Inventory are built. Algebra 1 and Evolution come
+          built in. For any other topic, a language model writes the questions and the app checks
+          them before they are used.
+        </p>
+      </li>
+      <li class="how-step">
+        <span class="how-n">2</span>
+        <h3>Paste back the class&rsquo;s answers</h3>
+        <p>
+          One row per student, copied straight out of a spreadsheet. Print the quiz, the answer key
+          and a blank answer sheet from Materials. Everything runs in the browser, so student data
+          never leaves the page.
+        </p>
+      </li>
+      <li class="how-step">
+        <span class="how-n">3</span>
+        <h3>See who believes what, and what to reteach</h3>
+        <p>
+          It weighs every answer to estimate which misunderstandings each student holds, groups the
+          students who share one, gives each group a reteach and three check questions, and flags
+          the questions on the test that measured nothing. The diagnosis is statistics, not a
+          language model, and every student&rsquo;s result shows the evidence behind it.
+        </p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================== THE APP ============================== -->
+<section class="app-intro" id="app">
+  <div class="wrap">
+    <div class="app-head">
+      <div>
+        <h2>Try it on a sample class</h2>
+        <p class="sub">
+          Everything below is computed live from a simulated class. Change the subject or the class
+          size, or paste your own class&rsquo;s answers.
+        </p>
+      </div>
+      <button id="bar-toggle" class="btn bar-toggle" type="button" aria-expanded="false" aria-controls="toolbar">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 4.5h7M13 4.5h1M2 11.5h1M7 11.5h7"/><circle cx="11" cy="4.5" r="1.8"/><circle cx="5" cy="11.5" r="1.8"/></svg>
+        Change class
+      </button>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <div class="toolbar-in">
+        <div class="tool-group">
+          <div class="field field-select">
+            <label for="pack">Subject</label>
+            <select id="pack"></select>
+          </div>
+          <button id="new-subject" class="btn btn-quiet" type="button">+ New subject</button>
+        </div>
+
+        <div class="tool-group">
+          <div class="field field-select">
+            <label for="source">Class</label>
+            <select id="source">
+              <option value="sample">Sample class</option>
+              <option value="import">Paste my class…</option>
+            </select>
+          </div>
+          <div class="field field-num sample-only">
+            <label for="size">Size</label>
+            <input id="size" type="number" value="28" min="12" max="120">
+          </div>
+          <div class="field field-num sample-only">
+            <label for="seed">Variant</label>
+            <input id="seed" type="number" value="7" min="1" max="9999">
+          </div>
+        </div>
+
+        <div class="tool-group tool-end">
+          <button id="materials" class="btn" type="button">Materials</button>
+          <button id="run" class="btn btn-primary" type="button">Analyse</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="pack-line" id="pack-line"></p>
+
     <div class="summary" id="summary"></div>
     <p class="strip-note" id="strip-note"></p>
   </div>
@@ -106,12 +166,12 @@
 <!-- =============================== TABS ================================ -->
 <nav class="tabs" aria-label="Analysis views">
   <div class="wrap tabs-in" role="tablist">
-    <button class="tab is-active" role="tab" data-view="matrix" aria-selected="true"><span class="tab-n">01</span> Class map</button>
-    <button class="tab" role="tab" data-view="groups" aria-selected="false"><span class="tab-n">02</span> Reteach groups</button>
-    <button class="tab" role="tab" data-view="students" aria-selected="false"><span class="tab-n">03</span> Students</button>
-    <button class="tab" role="tab" data-view="items" aria-selected="false"><span class="tab-n">04</span> Your questions</button>
-    <button class="tab" role="tab" data-view="validation" aria-selected="false"><span class="tab-n">05</span> Does it work?</button>
-    <button class="tab" role="tab" data-view="method" aria-selected="false"><span class="tab-n">06</span> Method</button>
+    <button class="tab is-active" role="tab" data-view="matrix" aria-selected="true">Class map</button>
+    <button class="tab" role="tab" data-view="groups" aria-selected="false">Reteach groups</button>
+    <button class="tab" role="tab" data-view="students" aria-selected="false">Students</button>
+    <button class="tab" role="tab" data-view="items" aria-selected="false">Your questions</button>
+    <button class="tab" role="tab" data-view="validation" aria-selected="false">Does it work?</button>
+    <button class="tab" role="tab" data-view="method" aria-selected="false">Method</button>
   </div>
 </nav>
 
@@ -299,10 +359,11 @@
 <footer class="foot">
   <div class="wrap foot-in">
     <div class="foot-brand">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="6" fill="#fff" stroke="#c3ccd8" stroke-width="1.5"/><path d="M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z" fill="#142033"/><path d="M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3" fill="none" stroke="#d1372b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <p>
-        <b>Why Wrong</b> &mdash; built for the Prometheus August AI Challenge. Everything runs in your
-        browser: no server, no account, and no class data ever leaves this page.
+        <b>Why Wrong</b> &mdash; built by <a href="https://adrianerlikhman.is-a.dev">Adrian Erlikhman</a>
+        for the Prometheus August AI Challenge. Everything runs in your browser: no server, no
+        account, and no class data ever leaves this page.
       </p>
     </div>
     <nav class="foot-links" aria-label="More">
@@ -315,7 +376,7 @@
 <!-- ============================ INTRO / DEMO =========================== -->
 <div id="intro" class="modal" hidden>
   <div class="modal-card intro-card" role="dialog" aria-modal="true" aria-labelledby="intro-title">
-    <div class="intro-kicker"><span class="brand-mark" aria-hidden="true"></span> Why Wrong &middot; 45-second tour</div>
+    <div class="intro-kicker"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="6" fill="#fff" stroke="#c3ccd8" stroke-width="1.5"/><path d="M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z" fill="#142033"/><path d="M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3" fill="none" stroke="#d1372b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Why Wrong &middot; 45-second tour</div>
     <h3 id="intro-title">Find the misunderstanding behind every wrong answer.</h3>
     <p>
       A red X only says a student was wrong. Why Wrong works out <em>why</em> &mdash; which specific
