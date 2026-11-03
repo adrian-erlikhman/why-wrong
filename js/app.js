@@ -13,8 +13,8 @@
 import { allPacks, getPack, addPack, defaultPack } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, totalScores } from './simulate.js';
-import { inferMisconceptions, diagnose, prevalence, PARAMS } from './infer.js';
-import { clusterStudents, describeClusters } from './cluster.js';
+import { inferMisconceptions, diagnose, prevalence, coverage, PARAMS } from './infer.js';
+import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
 import { setKey, rewritePlan } from './llm.js';
@@ -52,7 +52,7 @@ function assignColours(pack) {
 }
 
 const state = {
-  pack: null, cls: null, inf: null, cl: null, groups: null, stats: null,
+  pack: null, cls: null, inf: null, cl: null, groups: null, stats: null, cov: null,
   sorted: false, rows: [], apiKey: null,
   imported: null,     // { students, responses } when the class is the teacher's own
   filterMis: null,    // highlight one misconception across the matrix
@@ -61,7 +61,7 @@ const state = {
 
 const ctx = () => ({
   pack: state.pack, cls: state.cls, inf: state.inf, cl: state.cl,
-  groups: state.groups, stats: state.stats, colourOf
+  groups: state.groups, stats: state.stats, cov: state.cov, colourOf
 });
 
 /* ======================================================================== */
@@ -89,10 +89,11 @@ function run() {
 
   const inf = inferMisconceptions(pack, cls.responses);
   const cl = clusterStudents(inf.posterior, { seed: 42 });
-  const groups = describeClusters(inf.posterior, cl.labels, inf.misIds, cl);
+  const cov = coverage(pack, cls.responses);
+  const groups = separateThin(describeClusters(inf.posterior, cl.labels, inf.misIds, cl), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
-  Object.assign(state, { cls, inf, cl, groups, stats, sorted: false, filterMis: null });
+  Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null });
 
   renderPackLine();
   renderExample();
@@ -186,8 +187,9 @@ function renderSummary() {
   const host = $('#summary');
   host.innerHTML = '';
 
-  const real = groups.filter(g => !g.isSecure);
+  const real = reteachGroups(groups);
   const secure = groups.find(g => g.isSecure);
+  const thin = groups.find(g => g.isThin);
   const biggest = real[0];
   const prev = prevalence(inf.posterior, inf.misIds)[0];
   const bad = problemItems(stats);
@@ -221,9 +223,12 @@ function renderSummary() {
   });
 
   const topName = prev ? (byId[prev.id]?.name ?? prev.id) : null;
-  $('#strip-note').textContent = real.length
+  const blanks = thin
+    ? ` ${thin.size} student${thin.size === 1 ? '' : 's'} left too much blank to diagnose.`
+    : '';
+  $('#strip-note').textContent = (real.length
     ? `Start with the biggest group. ${topName ? `The single most widespread problem is “${topName}”.` : ''}`
-    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.';
+    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.') + blanks;
 }
 
 /* ======================================================================== */
@@ -282,7 +287,7 @@ function renderMatrix() {
 }
 
 function setMatrixNote(sorted) {
-  const real = state.groups.filter(g => !g.isSecure).length;
+  const real = reteachGroups(state.groups).length;
   $('#matrix-note').textContent = sorted
     ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes are the questions where a whole group made the same mistake for the same reason.`
     : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
@@ -317,7 +322,9 @@ function sortRows() {
 
   const h = ROW_H();
   bands.forEach(b => {
-    const colour = b.g.isSecure ? 'var(--accent-hi)' : (colourOf[b.g.signature[0]?.id] || 'var(--accent)');
+    const colour = b.g.isThin ? 'var(--slip)'
+      : b.g.isSecure ? 'var(--accent-hi)'
+      : (colourOf[b.g.signature[0]?.id] || 'var(--accent)');
 
     const bar = el('div', 'band');
     bar.style.top = `${b.start * h + 2}px`;
@@ -325,7 +332,7 @@ function sortRows() {
     bar.style.background = colour;
     host.appendChild(bar);
 
-    const tag = el('div', 'band-tag', b.g.isSecure ? 'no reteach' : (b.g.signature[0]?.id ?? ''));
+    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no reteach' : (b.g.signature[0]?.id ?? ''));
     tag.style.top = `${b.start * h - 1}px`;
     host.appendChild(tag);
 
@@ -419,16 +426,18 @@ function renderGroups() {
   const host = $('#groups');
   host.innerHTML = '';
 
-  const real = state.groups.filter(g => !g.isSecure);
+  const real = reteachGroups(state.groups);
   const secure = state.groups.find(g => g.isSecure);
+  const thin = state.groups.find(g => g.isThin);
   const n = state.cls.students.length;
 
   const sub = $('#groups-sub');
   sub.textContent =
     `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
     `${real.length} group${real.length === 1 ? '' : 's'} here` +
-    (secure ? `, plus ${secure.size} who need no reteach.` : '.') +
-    ` One lesson can serve a whole group, because they are wrong for the same reason.`;
+    (secure ? `, plus ${secure.size} who need no reteach` : '') +
+    (thin ? `, and ${thin.size} with too few answers to say` : '') +
+    `. One lesson can serve a whole group, because they are wrong for the same reason.`;
   sub.appendChild(el('span', 'x-anchor', ' '));
   sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
@@ -437,16 +446,27 @@ function renderGroups() {
 
 function groupCard(g, idx) {
   const byId = misById(state.pack);
-  const card = el('div', `group${g.isSecure ? ' secure' : ''}`);
+  const card = el('div', `group${g.isSecure ? ' secure' : ''}${g.isThin ? ' thin' : ''}`);
   const total = state.cls.students.length;
 
   const top = el('div', 'group-top');
   if (!g.isSecure && g.signature[0]) card.style.setProperty('--gc', colourOf[g.signature[0].id]);
 
   const nline = el('div', 'group-n');
-  nline.appendChild(el('span', null, g.isSecure ? 'No reteach needed' : `Group ${idx + 1}`));
+  nline.appendChild(el('span', null, g.isThin ? 'Not enough answers' : g.isSecure ? 'No reteach needed' : `Group ${idx + 1}`));
   nline.appendChild(el('span', null, `${g.size} student${g.size === 1 ? '' : 's'} · ${Math.round((g.size / total) * 100)}%`));
   top.appendChild(nline);
+
+  if (g.isThin) {
+    top.appendChild(el('h3', null, 'Too few answers to say'));
+    card.appendChild(top);
+    const body = el('div', 'group-body');
+    body.appendChild(el('p', 'belief',
+      'These students left at least half the paper blank. That is not the same as being fine: nothing is known about them yet. Get the rest of their answers, or talk to them, before deciding anything.'));
+    body.appendChild(roster(g));
+    card.appendChild(body);
+    return card;
+  }
 
   if (g.isSecure) {
     top.appendChild(el('h3', null, 'No stable misunderstanding'));
@@ -529,7 +549,7 @@ function renderStudents() {
   const host = $('#students');
   host.innerHTML = '';
 
-  const { pack, cls, inf, groups } = state;
+  const { pack, cls, inf, groups, cov } = state;
   const byId = misById(pack);
   const ci = pack.items.map(correctIndex);
   const q = ($('#student-search').value || '').trim().toLowerCase();
@@ -560,8 +580,12 @@ function renderStudents() {
 
     const l = el('div', 'stu-l');
     l.appendChild(el('div', 'stu-name', r.st.name));
-    l.appendChild(el('div', 'stu-meta',
-      r.group ? (r.group.isSecure ? 'No reteach needed' : `Group ${state.groups.indexOf(r.group) + 1}`) : ''));
+    const placed = !r.group ? ''
+      : r.group.isThin ? 'Not enough answers'
+      : r.group.isSecure ? 'No reteach needed'
+      : `Group ${state.groups.indexOf(r.group) + 1}`;
+    const blank = cov[r.s].total - cov[r.s].answered;
+    l.appendChild(el('div', 'stu-meta', blank ? `${placed} · ${blank} left blank` : placed));
     card.appendChild(l);
 
     const mid = el('div', 'stu-m');
@@ -575,6 +599,8 @@ function renderStudents() {
         mid.appendChild(c);
       });
       if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
+    } else if (r.group?.isThin) {
+      mid.appendChild(el('span', 'chip chip-thin', 'Too few answers to say'));
     } else {
       mid.appendChild(el('span', 'chip chip-clear', 'No stable misunderstanding'));
     }
@@ -1028,7 +1054,7 @@ async function rewriteGroups() {
   btn.disabled = true;
   btn.textContent = 'Rewriting…';
 
-  const real = state.groups.filter(g => !g.isSecure);
+  const real = reteachGroups(state.groups);
   const results = await Promise.all(real.map(g =>
     rewritePlan(g, state.cls.students.length).catch(e => ({ _error: e.message }))
   ));
@@ -1156,7 +1182,7 @@ window.addEventListener('resize', () => {
 
 /** What the tour says about the class on screen, computed rather than canned. */
 function tourFacts() {
-  const real = state.groups.filter(g => !g.isSecure);
+  const real = reteachGroups(state.groups);
   const byId = misById(state.pack);
   const bad = problemItems(state.stats);
   const top = real[0];

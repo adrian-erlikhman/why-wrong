@@ -15,7 +15,7 @@
  */
 
 import { correctIndex, misById } from './pack.js';
-import { PARAMS } from './infer.js';
+import { PARAMS, untested } from './infer.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
@@ -72,9 +72,10 @@ function openWith(node, onClose) {
 /* ======================================================================== */
 
 export function openStudent(ctx, s) {
-  const { pack, cls, inf, groups, colourOf } = ctx;
+  const { pack, cls, inf, groups, cov, colourOf } = ctx;
   const byId = misById(pack);
   const student = cls.students[s];
+  const { answered, total, thin } = cov[s];
   const ci = pack.items.map(correctIndex);
   const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
 
@@ -87,10 +88,14 @@ export function openStudent(ctx, s) {
 
   const facts = el('div', 'dr-facts');
   facts.appendChild(fact(`${score}/${pack.items.length}`, 'score'));
-  facts.appendChild(fact(`${Math.round((score / pack.items.length) * 100)}%`, 'correct'));
+  if (answered < total) {
+    facts.appendChild(fact(`${answered}/${total}`, 'answered'));
+  } else {
+    facts.appendChild(fact(`${Math.round((score / pack.items.length) * 100)}%`, 'correct'));
+  }
   facts.appendChild(fact(
-    group ? (group.isSecure ? 'None' : (group.signature[0]?.id ?? '—')) : '—',
-    group && group.isSecure ? 'no stable pattern' : 'main misconception'
+    group?.isThin ? '—' : group ? (group.isSecure ? 'None' : (group.signature[0]?.id ?? '—')) : '—',
+    group?.isThin ? 'too few answers' : group?.isSecure ? 'no stable pattern' : 'main misconception'
   ));
   wrap.appendChild(facts);
 
@@ -105,13 +110,24 @@ export function openStudent(ctx, s) {
   const h = el('div', 'dr-h');
   h.appendChild(el('span', null, acted.length
     ? `${acted.length} misconception${acted.length === 1 ? '' : 's'} identified`
-    : 'No misconception identified'));
+    : thin ? 'Too few answers to say' : 'No misconception identified'));
   h.appendChild(infoButton('confidence'));
   wrap.appendChild(h);
 
-  if (!acted.length) {
+  if (thin) {
+    wrap.appendChild(el('p', 'dr-note dr-warn',
+      `This student answered ${answered} of ${total} questions. Blanks count as no evidence, so ${acted.length ? 'anything else they believe has not been tested' : 'this is not a clean result, just an empty one'}.`));
+  } else if (!acted.length) {
     wrap.appendChild(el('p', 'dr-note',
       'This student’s wrong answers do not repeat and do not point anywhere in particular. That is a slip profile: they need practice and attention rather than a reteach.'));
+  }
+
+  // A misconception with its questions left blank has not been ruled out, even
+  // when the rest of the paper was answered.
+  const notTested = untested(inf, s);
+  if (notTested.length && !thin) {
+    wrap.appendChild(el('p', 'dr-note dr-warn',
+      `Not tested, because too many of its questions were left blank: ${notTested.map(id => byId[id]?.short || id).join(', ')}.`));
   }
 
   acted.forEach(r => wrap.appendChild(diagnosisCard(ctx, s, r, byId, colourOf, true)));
@@ -178,19 +194,21 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   ev.slice()
     .sort((a, b) => Math.abs(b.logOdds) - Math.abs(a.logOdds))
     .forEach(c => {
-      const row = el('div', `ev-row ${c.logOdds > 0 ? 'for' : 'against'}`);
+      const row = el('div', `ev-row ${c.omitted ? 'blank' : c.logOdds > 0 ? 'for' : 'against'}`);
       row.appendChild(el('span', 'ev-id', c.itemId));
-      const what = c.isCorrect
-        ? 'answered correctly'
+      const what = c.omitted ? 'left blank'
+        : c.isCorrect ? 'answered correctly'
         : (c.isDiagnostic ? `chose “${c.chose}”` : `chose “${c.chose}” (unrelated slip)`);
       row.appendChild(setMath(el('span', 'ev-what'), what));
-      row.appendChild(el('span', 'ev-w', c.logOdds > 0 ? 'supports' : 'argues against'));
+      row.appendChild(el('span', 'ev-w', c.omitted ? 'no evidence' : c.logOdds > 0 ? 'supports' : 'argues against'));
       list.appendChild(row);
     });
 
   const forN = ev.filter(c => c.logOdds > 0).length;
+  const blank = ev.filter(c => c.omitted).length;
+  const seen = ev.length - blank;
   list.appendChild(el('p', 'ev-sum',
-    `${forN} of ${ev.length} question${ev.length === 1 ? '' : 's'} that test this point to the misconception.`));
+    `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} that test this point to the misconception${blank ? `; ${blank} left blank` : ''}.`));
 
   card.appendChild(list);
   return card;

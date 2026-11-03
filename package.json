@@ -1,5 +1,9 @@
 {
   "name": "why-wrong",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "test": "node test/pipeline.test.mjs",
+    "start": "npx http-server . -p 4173 -c-1"
+  }
 }

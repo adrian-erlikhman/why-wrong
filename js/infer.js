@@ -161,6 +161,37 @@ export function posteriorWithout(inference, s, mIndex, itemId) {
   return sigmoid(adjusted);
 }
 
+/** Below this share of questions answered, a clean result says nothing. */
+export const MIN_ANSWERED = 0.5;
+
+/** Fewer answered probes than this and a misconception has not been tested. */
+export const MIN_PROBES_ANSWERED = 2;
+
+/**
+ * How much evidence each student actually gave.
+ *
+ * Blanks carry no evidence, so a student who skipped most of the paper keeps
+ * the prior on every misconception, which sits below the reporting threshold.
+ * Read naively that looks exactly like a student with no misconception at all.
+ * It is the opposite: nothing is known about them. So the difference is made
+ * explicit here, and everything downstream can say which of the two it means.
+ *
+ * @returns {{answered:number, total:number, thin:boolean}[]}
+ */
+export function coverage(pack, responses) {
+  const total = pack.items.length;
+  return responses.map(row => {
+    const answered = row.filter(c => c != null && c >= 0).length;
+    return { answered, total, thin: answered / total < MIN_ANSWERED };
+  });
+}
+
+/** Misconceptions this student gave too few answers to test. */
+export function untested(inference, s) {
+  return inference.misIds.filter((_, k) =>
+    inference.evidence[s][k].filter(c => !c.omitted).length < MIN_PROBES_ANSWERED);
+}
+
 /** Thresholded diagnosis: the set of misconceptions attributed to each student. */
 export function diagnose(posterior, misIds, threshold = PARAMS.decisionThreshold) {
   return posterior.map(row => {

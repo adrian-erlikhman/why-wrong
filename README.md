@@ -92,6 +92,8 @@ students who picked it**.
   very different grades routinely land in the same group, which is the point.
 - Students with no stable misunderstanding are separated out rather than forced
   into a group. They are not a failure mode; they need practice, not a reteach.
+- Students who left too much blank are separated out too, because no evidence is
+  not the same as good news.
 
 ## The idea
 
@@ -227,7 +229,7 @@ one in 36/40.
 Reproduce:
 
 ```bash
-node test/pipeline.test.mjs
+npm test
 ```
 
 ## Where the language model fits
@@ -293,10 +295,12 @@ test/pipeline.test.mjs runs every built-in pack, plus the paper round trip
 - At 28 students, per-item statistics are noisy. Several items pick up marginal
   low-discrimination flags that are sample noise, which is why findings are
   ranked by severity and the marginal ones are collapsed.
-- Unanswered questions are treated as carrying no evidence either way, rather
-  than as wrong. That is the honest default, but it means a student who skipped
-  half the paper gets a thinner diagnosis rather than a worse one, and the tool
-  does not currently say so loudly enough on the student card.
+- Unanswered questions carry no evidence either way, rather than counting as
+  wrong. So a student who skipped most of the paper has no diagnosis, which is
+  not the same as a clean one. Anyone who answered under half the paper is moved
+  out of "no reteach" into a separate **Not enough answers** group, and a
+  misconception whose questions were left blank is listed as not tested on the
+  student card. The 50% line is a judgement call, not a measured threshold.
 - Misconceptions are treated as conditionally independent. Real ones co-occur
   causally — M07 and M11 are plausibly the same underlying failure — and a model
   with a dependency structure would do better.

@@ -428,6 +428,9 @@ export function groupsCsv(pack, cls, groups, misIndex) {
   const head = ['Group', 'Students', 'Size', 'Misconceptions', 'Reteach', 'Check 1', 'Check 2', 'Check 3'];
   const rows = groups.map((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
+    if (g.isThin) {
+      return ['Not enough answers', names, g.size, '—', 'Left at least half the paper blank. Get the rest of their answers before deciding anything.', '', '', ''];
+    }
     if (g.isSecure) {
       return [`Secure`, names, g.size, '—', 'No reteach needed. Practice and attention rather than a lesson.', '', '', ''];
     }

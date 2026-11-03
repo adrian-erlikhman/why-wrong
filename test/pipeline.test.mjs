@@ -11,8 +11,8 @@
 import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES } from '../js/pack.js';
 import { generateClass, totalScores } from '../js/simulate.js';
-import { inferMisconceptions, diagnose } from '../js/infer.js';
-import { clusterStudents, describeClusters } from '../js/cluster.js';
+import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from '../js/infer.js';
+import { clusterStudents, describeClusters, separateThin, reteachGroups } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml } from '../js/importer.js';
@@ -198,6 +198,38 @@ for (const pack of BUILT_IN) {
   check('the review sheet lists every misconception and question',
     bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
   check('the review sheet marks unlabelled options as slips', (sheet.match(/careless slip<\/span>/g) || []).length === 4);
+}
+
+// ---------------------------------------------------------- blank answers
+// A blank is no evidence. A student who left the paper blank has to come out
+// as unknown, never as fine.
+{
+  console.log(`\n${'='.repeat(66)}\nBlank answers\n${'='.repeat(66)}`);
+  const pack = BUILT_IN[0];
+  const c = generateClass(pack, { seed: 7, size: 28 });
+  const half = Math.floor(pack.items.length * MIN_ANSWERED);
+  c.responses[0] = c.responses[0].map(() => -1);                         // nothing
+  c.responses[1] = c.responses[1].map((v, i) => (i < 6 ? v : -1));       // six answers
+  c.responses[2] = c.responses[2].map((v, i) => (i < half ? v : -1));    // exactly half
+
+  const inf = inferMisconceptions(pack, c.responses);
+  const cov = coverage(pack, c.responses);
+  check('coverage counts answered questions', cov[1].answered === 6 && cov[0].answered === 0);
+  check('under half answered is thin, exactly half is not', cov[1].thin && !cov[2].thin);
+
+  const cl = clusterStudents(inf.posterior, { seed: 42 });
+  const raw = describeClusters(inf.posterior, cl.labels, inf.misIds, cl);
+  const g = separateThin(raw, cov);
+  const thin = g.find(x => x.isThin);
+  const secure = g.find(x => x.isSecure);
+  check('a blank paper is not counted as needing no reteach', !secure?.members.includes(0) && thin?.members.includes(0));
+  check('the groups still partition the class', g.reduce((n, x) => n + x.size, 0) === 28);
+  check('the unknown group is not a reteach group', !reteachGroups(g).some(x => x.isThin));
+  check('a blank paper leaves every misconception untested', untested(inf, 0).length === pack.misconceptions.length);
+  check('a full paper leaves nothing untested', untested(inf, 5).length === 0);
+
+  const none = separateThin(raw, coverage(pack, c.responses.map(r => r.map(() => 0))));
+  check('with no blanks the groups come back unchanged', none === raw);
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);

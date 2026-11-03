@@ -256,6 +256,33 @@ export function describeClusters(posterior, labels, misIds, { k, secureLabel }) 
   return clusters;
 }
 
+/** The groups a teacher reteaches: not the fine, and not the unknown. */
+export function reteachGroups(groups) {
+  return groups.filter(g => !g.isSecure && !g.isThin);
+}
+
+/**
+ * Take students who left too much blank out of the "no reteach" group.
+ *
+ * A student who answered six questions of thirty-six has no confident
+ * misconception because there is no evidence, not because they are fine, and
+ * telling a teacher they need no reteach would be a claim the data cannot make.
+ * They keep any group the answers they did give put them in; only a clean
+ * result built on too little evidence is moved.
+ */
+export function separateThin(groups, cov) {
+  const secure = groups.find(g => g.isSecure);
+  if (!secure) return groups;
+  const thin = secure.members.filter(s => cov[s].thin);
+  if (!thin.length) return groups;
+
+  const kept = secure.members.filter(s => !cov[s].thin);
+  const out = groups.filter(g => g !== secure);
+  if (kept.length) out.push({ ...secure, members: kept, size: kept.length });
+  out.push({ index: -1, members: thin, size: thin.length, profile: [], signature: [], isSecure: false, isThin: true });
+  return out;
+}
+
 /**
  * Adjusted Rand Index between two labelings -- used to score how well the
  * discovered clusters match the archetypes that were actually planted.
