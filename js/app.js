@@ -967,13 +967,19 @@ function renderProgress() {
   const real = reteachGroups(state.groups);
   const cmp = compareSittings(pack, cls, retest, real);
   const { totals: t, match } = cmp;
+  const matchNotes = [
+    match.onlyBefore.length && sentence(`Only in the first sitting: ${match.onlyBefore.join(', ')}`),
+    match.onlyAfter.length && sentence(`Only in the retest: ${match.onlyAfter.join(', ')}`),
+    match.ambiguous.length && sentence(`Repeated or missing names, so left out: ${match.ambiguous.join(', ')}`)
+  ].filter(Boolean);
 
   if (!match.pairs.length) {
     $('#export-progress').hidden = true;
     $('#print-progress').hidden = true;
     const box = el('div', 'empty');
-    box.appendChild(el('h3', null, 'No student appears in both sittings.'));
-    box.appendChild(el('p', null, 'Students are matched by name, so check that the two sheets spell them the same way.'));
+    box.appendChild(el('h3', null, 'No students could be matched between sittings.'));
+    box.appendChild(el('p', null, 'Students are matched by name. Check spelling and add a name to every row before comparing.'));
+    if (matchNotes.length) box.appendChild(el('p', 'note', matchNotes.join(' ')));
     host.appendChild(box);
     return;
   }
@@ -1009,12 +1015,7 @@ function renderProgress() {
   cmp.misconceptions.filter(m => m.before || m.after).forEach(m => list.appendChild(progressCard(m, byId, t.students)));
   host.appendChild(list);
 
-  const missing = [
-    match.onlyBefore.length && sentence(`Only in the first sitting: ${match.onlyBefore.join(', ')}`),
-    match.onlyAfter.length && sentence(`Only in the retest: ${match.onlyAfter.join(', ')}`),
-    match.ambiguous.length && sentence(`Same name twice, so left out: ${match.ambiguous.join(', ')}`)
-  ].filter(Boolean);
-  if (missing.length) host.appendChild(el('p', 'note', missing.join(' ')));
+  if (matchNotes.length) host.appendChild(el('p', 'note', matchNotes.join(' ')));
 
   if (retest.simulated) {
     const held = rows => rows.reduce((n, r) => n + r.held.size, 0);

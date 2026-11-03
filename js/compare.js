@@ -19,6 +19,7 @@ export function matchStudents(before, after) {
     const seen = new Map();
     students.forEach((st, i) => {
       const k = normName(st.name);
+      if (!k) return;
       seen.set(k, [...(seen.get(k) || []), i]);
     });
     return seen;
@@ -33,8 +34,20 @@ export function matchStudents(before, after) {
     if (is.length === 1 && js.length === 1) pairs.push({ before: is[0], after: js[0] });
     else ambiguous.push(before[is[0]].name);
   }
-  const onlyBefore = before.filter(st => !b.has(normName(st.name))).map(st => st.name);
-  const onlyAfter = after.filter(st => !a.has(normName(st.name))).map(st => st.name);
+  before.forEach((st, i) => {
+    if (!normName(st.name)) ambiguous.push(`Unnamed student (first sitting row ${i + 1})`);
+  });
+  after.forEach((st, i) => {
+    if (!normName(st.name)) ambiguous.push(`Unnamed student (retest row ${i + 1})`);
+  });
+  const onlyBefore = before.filter(st => {
+    const key = normName(st.name);
+    return key && !b.has(key);
+  }).map(st => st.name);
+  const onlyAfter = after.filter(st => {
+    const key = normName(st.name);
+    return key && !a.has(key);
+  }).map(st => st.name);
   return { pairs, onlyBefore, onlyAfter, ambiguous };
 }
 

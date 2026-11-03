@@ -706,6 +706,16 @@ for (const pack of BUILT_IN) {
   check('students pair up by name', m.pairs.length === 2);
   check('a shared name is left out rather than guessed', m.ambiguous.includes('Sam'));
   check('students in only one sitting are reported', m.onlyBefore.includes('Gone') && m.onlyAfter.includes('New Kid'));
+  const unnamed = matchStudents(
+    [{ name: '' }, { name: '   ' }, { name: 'Taylor' }],
+    [{ name: '' }, { name: 'taylor' }]);
+  check('blank names never pair across sittings', unnamed.pairs.length === 1 && unnamed.pairs[0].before === 2 && unnamed.pairs[0].after === 1);
+  check('blank names are reported as ambiguous rows',
+    unnamed.ambiguous.includes('Unnamed student (first sitting row 1)') &&
+    unnamed.ambiguous.includes('Unnamed student (first sitting row 2)') &&
+    unnamed.ambiguous.includes('Unnamed student (retest row 1)'));
+  check('blank names are not also mislabeled as sitting-only students',
+    unnamed.onlyBefore.join() === '' && unnamed.onlyAfter.join() === '');
 
   for (const pack of BUILT_IN) {
     const tally = { still: 0, moved: 0, trueBefore: 0, trueAfter: 0, repBefore: 0, repAfter: 0 };
