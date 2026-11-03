@@ -116,18 +116,28 @@ async function callModel(apiKey, messages, maxTokens = 16000) {
 
   if (!res.ok) throw await apiFailure(res);
   const data = await res.json();
-  return (data.content || []).map(c => c.text || '').join('').trim();
+  return {
+    text: (data.content || []).map(c => c.text || '').join('').trim(),
+    cutOff: data.stop_reason === 'max_tokens'
+  };
 }
 
-function parsePack(text, topic) {
+/** A reply that cannot be read, as a note the repair loop can act on. */
+class UnreadableReply extends Error {}
+
+function parsePack({ text, cutOff }, topic) {
+  if (cutOff) throw new UnreadableReply('The reply ran out of room before the JSON ended. Return it again with shorter text.');
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('The model did not return JSON.');
+  if (!match) throw new UnreadableReply('The reply contained no JSON.');
 
   let raw;
   try {
     raw = JSON.parse(match[0]);
   } catch (e) {
-    throw new Error(`The model returned malformed JSON: ${e.message}`);
+    throw new UnreadableReply(`The reply was not valid JSON (${e.message}).`);
+  }
+  if (!Array.isArray(raw.items) || raw.items.some(it => !it || typeof it !== 'object')) {
+    throw new UnreadableReply('The reply has no usable "items" list.');
   }
 
   // Normalise into the pack shape. The model is asked for `weak` rather than
@@ -138,9 +148,9 @@ function parsePack(text, topic) {
       topic: it.topic || raw.subject || '',
       stem: it.stem,
       opts: (it.opts || []).map(o => ({
-        t: String(o.t ?? '').trim(),
-        ...(o.c ? { c: true } : {}),
-        ...(o.c ? {} : { mis: o.mis ?? null })
+        t: String(o?.t ?? '').trim(),
+        ...(o?.c ? { c: true } : {}),
+        ...(o?.c ? {} : { mis: o?.mis ?? null })
       }))
     };
     if (it.weak) out._weak = it.weak;
@@ -163,6 +173,7 @@ function parsePack(text, topic) {
 
 /** Structural problems worth asking the model to repair, as instructions. */
 function repairNotes(pack, report) {
+  if (!pack) return [...report.errors];
   const notes = [...report.errors];
   pack.misconceptions.forEach(m => {
     const n = itemsProbing(pack, m.id).length;
@@ -194,10 +205,21 @@ export async function generatePack(apiKey, topic, {
 
   const messages = [{ role: 'user', content: buildPrompt(topic.trim(), { misconceptionCount, probesPer }) }];
 
+  // An unreadable reply is one more thing to repair, not the end of the run:
+  // a long instrument can be cut off, or one stray character can break the JSON.
+  const read = reply => {
+    try {
+      const pack = parsePack(reply, topic.trim());
+      return { pack, report: validatePack(pack) };
+    } catch (e) {
+      if (!(e instanceof UnreadableReply)) throw e;
+      return { pack: null, report: { ok: false, errors: [e.message], warnings: [] } };
+    }
+  };
+
   onProgress({ stage: 'writing', attempt: 1, message: 'Writing the misconception taxonomy and item bank…' });
-  let text = await callModel(apiKey, messages);
-  let pack = parsePack(text, topic.trim());
-  let report = validatePack(pack);
+  let reply = await callModel(apiKey, messages);
+  let { pack, report } = read(reply);
   let attempts = 1;
 
   // Repair loop. Structural failure is fed back specifically rather than as a
@@ -214,20 +236,19 @@ export async function generatePack(apiKey, topic, {
       notes
     });
 
-    messages.push({ role: 'assistant', content: text });
+    messages.push({ role: 'assistant', content: reply.text || '(empty reply)' });
     messages.push({
       role: 'user',
       content: `The instrument has structural problems that make it unusable:\n\n${notes.map(n => `- ${n}`).join('\n')}\n\nReturn the COMPLETE corrected JSON, same shape, with every problem fixed. Keep everything that was already valid. JSON only.`
     });
 
-    text = await callModel(apiKey, messages);
-    pack = parsePack(text, topic.trim());
-    report = validatePack(pack);
+    reply = await callModel(apiKey, messages);
+    ({ pack, report } = read(reply));
     attempts++;
   }
 
   if (!report.ok) {
-    throw new Error(`The generated instrument did not validate after ${attempts} attempts: ${report.errors.slice(0, 3).join('; ')}`);
+    throw new Error(`The questions could not be built after ${attempts} tries, so nothing was added. Try again, or a narrower topic. The last problem was: ${report.errors[0]}`);
   }
 
   onProgress({ stage: 'done', attempt: attempts, message: 'Instrument ready.' });

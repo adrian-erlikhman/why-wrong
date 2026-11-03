@@ -1420,7 +1420,7 @@ async function rewriteGroups() {
 
   const real = reteachGroups(state.groups);
   const results = await Promise.all(real.map(g =>
-    rewritePlan(g, state.cls.students.length).catch(e => ({ _error: e.message }))
+    rewritePlan(g, state.cls.students.length, state.pack.subject).catch(e => ({ _error: e.message }))
   ));
 
   let ok = 0;

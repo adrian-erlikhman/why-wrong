@@ -18,6 +18,8 @@ import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint } from '../js/session.js';
 import { compareSittings, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
+import { generatePack } from '../js/generate.js';
+import { rewritePlan, setKey } from '../js/llm.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -479,6 +481,74 @@ for (const pack of BUILT_IN) {
   const saved = readClassFile(classFile({ pack, students: c.students, responses: c.responses, retest: r, builtIn: true }),
     id => BUILT_IN.find(p => p.id === id));
   check('a saved class keeps its retest', saved.ok && JSON.stringify(saved.retest.responses) === JSON.stringify(r.responses));
+}
+
+// ------------------------------------------------------------ the model layer
+// The model is stubbed: what is under test is what happens around it, above all
+// that bad replies are repaired or refused and never reach a teacher as a test.
+{
+  console.log(`\n${'='.repeat(66)}\nThe model layer (stubbed)\n${'='.repeat(66)}`);
+  const good = () => {
+    const p = structuredClone(BUILT_IN[0]);
+    const body = {
+      name: 'Stub', subject: 'Maths', misconceptions: p.misconceptions, archetypes: p.archetypes,
+      items: p.items.map(({ _weak, ...it }) => ({ ...it, ...(it.id === p.items[0].id ? { weak: 'trivial' } : {}) }))
+    };
+    return JSON.stringify(body);
+  };
+  const say = (text, stop_reason = 'end_turn') => ({ ok: true, status: 200, json: async () => ({ content: [{ text }], stop_reason }) });
+  const script = replies => {
+    const asked = [];
+    globalThis.fetch = async (_, init) => {
+      asked.push(JSON.parse(init.body));
+      return replies.length > 1 ? replies.shift() : replies[0];
+    };
+    return asked;
+  };
+  const failsWith = async (replies) => {
+    script(replies);
+    try { await generatePack('k', 'topic'); return null; } catch (e) { return e.message; }
+  };
+
+  let asked = script([say(good())]);
+  let run = await generatePack('k', 'topic');
+  check('a good reply is taken on the first try', run.attempts === 1 && asked.length === 1);
+
+  asked = script([say('Sorry, here you go: not json'), say(good())]);
+  run = await generatePack('k', 'topic');
+  check('a reply with no JSON is repaired, not fatal', run.attempts === 2);
+  check('the repair names the problem', asked[1].messages.at(-1).content.includes('no JSON'));
+
+  asked = script([say('{"items": [', 'max_tokens'), say(good())]);
+  run = await generatePack('k', 'topic');
+  check('a reply cut off at the token limit is repaired', run.attempts === 2 && asked[1].messages.at(-1).content.includes('ran out of room'));
+
+  script([say('{"name": "x", "items": [null]}'), say(good())]);
+  run = await generatePack('k', 'topic');
+  check('a reply with an empty item is repaired, not thrown', run.attempts === 2);
+
+  const broken = JSON.parse(good());
+  broken.items[0].opts.forEach(o => { delete o.c; });
+  asked = script([say(JSON.stringify(broken)), say(good())]);
+  run = await generatePack('k', 'topic');
+  check('a structural fault is fed back by name', asked[1].messages.at(-1).content.includes('correct options'));
+
+  const msg = await failsWith([say('nope')]);
+  check('a model that never recovers is refused in plain words', msg && msg.includes('could not be built') && !/JSON\.parse|undefined/.test(msg));
+
+  const failed = await failsWith([{ ok: false, status: 401, json: async () => ({}) }]);
+  check('a bad key is explained', failed && failed.includes('API key'));
+
+  setKey('k');
+  asked = script([say('{"headline":"Root cause","plan":"Do this.","verify":["a","b","c"]}')]);
+  await rewritePlan({ size: 4, misDetails: [{ id: 'X1', name: 'Motion needs a force' }] }, 20, 'Physics');
+  const prompt = asked[0].messages[0].content;
+  check('a rewrite names the real subject', prompt.includes('a teacher of Physics') && !prompt.includes('mathematics'));
+  check('a missing plan is left out of the prompt', !prompt.includes('undefined'));
+
+  script([say('{"plan": ')]);
+  const bad = await rewritePlan({ size: 4, misDetails: [{ id: 'X1', name: 'y' }] }, 20).catch(e => e.message);
+  check('an unusable rewrite gives a readable error', bad === 'Model did not return usable JSON.');
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);

@@ -58,16 +58,20 @@ export function networkFailure() {
 /**
  * Rewrite one cluster's reteach plan.
  * @param {object} cluster  { size, signature: [{id, inMean}], misDetails: [...] }
+ * @param {number} classSize
+ * @param {string} subject  what is being taught, if the test says
  * @returns {Promise<{headline: string, plan: string, verify: string[]}>}
  */
-export async function rewritePlan(cluster, classSize) {
+export async function rewritePlan(cluster, classSize, subject = '') {
   if (!apiKey) throw new Error('No API key set.');
 
+  // A teacher's own test may name only the misunderstanding, so a field that is
+  // missing is left out rather than sent to the model as the word "undefined".
   const profile = cluster.misDetails.map(m =>
-    `- ${m.id} "${m.name}": ${m.belief}\n  Standard remedy: ${m.reteach}`
+    `- ${m.id} "${m.name}"${m.belief ? `: ${m.belief}` : ''}${m.reteach ? `\n  Standard remedy: ${m.reteach}` : ''}`
   ).join('\n');
 
-  const prompt = `You are helping a mathematics teacher plan a reteach for one group within their class.
+  const prompt = `You are helping a teacher${subject ? ` of ${subject}` : ''} plan a reteach for one group within their class.
 
 The class has ${classSize} students. This group contains ${cluster.size} of them. A diagnostic analysis found that these students share the following misconceptions:
 
@@ -111,7 +115,8 @@ Respond as JSON only, with this exact shape:
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('Model did not return usable JSON.');
 
-  const parsed = JSON.parse(match[0]);
+  let parsed;
+  try { parsed = JSON.parse(match[0]); } catch { throw new Error('Model did not return usable JSON.'); }
   if (!parsed.plan || !Array.isArray(parsed.verify)) {
     throw new Error('Model response was missing required fields.');
   }
