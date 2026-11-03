@@ -4,9 +4,8 @@
 
 A red X tells a student nothing and a teacher less. Why Wrong takes a class's
 answer sheets and works out the *specific misconception* behind each wrong
-answer, groups the class into the handful of failure modes it actually shares,
-and then turns the lens around to audit which of the teacher's questions
-measured anything at all.
+answer, groups the class by the few misunderstandings it shares, and audits which of
+the teacher's questions measured anything at all.
 
 **Works for any subject.** Two curated instruments ship built in (Algebra 1 and
 Evolution & Inheritance). For anything else, name a topic and a model writes the
@@ -34,7 +33,7 @@ The loop closes in both directions, on paper.
 1. **Pick a subject**, or build one for any topic you teach.
 2. **Materials** prints the questions and the answer key, or downloads a blank
    answer sheet as a spreadsheet with one column per question.
-3. Give it. Mark it, or don't — you only need which option each student picked.
+3. Give it. You don't have to mark it, since you only need which option each student picked.
 4. **Class → Paste my class** and paste the sheet back in. Letters, numbers, or
    the answer text all work. A Google Forms export works as it comes: timestamp,
    email and score columns are stepped over, and questions are matched by their
@@ -123,14 +122,14 @@ appears. It only counts if they were written down first.
 ### Every diagnosis opens up
 
 A tool that says *"Milo holds the sign-distribution misconception, 87%"* and
-offers no way to check has asked for faith — and a teacher who cannot check
-will, correctly, ignore it the first time it says something surprising.
+offers no way to check is asking for faith, and a teacher who cannot check
+will ignore it the first time it says something surprising.
 
 So click any student. You get the confidence for each misunderstanding and,
 under it, **the questions that produced that number**: which ones pointed to it,
-which argued against it, and what they actually chose. Because the model is a
-sum of one term per question, that trail is not an explanation written
-afterwards — it is the arithmetic itself, taken apart again.
+which argued against it, and what they chose. Because the model is a
+sum of one term per question, that trail is the arithmetic itself, taken
+apart again.
 
 Click any question instead and you get how the class answered it, which
 misunderstanding each wrong option corresponds to, and **the names of the
@@ -153,30 +152,30 @@ students who picked it**.
 - **What a paste turned up stays on the page**: a name pasted twice, a cell that
   could not be read, a class too small to group. A paste with no readable answers
   is refused.
-- Groups are formed by *what students believe*, not by score — two students with
-  very different grades routinely land in the same group, which is the point.
+- Groups are formed by *what students believe*, not by score, so two students with
+  very different grades often land in the same group.
 - Students with no stable misunderstanding are separated out rather than forced
-  into a group. They are not a failure mode; they need practice, not a reteach.
+  into a group. They need practice, not a reteach.
 - Students who left too much blank are separated out too, because no evidence is
   not the same as good news.
 
 ## The idea
 
 Most assessment tooling reports *that* a student was wrong. What changes
-instruction is knowing *why* — which broken rule in their head produced that
+instruction is knowing *why*: which broken rule in their head produced that
 particular answer.
 
 That is possible only if the test is built for it. Every wrong option in this
 item bank is tagged with the misconception that generates it, so a wrong answer
-carries information rather than merely being negative. This is how real concept
+carries information. This is how real concept
 inventories work; the Force Concept Inventory in physics is the canonical
 example.
 
 From there the tool answers three questions:
 
-1. **Which misconception does this student hold?** — inferred, not read off.
-2. **What does the class share?** — 28 students are rarely 28 problems.
-3. **Was the test any good?** — the response matrix scores the questions too.
+1. **Which misconception does this student hold?** Inferred, not read off.
+2. **What does the class share?** 28 students are rarely 28 problems.
+3. **Was the test any good?** The response matrix scores the questions too.
 
 ## Pipeline
 
@@ -188,20 +187,20 @@ bank whose every wrong option maps to one of them, and archetypes describing
 which misconceptions travel together. Wrong options carrying no diagnostic
 meaning are tagged as slips so they contribute no signal.
 
-Authoring one is the genuinely knowledge-intensive part of this exercise: it
+Authoring one is the knowledge-intensive part of this exercise: it
 needs someone who knows not just the content but the characteristic ways
-students get it wrong. That is a task a language model is actually good at, so
-for a new subject the model writes the instrument — and only the instrument. It
+students get it wrong. A language model is good at that, so for a
+new subject the model writes the instrument and nothing else. It
 never sees a student response, never decides who holds what, never groups a
 class, never judges an item. **The model builds the ruler; deterministic code
 does the measuring.**
 
 Generated packs are untrusted until `validatePack` says otherwise, because a
-malformed pack would not throw — it would produce confident nonsense. Generation
+malformed pack would not throw. It would produce confident nonsense. Generation
 is a loop: generate, validate, feed the specific structural failures back for
 repair.
 
-**2 · Per-student inference** *(no LLM — `js/infer.js`)*
+**2 · Per-student inference** *(no LLM, `js/infer.js`)*
 A misconception is latent. A student who holds one still answers correctly
 sometimes, and a student who doesn't still slips onto that option occasionally,
 so a single item cannot diagnose anybody. Evidence is accumulated across every
@@ -211,19 +210,19 @@ probing item as a log-odds update:
 logit P(holds m | responses) = logit P(m) + Σᵢ log [ P(rᵢ | m) / P(rᵢ | ¬m) ]
 ```
 
-Naive Bayes over item responses — "naive" for the conditional-independence
+Naive Bayes over item responses, "naive" for the conditional-independence
 assumption that also makes Bayesian knowledge tracing tractable. The likelihood
 parameters are exported and shown in the UI rather than buried, because they are
 assumptions rather than facts.
 
-**3 · Class structure** *(no LLM — `js/cluster.js`)*
+**3 · Class structure** *(no LLM, `js/cluster.js`)*
 Each student becomes a point in misconception space. Two design
 decisions matter more than the choice of algorithm:
 
 - Students with no confident misconception are **separated out before**
-  clustering. They aren't a failure mode, they're the students who are fine, and
+  clustering. They're the students who are fine, and
   leaving them in drags every centroid toward the origin.
-- The rest are compared by **direction, not magnitude** — posteriors are
+- The rest are compared by **direction, not magnitude**: posteriors are
   L2-normalised so k-means operates on cosine similarity. A student who
   expresses the sign misconceptions weakly belongs with those who express them
   strongly; under plain Euclidean distance they'd look like someone with no
@@ -233,7 +232,7 @@ k is chosen by mean silhouette, ties broken toward *fewer* groups. A teacher can
 act on three groups and not on eleven. Students are put in a fixed order before
 any of this runs, so the groups do not change with the order of the sheet.
 
-**4 · Prescription.** Each failure mode gets a reteach aimed at the specific
+**4 · Prescription.** Each group gets a reteach aimed at the specific
 belief, plus verification items. Then the paper is given again and each student
 is compared with themselves (`js/compare.js`), so the loop closes on evidence
 rather than on a feeling that the lesson went well.
@@ -246,8 +245,8 @@ discrimination, per-distractor selection shares, dead options, Cronbach's alpha.
 The interesting part is what the tool *refuses* to call a bad question.
 
 Point-biserial discrimination asks whether students who did well overall also got
-this item right — which presumes the test measures one underlying trait. A
-diagnostic instrument deliberately doesn't. An item targeting a misconception
+this item right, which presumes the test measures one underlying trait. A
+diagnostic instrument doesn't. An item targeting a misconception
 held by one subgroup gets missed by that subgroup regardless of their ability
 elsewhere, so it can correlate weakly, even negatively, with total score while
 being the most informative question on the page.
@@ -261,19 +260,19 @@ never allowed to vote on its own validity.
 Low agreement plus low discrimination is a broken item. Low discrimination with
 high agreement is a *diagnostic* item, and it gets defended rather than flagged.
 
-Similarly, Cronbach's alpha comes out low here — and correctly so. Alpha assumes
+Similarly, Cronbach's alpha comes out low here, and it should. Alpha assumes
 a single underlying trait; this instrument targets twelve distinct
 misconceptions. Low internal consistency is evidence of multidimensionality, not
 of an unreliable test, and the UI says so rather than leaving the number to be
 misread.
 
-## Does it actually work?
+## Does it work?
 
 This is why the class is simulated rather than borrowed.
 
 `js/simulate.js` doesn't hand-write a plausible answer sheet. It builds a
-generative model of a class: each student gets a hidden profile — a set of
-misconceptions they genuinely hold plus an ability parameter — and their answers
+generative model of a class: each student gets a hidden profile (a set of
+misconceptions they hold plus an ability parameter), and their answers
 are generated *from* that profile. The profile is then withheld from every
 downstream stage.
 
@@ -288,8 +287,8 @@ whatever seed is loaded:
 | Group recovery (Adjusted Rand Index) | **0.674** | **0.535** |
 | Correct number of groups recovered | 36/40 | 30/40 |
 
-Two deliberately defective questions are planted in the item bank — one trivial,
-one ambiguously worded — and marked nowhere in the data. The item analysis has to
+Two defective questions are planted in the item bank, one trivial and one
+ambiguously worded, and marked nowhere in the data. The item analysis has to
 find them on its own. It catches the trivial one in 39/40 seeds and the ambiguous
 one in 36/40.
 
@@ -301,16 +300,15 @@ npm test
 
 ## Where the language model fits
 
-Deliberately at the edge, not the centre. Everything above is deterministic
-numeric code, and the reteach plans that ship are written by hand — so the page
+At the edge, not the centre. Everything above is deterministic
+numeric code, and the reteach plans that ship are written by hand, so the page
 is fully functional with no key, no network, and no account.
 
 Two optional uses, both requiring a key. **Authoring a new subject** is the
 substantial one, described above. The smaller one rewrites a reteach plan for the
 specific *combination* of misconceptions a given group holds and its size.
-That's an appropriate use of a language model — generating prose conditioned on
-structured input — rather than asking it to do the diagnosis, which arithmetic
-does more reliably. The key is held in the tab only, never stored, and sent
+That suits a language model, because it is writing prose from structured input.
+The diagnosis stays with the arithmetic, which does it more reliably. The key is held in the tab only, never stored, and sent
 nowhere except `api.anthropic.com`.
 
 ## Running locally
@@ -379,7 +377,7 @@ test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
   misconception whose questions were left blank is listed as not tested on the
   student card. The 50% line is a judgement call, not a measured threshold.
 - Misconceptions are treated as conditionally independent. Real ones co-occur
-  causally — M07 and M11 are plausibly the same underlying failure — and a model
+  causally (M07 and M11 are plausibly the same underlying failure), and a model
   with a dependency structure would do better.
 
 ## License
