@@ -11,38 +11,40 @@
 :root {
   color-scheme: light;
 
-  --bg:          #ffffff;
-  --bg-2:        #f6f8fb;
-  --bg-3:        #edf1f6;
-  --surface:     #ffffff;
-  --surface-2:   #f3f6fa;
-  --surface-3:   #e8edf4;
-  --ink:         #142033;
-  --ink-2:       #3b4759;
-  --muted:       #667387;
-  --line:        #dde3eb;
-  --line-soft:   #e9edf3;
-  --line-hi:     #c3ccd8;
+  --bg:          #fffaf3;
+  --bg-2:        #fdf1e3;
+  --bg-3:        #f7e6d2;
+  --surface:     #fffdf9;
+  --surface-2:   #fcf3e7;
+  --surface-3:   #f5e7d5;
+  --ink:         #0b3a4a;
+  --ink-2:       #2f5563;
+  --muted:       #56707b;
+  --line:        #eddcc4;
+  --line-soft:   #f4e8d6;
+  --line-hi:     #dcc7a6;
 
-  --accent:      #2456d3;
-  --accent-2:    #1b45ae;
-  --accent-tint: #ebf1fd;
-  --accent-line: #c3d3f6;
+  --accent:      #0b7285;
+  --accent-2:    #085a69;
+  --accent-tint: #e2f3f4;
+  --accent-line: #b5dfe2;
+  --coral:       #c23a28;
+  --coral-2:     #a92f1f;
 
-  --good:        #1b7a4a;
-  --good-tint:   #e8f4ed;
-  --good-line:   #bfdfcb;
+  --good:        #0f7b6c;
+  --good-tint:   #e3f4ef;
+  --good-line:   #b6e0d5;
   --accent-hi:   var(--good);   /* the "no reteach" band on the sorted map */
   --warn:        #a35a05;
   --warn-tint:   #fdf3e3;
   --warn-line:   #f0d3a5;
-  --bad:         #bf3329;
+  --bad:         #b3261e;
   --bad-tint:    #fcecea;
   --bad-line:    #f0c3bf;
 
   /* response encoding */
-  --correct:     #e6eaf0;
-  --slip:        #a1abb9;
+  --correct:     #f1e5d3;
+  --slip:        #a99f91;
 
   /* 12 misconception hues, tuned to stay apart from each other on white */
   --m1:  #e0533f;
@@ -63,12 +65,12 @@
   --row: 19px;
   --r: 10px;
   --r-s: 8px;
-  --shadow-1: 0 1px 2px rgba(20,32,51,.05);
-  --shadow-2: 0 18px 40px -18px rgba(20,32,51,.22), 0 2px 6px rgba(20,32,51,.05);
+  --shadow-1: 0 1px 2px rgba(11,58,74,.05);
+  --shadow-2: 0 18px 40px -18px rgba(11,58,74,.22), 0 2px 6px rgba(11,58,74,.05);
   --ease: cubic-bezier(.22,.9,.28,1);
   --ease-out: cubic-bezier(.16,1,.3,1);
 
-  --display: Lexend, "Source Sans 3", system-ui, sans-serif;
+  --display: Fredoka, Lexend, "Source Sans 3", system-ui, sans-serif;
   --body: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -178,8 +180,8 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .btn:hover:not(:disabled) { background: var(--bg-2); border-color: var(--muted); text-decoration: none; }
 .btn:disabled { opacity: .5; cursor: default; }
 
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--accent-2); border-color: var(--accent-2); }
+.btn-primary { background: var(--coral); border-color: var(--coral); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--coral-2); border-color: var(--coral-2); }
 
 .btn-quiet { background: transparent; border-color: transparent; color: var(--ink-2); }
 .btn-quiet:hover:not(:disabled) { background: var(--bg-2); border-color: transparent; color: var(--ink); }
@@ -268,7 +270,15 @@ sup { font-size: .68em; line-height: 0; }
 
 /* ---------------------------- how it works ----------------------------- */
 
-.how { background: var(--bg-2); border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); padding: 72px 0 80px; }
+.how { position: relative; background: var(--bg-2); padding: 104px 0 80px; }
+/* The tide line between the hero and the section under it. */
+.how::before {
+  content: "";
+  position: absolute;
+  inset: -1px 0 auto;
+  height: 42px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 42' preserveAspectRatio='none'%3E%3Cpath d='M0 0h600v16c-50 22-100 22-150 8s-100-14-150 0-100 14-150 0S50-2 0 16z' fill='%23fffaf3'/%3E%3C/svg%3E") repeat-x 0 0 / 600px 42px;
+}
 
 .sec-head { margin-bottom: 32px; }
 .sec-head h2 { font-size: clamp(27px, 3vw, 36px); margin-bottom: 10px; }
@@ -1097,7 +1107,7 @@ body.has-import .import-only { display: inline-flex; }
    short screen scrolls instead of losing its top edge. */
 .modal {
   position: fixed; inset: 0;
-  background: rgba(20,32,51,.45);
+  background: rgba(11,58,74,.45);
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -1113,7 +1123,7 @@ body.has-import .import-only { display: inline-flex; }
   width: 100%;
   margin: auto 0;
   border: none;
-  box-shadow: 0 30px 70px -20px rgba(20,32,51,.35);
+  box-shadow: 0 30px 70px -20px rgba(11,58,74,.35);
 }
 .modal-card h3 { font-size: 23px; margin-bottom: 12px; }
 .modal-card > p { color: var(--ink-2); font-size: 16px; margin-bottom: 22px; }
@@ -1234,7 +1244,7 @@ body.has-import .import-only { display: inline-flex; }
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 16px 20px 16px;
-  box-shadow: 0 24px 60px -16px rgba(20,32,51,.4);
+  box-shadow: 0 24px 60px -16px rgba(11,58,74,.4);
 }
 .coach-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .coach-n { font-size: 14px; font-weight: 700; color: var(--accent); }
@@ -1258,7 +1268,7 @@ body.has-import .import-only { display: inline-flex; }
   position: relative;
   z-index: 45;
   border-radius: 12px;
-  box-shadow: 0 0 0 3px var(--accent), 0 0 0 100vmax rgba(20,32,51,.42);
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 100vmax rgba(11,58,74,.42);
 }
 
 .mats-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
@@ -1325,7 +1335,7 @@ body.has-import .import-only { display: inline-flex; }
 .drawer[hidden] { display: none; }
 .drawer-scrim {
   position: absolute; inset: 0;
-  background: rgba(20,32,51,.38);
+  background: rgba(11,58,74,.38);
   opacity: 0; transition: opacity .22s;
 }
 .drawer.is-open .drawer-scrim { opacity: 1; }
@@ -1339,7 +1349,7 @@ body.has-import .import-only { display: inline-flex; }
   overflow-y: auto;
   transform: translateX(100%);
   transition: transform .32s var(--ease-out);
-  box-shadow: -24px 0 60px -24px rgba(20,32,51,.35);
+  box-shadow: -24px 0 60px -24px rgba(11,58,74,.35);
 }
 .drawer.is-open .drawer-panel { transform: none; }
 
@@ -1554,7 +1564,7 @@ body.has-import .import-only { display: inline-flex; }
 /* --------------------------------- print -------------------------------- */
 
 @media print {
-  :root { --bg-2: #fff; --bg-3: #f4f5f7; --line: #bbb; --line-soft: #ddd; --line-hi: #999; }
+  :root { --bg: #fff; --surface: #fff; --bg-2: #fff; --bg-3: #f4f5f7; --line: #bbb; --line-soft: #ddd; --line-hi: #999; }
   .bar, .tabs, .hero, .how, .app-intro, .foot, .drawer, .modal, .coach,
   .head-actions, .view-head .btn, .hint, .legend, .legend-head { display: none !important; }
   .tour-lit { box-shadow: none !important; }
