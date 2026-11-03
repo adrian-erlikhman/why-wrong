@@ -1,5 +1,5 @@
 /**
- * llm.js -- optional language-model layer.
+ * llm.js: optional language-model layer.
  * ---------------------------------------------------------------------------
  * Everything the tool concludes is computed without this file. The inference,
  * the clustering, the item analysis and the validation are all deterministic
@@ -8,11 +8,10 @@
  * is the only sane default for something a teacher might open once.
  *
  * What a model adds is adaptation: rewriting a generic reteach plan for the
- * specific combination of misconceptions *this* cluster actually holds, and for
- * its size. That is a genuine improvement and a genuinely appropriate use of a
- * language model -- generating prose conditioned on structured input -- rather
- * than asking it to do the diagnosis, which it would do less reliably than
- * arithmetic does.
+ * specific combination of misconceptions *this* cluster holds, and for
+ * its size. That suits a language model, because it is writing prose from
+ * structured input. The diagnosis stays with the arithmetic, which does it more
+ * reliably.
  *
  * The key lives in a module-scoped variable for the lifetime of the tab. It is
  * never written to localStorage, never logged, and never sent anywhere except
@@ -31,7 +30,7 @@ export function clearKey() { apiKey = null; }
 /**
  * A failed API call, as a sentence a teacher can act on. The raw error body is
  * JSON ({type: "error", error: {type, message}}), which is noise to anyone who
- * is not a developer; the status code says what actually went wrong.
+ * is not a developer; the status code says what went wrong.
  */
 export async function apiFailure(res) {
   let detail = '';

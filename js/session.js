@@ -1,5 +1,5 @@
 /**
- * session.js -- keep a real class.
+ * session.js: keep a real class.
  * ---------------------------------------------------------------------------
  * Everything here runs in the tab, which is the right privacy default and a bad
  * storage default: a reload loses thirty hand-typed answer sheets, and the paper
@@ -116,7 +116,7 @@ export function readClassFile(text, findPack) {
   ];
   if (errors.length) return fail(...errors.slice(0, 3));
 
-  // Predictions are optional, and an id the test does not know is simply dropped.
+  // Predictions are optional, and an id the test does not know is dropped.
   const known = new Set(pack.misconceptions.map(m => m.id));
   const predictions = (Array.isArray(file.predictions) ? file.predictions : []).filter(id => known.has(id));
 

@@ -1,5 +1,5 @@
 /**
- * packs/index.js -- registry of built-in subject packs.
+ * packs/index.js: registry of built-in subject packs.
  *
  * Built-in packs exist so the tool works with no key, no network and no
  * account, and so there is something to demonstrate against. Anything beyond

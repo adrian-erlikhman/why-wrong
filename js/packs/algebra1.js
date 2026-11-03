@@ -1,5 +1,5 @@
 /**
- * packs/algebra1.js -- Algebra 1: exponents, signs, fractions, linear equations.
+ * packs/algebra1.js: Algebra 1: exponents, signs, fractions, linear equations.
  *
  * A subject pack is a self-contained diagnostic instrument: a taxonomy of named
  * misconceptions, an item bank whose every wrong option is mapped to one of

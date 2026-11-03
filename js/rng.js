@@ -1,5 +1,5 @@
 /**
- * rng.js -- small seeded PRNG.
+ * rng.js: small seeded PRNG.
  *
  * Everything downstream (class generation, k-means initialisation) is seeded so
  * that a given seed always produces the same class and the same analysis. That

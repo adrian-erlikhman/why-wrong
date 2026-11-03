@@ -1,10 +1,10 @@
 /**
- * infer.js -- per-student misconception inference.
+ * infer.js: per-student misconception inference.
  * ---------------------------------------------------------------------------
  * Stage 2 of the pipeline, and the reason this is not just a spreadsheet.
  *
  * A misconception is *latent*: you never observe it, you observe answers that
- * it makes more likely. And a single item is a weak signal -- a student who
+ * it makes more likely. And a single item is a weak signal: a student who
  * holds a misconception still answers correctly sometimes, and a student who
  * does not hold it still slips onto that option occasionally. So we do not read
  * a diagnosis off one wrong answer. We accumulate evidence across every item
@@ -12,12 +12,12 @@
  *
  *     logit P(holds m | responses) = logit P(m) + SUM_i log [ P(r_i | m) / P(r_i | not m) ]
  *
- * This is naive Bayes over item responses -- "naive" because it treats items as
+ * This is naive Bayes over item responses, "naive" because it treats items as
  * conditionally independent given the misconception, which is the standard
  * simplifying assumption in this family of models (and the same one that makes
  * Bayesian knowledge tracing tractable).
  *
- * The likelihood parameters below are the model. They are deliberately exported
+ * The likelihood parameters below are the model. They are exported
  * and surfaced in the UI rather than buried, because they are assumptions, not
  * facts, and a reader should be able to see and challenge them.
  */
@@ -168,7 +168,7 @@ export const MIN_ANSWERED = 0.5;
 export const MIN_PROBES_ANSWERED = 2;
 
 /**
- * How much evidence each student actually gave.
+ * How much evidence each student gave.
  *
  * Blanks carry no evidence, so a student who skipped most of the paper keeps
  * the prior on every misconception, which sits below the reporting threshold.

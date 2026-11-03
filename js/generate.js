@@ -1,17 +1,17 @@
 /**
- * generate.js -- build a diagnostic instrument for any subject.
+ * generate.js: build a diagnostic instrument for any subject.
  * ---------------------------------------------------------------------------
  * This is where the language model earns its place, and it is worth being
  * precise about the division of labour.
  *
- * Authoring a misconception inventory is the genuinely hard, genuinely
- * knowledge-intensive part of this whole exercise. It takes a subject expert
+ * Authoring a misconception inventory is the hard, knowledge-intensive
+ * part of this project. It takes a subject expert
  * who knows not just the content but the *characteristic ways students get it
  * wrong*, and then the patience to write distractors that each correspond to
  * exactly one of those wrong mental models. Real concept inventories take years
  * and multiple rounds of student interviews.
  *
- * That is a task a language model is actually good at, because it is recall and
+ * A language model is good at that, because it is recall and
  * composition over pedagogical content. So the model writes the instrument.
  *
  * What the model does NOT do is any of the analysis. It never sees a student

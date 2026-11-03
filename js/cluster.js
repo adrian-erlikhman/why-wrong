@@ -1,16 +1,16 @@
 /**
- * cluster.js -- class-level structure discovery.
+ * cluster.js: class-level structure discovery.
  * ---------------------------------------------------------------------------
  * Stage 3, and the thesis of the whole tool.
  *
  * Stage 2 gives every student a vector in misconception-space. A class of 28
  * students is then 28 points in 12 dimensions, and the question is whether
  * those points are scattered (28 unrelated problems, which is how a gradebook
- * presents them) or clumped (a small number of shared failure modes, which is
- * what you can actually act on in a lesson).
+ * presents them) or clumped (a small number of shared misunderstandings, which
+ * a teacher can act on in a lesson).
  *
  * k-means with k chosen by mean silhouette answers that question rather than
- * assuming it. If the class genuinely has no structure the silhouette stays
+ * assuming it. If the class has no structure the silhouette stays
  * low, and the tool should say so instead of inventing groups.
  */
 
@@ -99,13 +99,13 @@ function unit(v) {
 }
 
 /**
- * Cluster students into shared failure modes.
+ * Cluster students into reteach groups.
  *
  * Two design decisions here matter more than the choice of algorithm.
  *
  * 1. Students with no confident misconception are separated out *before*
- *    clustering rather than being forced into a group. They are not a failure
- *    mode -- they are the students who are fine, and their errors are slips.
+ *    clustering rather than being forced into a group. They are the students
+ *    who are fine, and their errors are slips.
  *    Leaving them in drags centroids toward the origin and blurs every real
  *    group.
  *
@@ -117,8 +117,7 @@ function unit(v) {
  *    student with no misconception at all, which is precisely wrong.
  *
  * k is chosen by mean silhouette, filtered by a minimum group size and then
- * broken toward parsimony -- see the comment at the selection step, which is
- * where the reasoning lives.
+ * broken toward parsimony. The comment at the selection step has the reasoning.
  *
  * @returns {{labels:number[], k:number, secureLabel:number, secure:number[],
  *            silhouette:number, scan:Array}}
@@ -188,8 +187,7 @@ export function clusterStudents(posterior, {
   // Two corrections, in order.
   //
   // First, a floor on group size. This is a pedagogical constraint rather than
-  // a statistical one, and it is the honest one to apply: a group of two is not
-  // a failure mode a teacher can plan a lesson around, it is two students. Any
+  // a statistical one: a teacher cannot plan a lesson around a group of two. Any
   // k that produces a group below the floor is discarded outright.
   //
   // Second, parsimony among what survives. The smallest k within a small
@@ -262,7 +260,7 @@ export function describeClusters(posterior, labels, misIds, { k, secureLabel }) 
   clusters.sort((a, b) => b.size - a.size);
 
   const sec = build(secureLabel, true);
-  if (sec) clusters.push(sec);   // always last: it is not a failure mode
+  if (sec) clusters.push(sec);   // always last: this group needs no reteach
 
   return clusters;
 }
@@ -295,8 +293,8 @@ export function separateThin(groups, cov) {
 }
 
 /**
- * Adjusted Rand Index between two labelings -- used to score how well the
- * discovered clusters match the archetypes that were actually planted.
+ * Adjusted Rand Index between two labelings, used to score how well the
+ * discovered clusters match the planted archetypes.
  * 1.0 is perfect agreement; 0.0 is chance.
  */
 export function adjustedRandIndex(labelsA, labelsB) {

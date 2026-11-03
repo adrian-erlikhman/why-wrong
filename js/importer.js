@@ -1,23 +1,23 @@
 /**
- * importer.js -- get a real class in, and get usable paper out.
+ * importer.js: get a real class in, and get usable paper out.
  * ---------------------------------------------------------------------------
  * Everything else in this project analyses a simulated class. That is the right
  * default (it is the only way to measure whether the method works), but a
- * teacher does not have a simulated class -- they have thirty answer sheets on
+ * teacher does not have a simulated class. They have thirty answer sheets on
  * a desk.
  *
  * So the loop has to close in both directions: print the instrument, give it,
  * type the answers back in, get the analysis. This module does the boring,
  * load-bearing half of that.
  *
- * Parsing is deliberately forgiving. Teachers will paste from Excel, from
+ * Parsing is forgiving. Teachers will paste from Excel, from
  * Google Sheets, from a Form export; they will use A/B/C/D, or 1/2/3/4, or the
  * answer text itself; some cells will be blank because a student skipped a
- * question. All of that is accepted, and anything genuinely unreadable is
+ * question. All of that is accepted, and anything unreadable is
  * reported by row and column rather than silently coerced into a number.
  *
  * Letters and numbers refer to the order options are printed in on paper,
- * which is not the order they are stored in -- see paperOrder().
+ * which is not the order they are stored in (see paperOrder()).
  */
 
 import { makeRng, shuffled } from './rng.js';
@@ -376,7 +376,7 @@ const asNumber = (v, n) => {
 
 /**
  * How a sheet codes its answers: 'letters', 'numbers' or 'text'. A cell like
- * "2" is ambiguous on its own -- option 2, or the answer "2"? -- and a Forms
+ * "2" is ambiguous on its own (option 2, or the answer "2"?), and a Forms
  * export of an algebra quiz is full of them. So the sheet is judged as a whole,
  * by what most of its filled cells look like, and ambiguous cells are read that
  * way. Whatever is unambiguous still reads in any coding.

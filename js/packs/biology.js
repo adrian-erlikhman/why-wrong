@@ -1,5 +1,5 @@
 /**
- * packs/biology.js -- Evolution and inheritance.
+ * packs/biology.js: Evolution and inheritance.
  *
  * The misconceptions here are among the best-documented in science education:
  * Lamarckian reasoning about individual organisms, teleology ("the species

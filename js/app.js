@@ -1,11 +1,11 @@
 /**
- * app.js -- orchestration and rendering.
+ * app.js: orchestration and rendering.
  *
  * Pipeline order, stated once because it matters:
  *   pack -> class (simulated or imported) -> infer -> cluster -> item analysis
  * Item analysis takes the inference result because it asks a leave-one-out
  * question of it. Validation takes the planted truth, which nothing upstream of
- * it is permitted to see, and which an imported class simply does not have.
+ * it is permitted to see, and which an imported class does not have.
  *
  * Nothing here knows what subject is loaded.
  */
@@ -472,7 +472,7 @@ function sortRows() {
 
     // A timer rather than requestAnimationFrame: rAF is suspended while the tab
     // is backgrounded, which would leave these permanently invisible instead of
-    // merely un-animated.
+    // just un-animated.
     setTimeout(() => { bar.classList.add('on'); tag.classList.add('on'); }, 30);
   });
 

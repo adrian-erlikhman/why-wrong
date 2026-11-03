@@ -1,11 +1,11 @@
 /**
- * simulate.js -- synthetic class generator with recoverable ground truth.
+ * simulate.js: synthetic class generator with recoverable ground truth.
  * ---------------------------------------------------------------------------
  * This is the honest answer to "where does the data come from".
  *
  * We do not hand-write a plausible-looking answer sheet. We build a generative
  * model of a class: each student is assigned a latent profile (a set of
- * misconceptions they actually hold, plus an ability parameter), and their
+ * misconceptions they hold, plus an ability parameter), and their
  * answers are then *generated from that profile*. The planted profile is kept
  * and never shown to the inference layer.
  *
@@ -14,10 +14,10 @@
  * what was planted, and validate.js reports how much of it came back.
  *
  * Response model, per student s and item i:
- *   1. Find the options on item i whose mapped misconception s actually holds.
+ *   1. Find the options on item i whose mapped misconception s holds.
  *   2. If any exist, s expresses one of them with probability P_EXPRESS.
- *      A misconception is a stable rule, so it fires most of the time -- but
- *      not always, which is exactly why single items cannot diagnose.
+ *      A misconception is a stable rule, so it fires most of the time but
+ *      not always, which is why single items cannot diagnose.
  *   3. Otherwise s answers correctly with probability sigmoid(ability),
  *      and otherwise slips to a random wrong option.
  *

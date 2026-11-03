@@ -1,5 +1,5 @@
 /**
- * explain.js -- inline glossary.
+ * explain.js: inline glossary.
  * ---------------------------------------------------------------------------
  * The analysis leans on real psychometric and statistical terms, and a teacher
  * has no reason to know any of them. Two bad options are usually taken here:
@@ -8,8 +8,8 @@
  *
  * So: plain language in the sentence, the real term available on demand. Every
  * statistic on screen carries a small marker that opens a short explanation
- * written for someone who teaches for a living -- what it means, and what a
- * teacher should actually do about the number in front of them.
+ * written for someone who teaches for a living: what it means, and what a
+ * teacher should do about the number in front of them.
  */
 
 export const TERMS = {

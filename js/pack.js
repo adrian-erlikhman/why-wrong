@@ -1,5 +1,5 @@
 /**
- * pack.js -- the subject-pack contract.
+ * pack.js: the subject-pack contract.
  * ---------------------------------------------------------------------------
  * A pack is a complete diagnostic instrument for one subject:
  *

@@ -1,16 +1,16 @@
 /**
- * drawer.js -- inspect one student, or one question.
+ * drawer.js: inspect one student, or one question.
  * ---------------------------------------------------------------------------
- * The part that makes the analysis trustworthy rather than merely impressive.
+ * This is what lets a teacher check the analysis.
  *
  * A tool that tells a teacher "Milo holds the sign-distribution misconception,
- * 87%" and offers no way to check has asked for faith. And a teacher who cannot
- * check will, correctly, ignore it the first time it says something surprising.
+ * 87%" and offers no way to check is asking for faith, and a teacher who cannot
+ * check will ignore it the first time it says something surprising.
  *
  * So every diagnosis opens up. The inference model is a sum of independent
- * log-odds contributions, one per question, which means the reasoning is
- * genuinely decomposable -- not reconstructed after the fact, but the actual
- * arithmetic that produced the number. Each question either pushed the
+ * log-odds contributions, one per question, so the reasoning can be taken
+ * apart. It is the arithmetic that produced the number, not an explanation
+ * written afterwards. Each question either pushed the
  * conclusion up or pulled it down, and by how much.
  */
 

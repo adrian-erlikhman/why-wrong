@@ -1,5 +1,5 @@
 /**
- * validate.js -- does the pipeline actually recover what was planted?
+ * validate.js: does the pipeline recover what was planted?
  * ---------------------------------------------------------------------------
  * This is the part most analysis tools cannot do, and the reason the class is
  * simulated rather than borrowed.
@@ -8,9 +8,9 @@
  * generates answers from it, we can hide the profile from the pipeline, run the
  * pipeline, and score the output against the truth. Two questions:
  *
- *   1. Per-student diagnosis -- of the misconceptions a student actually holds,
+ *   1. Per-student diagnosis: of the misconceptions a student holds,
  *      how many did we find, and how many did we invent? (precision / recall)
- *   2. Class structure -- do the discovered clusters correspond to the
+ *   2. Class structure: do the discovered clusters correspond to the
  *      archetypes that were planted? (adjusted Rand index)
  *
  * These numbers are computed live on whatever seed is loaded. They are not

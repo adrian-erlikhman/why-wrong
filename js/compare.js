@@ -1,5 +1,5 @@
 /**
- * compare.js -- did the reteach work?
+ * compare.js: did the reteach work?
  * ---------------------------------------------------------------------------
  * The whole tool promises a loop: find the misunderstanding, reteach it, check
  * it. This closes the last step. The class sits the paper again, the two

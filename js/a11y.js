@@ -1,5 +1,5 @@
 /**
- * a11y.js -- keyboard support shared by the dialogs.
+ * a11y.js: keyboard support shared by the dialogs.
  * ---------------------------------------------------------------------------
  * A dialog marked aria-modal promises that focus stays inside it, and a teacher
  * using a keyboard or a screen reader is relying on that promise. Each dialog
