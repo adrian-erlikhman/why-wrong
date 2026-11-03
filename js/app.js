@@ -1592,6 +1592,11 @@ function showView(name) {
   // Rows are absolutely positioned, so they need re-laying out whenever the
   // matrix returns from display:none at a possibly different width.
   if (name === 'matrix' && state.cls) layout(rowOrder());
+
+  // A long tab leaves you far down the page, and the next one should open at its
+  // top rather than wherever that scroll position happens to land in it.
+  const top = $('.main').getBoundingClientRect().top + window.scrollY - $('.tabs').offsetHeight;
+  if (window.scrollY > top) window.scrollTo({ top, behavior: 'instant' });
 }
 
 /** On a phone the tabs scroll sideways, so keep the open one in view. */
