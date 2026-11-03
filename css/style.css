@@ -1116,7 +1116,7 @@ html.key-above .legend { padding-bottom: 20px; }
 
 /* -------------------------------- method ------------------------------- */
 
-.method { counter-reset: st; list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; max-width: 88ch; }
+.method { counter-reset: st; list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: 88ch; }
 .method li {
   position: relative;
   padding: 24px 28px 24px 80px;
