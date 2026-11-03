@@ -1529,7 +1529,8 @@ function saveTest() {
 }
 
 function showTestNudge() {
-  $('#test-nudge').hidden = state.unsavedTest !== state.pack.id;
+  // Save class writes the test into its file, so one reminder covers both.
+  $('#test-nudge').hidden = state.unsavedTest !== state.pack.id || !!state.imported;
   $('#mat-pack').hidden = isBuiltIn(state.pack);
 }
 
