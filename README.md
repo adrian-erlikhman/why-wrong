@@ -73,6 +73,11 @@ would keep a gradebook.
 Each file carries a fingerprint of its test. If the test has changed since, the
 file is refused rather than read as different answers.
 
+A test built with **+ New subject** is only in the tab too, and the answers come
+back days after it prints. The page says so until it is saved, **Save test** writes
+it to a file, and **+ New subject → Open a .json file** brings it back with the same
+letters as the paper.
+
 ### After the reteach
 
 Give the same paper again and paste the new answers into **After the reteach**.

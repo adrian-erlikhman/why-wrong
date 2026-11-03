@@ -16,7 +16,7 @@ import { clusterStudents, describeClusters, separateThin, reteachGroups, adjuste
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, csvCell, groupsCsv } from '../js/importer.js';
-import { classFile, readClassFile, fingerprint } from '../js/session.js';
+import { classFile, readClassFile, fingerprint, testFile } from '../js/session.js';
 import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
 import { rewritePlan, setKey } from '../js/llm.js';
@@ -177,6 +177,9 @@ for (const pack of BUILT_IN) {
   const own = structuredClone(BUILT_IN[1]);
   own.id = 'teacher-test';
   own.keepOrder = true;
+  const reopened = JSON.parse(testFile(BUILT_IN[0]));
+  check('a saved built test keeps the letters already printed',
+    reopened.keepOrder === false && reopened.items.every((it, i) => paperOrder(it).join() === paperOrder(BUILT_IN[0].items[i]).join()));
   own.items.forEach(it => { it.id = `T-${it.id}`; });
   addPack(own);
   check('every item prints in stored order', own.items.every(it =>

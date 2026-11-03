@@ -32,6 +32,15 @@ export function fingerprint(pack) {
 }
 
 /**
+ * A test as a file, for + New subject to open again. A built test's letters come
+ * from a shuffle seeded by each question's id, so the file has to say to keep that
+ * shuffle, or the paper already printed would stop matching.
+ */
+export function testFile(pack) {
+  return JSON.stringify({ ...pack, keepOrder: Boolean(pack.keepOrder) }, null, 2);
+}
+
+/**
  * Serialise a class. A built-in test is stored by id, because it ships with the
  * page. Any other test only exists in this tab, so it travels inside the file.
  */

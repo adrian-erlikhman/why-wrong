@@ -178,6 +178,10 @@
       This class is only in this tab, and closing it loses the answers.
       <button id="save-nudge-go" class="btn btn-tiny" type="button">Save class</button>
     </p>
+    <p class="save-nudge" id="test-nudge" hidden>
+      This test is only in this tab. Save it before you print, so you can paste the answers back later.
+      <button id="test-nudge-go" class="btn btn-tiny" type="button">Save test</button>
+    </p>
     <div class="paste-notes" id="paste-notes" role="status" hidden>
       <div class="paste-notes-head">
         <b id="paste-notes-title"></b>
@@ -560,6 +564,10 @@
     <h3 id="mats-title">Materials</h3>
     <p>Everything you need to run this with a real class, on paper.</p>
     <div class="mats-list">
+      <button class="mat" id="mat-pack" hidden>
+        <span class="mat-t">Save this test to a file</span>
+        <span class="mat-d">A built test is only in this tab. Save it now, and open it from + New subject when the answers come back.</span>
+      </button>
       <button class="mat" id="mat-quiz">
         <span class="mat-t">Print the questions</span>
         <span class="mat-d">The full instrument, formatted for paper, with a name line.</span>

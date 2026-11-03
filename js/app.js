@@ -22,7 +22,7 @@ import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
-import { classFile, readClassFile } from './session.js';
+import { classFile, readClassFile, testFile } from './session.js';
 import { compareSittings, comparePredictions, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
 import { mathHtml, setMath } from './notation.js';
@@ -84,6 +84,7 @@ const state = {
   sorted: false, rows: [], apiKey: null,
   imported: null,     // { students, responses } when the class is the teacher's own
   unsaved: false,     // the imported class exists only in this tab
+  unsavedTest: null,  // id of a built test that exists only in this tab
   retest: null,       // { students, responses, simulated? } the same paper, after a reteach
   importFor: 'class', // what the paste box is filling in: 'class' or 'retest'
   predictions: new Set(), // misconception ids the teacher expected before seeing a result
@@ -131,6 +132,7 @@ function run() {
   Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
 
   fitMapToClass(cls.students.length);
+  showTestNudge();
   renderPackLine();
   renderExample();
   renderSummary();
@@ -1436,6 +1438,7 @@ async function doGenerate() {
 
     addPack(pack);
     dropClass();
+    state.unsavedTest = pack.id;
     setTimeout(() => { closeM('#modal'); state.pack = pack; renderPackOptions(pack.id); run(); }, 700);
   } catch (e) {
     err.textContent = e.message;
@@ -1517,6 +1520,18 @@ function useClass({ students, responses, retest = null, predictions = [], savedA
 
 /* ---- save and reopen a class ---- */
 
+/** A built test has to outlast the tab: the answers come back days after it prints. */
+function saveTest() {
+  download(`${state.pack.id}-test.json`, testFile(state.pack), 'application/json');
+  state.unsavedTest = null;
+  showTestNudge();
+}
+
+function showTestNudge() {
+  $('#test-nudge').hidden = state.unsavedTest !== state.pack.id;
+  $('#mat-pack').hidden = isBuiltIn(state.pack);
+}
+
 function saveClass() {
   const { pack, imported } = state;
   const savedAt = new Date();
@@ -1524,6 +1539,8 @@ function saveClass() {
   download(`${pack.id}-class-${day}.json`,
     classFile({ pack, ...imported, savedAt, retest: state.retest, predictions: [...state.predictions], builtIn: isBuiltIn(pack) }), 'application/json');
   imported.savedAt = savedAt.toISOString();
+  if (state.unsavedTest === pack.id) state.unsavedTest = null;   // the class file carries it
+  showTestNudge();
   markUnsaved(false);
   renderPackLine();
   flashSaved();
@@ -1795,6 +1812,8 @@ $('#class-file').addEventListener('change', e => {
 });
 $('#save-class').addEventListener('click', saveClass);
 $('#save-nudge-go').addEventListener('click', saveClass);
+$('#test-nudge-go').addEventListener('click', saveTest);
+$('#mat-pack').addEventListener('click', saveTest);
 $('#paste-notes-close').addEventListener('click', () => { $('#paste-notes').hidden = true; });
 $('#export-progress').addEventListener('click', exportProgress);
 $('#print-progress').addEventListener('click', printProgress);
@@ -1802,7 +1821,7 @@ $('#clear-retest').addEventListener('click', clearRetest);
 
 // Thirty typed answer sheets are not worth losing to a stray reload.
 window.addEventListener('beforeunload', e => {
-  if (state.imported && state.unsaved) { e.preventDefault(); e.returnValue = ''; }
+  if ((state.imported && state.unsaved) || state.unsavedTest) { e.preventDefault(); e.returnValue = ''; }
 });
 
 $('#print-plan').addEventListener('click', printPlan);
