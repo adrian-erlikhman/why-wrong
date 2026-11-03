@@ -416,6 +416,13 @@ function readCell(raw, item, coding = 'letters') {
     if (i >= 0) return i;
   }
 
+  // On a true/false question, T and F are the natural thing to type.
+  if (/^[tf]$/i.test(v)) {
+    const want = v.toLowerCase() === 't' ? 'true' : 'false';
+    const i = item.opts.findIndex(o => norm(o.t) === want);
+    if (i >= 0) return i;
+  }
+
   const readings = {
     letters: () => { const k = asLetter(v, n); return k === null ? null : order[k]; },
     numbers: () => { const k = asNumber(v, n); return k === null ? null : order[k]; },

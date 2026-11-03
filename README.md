@@ -107,7 +107,7 @@ file (JSON: misconceptions, and each question's options in her printed order,
 with every wrong option tagged or left untagged as a slip), then **+ New
 subject → Open a .json file**. The file is read in the tab and never uploaded,
 and her option order is kept, so her "A" is the tool's "A". True/false
-questions work.
+questions work, and T and F read on them.
 
 **Materials → Print the labels for the teacher to check** gives her every
 wrong answer with its label and a line to agree or fix it, plus a first page

@@ -212,6 +212,9 @@ for (const pack of BUILT_IN) {
   check('inference on it gives real probabilities', bi.posterior.flat().every(p => p >= 0 && p <= 1));
   check('a test with no subject prints no "undefined"',
     !quizHtml(bare).includes('undefined') && !reviewHtml(bare).includes('undefined'));
+  const typed = parseResponses(bare, `Student,B1,B2,B3,B4,B5\nAda,A,A,A,A,T\nBen,A,A,A,A,f`);
+  check('T and F read on a true/false question', typed.ok &&
+    bare.items[4].opts[typed.responses[0][4]].t === 'True' && bare.items[4].opts[typed.responses[1][4]].t === 'False');
   const sheet = reviewHtml(bare);
   check('the review sheet lists every misconception and question',
     bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
