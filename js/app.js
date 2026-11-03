@@ -644,6 +644,7 @@ function groupCard(g, idx) {
   if (g.aiPlan) h.appendChild(el('span', 'pill pill-ai', 'rewritten'));
   top.appendChild(h);
 
+  if (g.signature.length) top.appendChild(el('div', 'chips-lab', 'Held by about this share of the group'));
   const chips = el('div', 'chips');
   g.signature.slice(0, 4).forEach(s => {
     const c = el('button', 'chip');

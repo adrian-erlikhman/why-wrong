@@ -768,6 +768,7 @@ html.key-above .legend { padding-bottom: 20px; }
 .group h3 { font-size: 20px; margin: 10px 0 14px; line-height: 1.25; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips-lab { font-size: 13.5px; color: var(--muted); margin-bottom: 6px; }
 
 .chip {
   display: inline-flex;
