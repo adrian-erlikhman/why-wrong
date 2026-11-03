@@ -680,7 +680,7 @@ function renderGroups() {
 
 function groupCard(g, idx) {
   const byId = misById(state.pack);
-  const card = el('div', `group${g.isSecure ? ' secure' : ''}${g.isThin ? ' thin' : ''}`);
+  const card = el('article', `group${g.isSecure ? ' secure' : ''}${g.isThin ? ' thin' : ''}`);
   const total = state.cls.students.length;
 
   const top = el('div', 'group-top');
@@ -697,7 +697,7 @@ function groupCard(g, idx) {
     const body = el('div', 'group-body');
     body.appendChild(el('p', 'belief',
       'These students left at least half the paper blank. That is not the same as being fine: nothing is known about them yet. Get the rest of their answers, or talk to them, before deciding anything.'));
-    body.appendChild(roster(g));
+    top.appendChild(roster(g));
     card.appendChild(body);
     return card;
   }
@@ -710,7 +710,7 @@ function groupCard(g, idx) {
     body.appendChild(el('p', 'belief', g.members.every(s => scores[s] === state.cov[s].answered)
       ? 'Everything these students answered was right, so there is nothing to reteach.'
       : 'Any mistakes these students made do not repeat and do not point anywhere. That is carelessness rather than a misunderstanding: they need practice and attention, not a reteach.'));
-    body.appendChild(roster(g));
+    top.appendChild(roster(g));
     card.appendChild(body);
     return card;
   }
@@ -736,28 +736,33 @@ function groupCard(g, idx) {
     chips.appendChild(c);
   });
   top.appendChild(chips);
+  top.appendChild(roster(g));
   card.appendChild(top);
 
   const body = el('div', 'group-body');
+  const teach = el('div', 'group-teach');
+  const check = el('div', 'group-check');
+  body.appendChild(teach);
+  body.appendChild(check);
   if (details[0]?.belief) {
-    body.appendChild(el('div', 'lab', 'What they believe'));
-    body.appendChild(setMath(el('p', 'belief'), details[0].belief));
+    teach.appendChild(el('div', 'lab', 'What they believe'));
+    teach.appendChild(setMath(el('p', 'belief'), details[0].belief));
   }
 
   // A teacher's own test may carry no reteach plans yet; leave the heading out
   // rather than show it over nothing.
   const plan = g.aiPlan?.plan || details[0]?.reteach;
   if (plan) {
-    body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach, rewritten for this group' : 'Reteach'));
-    body.appendChild(setMath(el('p', 'plan'), plan));
+    teach.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach, rewritten for this group' : 'Reteach'));
+    teach.appendChild(setMath(el('p', 'plan'), plan));
   }
 
   const checks = g.aiPlan?.verify || details[0]?.verify || [];
   if (checks.length) {
-    body.appendChild(el('div', 'lab', 'Check it landed'));
+    check.appendChild(el('div', 'lab', 'Check it landed'));
     const ul = el('ul', 'checks');
     checks.forEach(v => ul.appendChild(setMath(el('li'), v)));
-    body.appendChild(ul);
+    check.appendChild(ul);
   }
 
   // The plan above is for the group's main misunderstanding. The rest are held
@@ -782,7 +787,6 @@ function groupCard(g, idx) {
     body.appendChild(more);
   }
 
-  body.appendChild(roster(g));
   card.appendChild(body);
   return card;
 }
@@ -876,6 +880,11 @@ function renderStudents() {
     host.appendChild(el('p', 'note', state.studentGroup == null ? 'No student by that name.' : 'No student by that name in this group.'));
     return;
   }
+
+  const cols = el('div', 'stu-cols');
+  cols.setAttribute('aria-hidden', 'true');
+  ['Student', 'What they hold, and how sure', 'Score', ''].forEach(t => cols.appendChild(el('span', null, t)));
+  host.appendChild(cols);
 
   shown.forEach(r => {
     const card = el('button', 'stu');
