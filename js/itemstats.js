@@ -191,9 +191,8 @@ export function analyseItems(pack, responses, inference = null) {
     // is a different failure from poor discrimination and is worth naming
     // separately, because the remedy is different: rewrite the options so the
     // wrong ones mean something.
-    // Test whether the observed number correct exceeds chance using an exact
-    // one-sided binomial tail; the normal approximation is unreliable for small
-    // classes and discrete counts.
+    // Check both exact binomial tails: neither a high nor a low result should be
+    // described as chance-like when it is unlikely under random guessing.
     const indistinguishableFromGuessing = chanceUpperTail !== null &&
       chanceUpperTail > 0.05 && chanceLowerTail > 0.05;
 
