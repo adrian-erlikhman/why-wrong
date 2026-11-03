@@ -66,7 +66,7 @@ export function paperLetter(item, optIndex) {
 
 /* ------------------------------------------------------------------ export */
 
-function csvCell(v) {
+export function csvCell(v) {
   const s = String(v ?? '');
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }

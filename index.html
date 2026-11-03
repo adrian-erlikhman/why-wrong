@@ -171,6 +171,7 @@
     <button class="tab" role="tab" data-view="groups" aria-selected="false">Reteach groups</button>
     <button class="tab" role="tab" data-view="students" aria-selected="false">Students</button>
     <button class="tab" role="tab" data-view="items" aria-selected="false">Your questions</button>
+    <button class="tab" role="tab" data-view="progress" aria-selected="false">After the reteach</button>
     <button class="tab" role="tab" data-view="validation" aria-selected="false">Does it work?</button>
     <button class="tab" role="tab" data-view="method" aria-selected="false">Method</button>
   </div>
@@ -266,6 +267,24 @@
     <p class="note" id="alpha-note"></p>
   </section>
 
+  <!-- ------------------------ AFTER THE RETEACH --------------------- -->
+  <section class="view" id="view-progress" role="tabpanel">
+    <div class="view-head">
+      <div>
+        <h2>Did the reteach work?</h2>
+        <p class="sub">
+          Give the same paper again and every student is compared with themselves. A misunderstanding
+          counts as cleared only if its questions were answered both times.
+        </p>
+      </div>
+      <div class="head-actions">
+        <button id="export-progress" class="btn btn-quiet" hidden>Export CSV</button>
+        <button id="clear-retest" class="btn btn-quiet" hidden>Remove retest</button>
+      </div>
+    </div>
+    <div id="progress"></div>
+  </section>
+
   <!-- ---------------------------- VALIDATION ------------------------ -->
   <section class="view" id="view-validation" role="tabpanel">
     <div class="view-head">
@@ -348,8 +367,8 @@
         <h3>What to do on Monday <span class="pill pill-ai">model-adapted</span></h3>
         <p>
           Each group gets a reteach aimed at the specific belief, plus three questions to check it
-          landed. Because those questions exist, the loop closes: reteach, re-run, watch the group
-          shrink.
+          landed. Then give the paper again and <b>After the reteach</b> compares every student with
+          themselves, and says whether the change is bigger than chance.
         </p>
       </li>
     </ol>

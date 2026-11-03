@@ -42,6 +42,44 @@ const FIRST = ['Amara','Ben','Chen','Dara','Eli','Farah','Gus','Hana','Ivan','Jo
 const LAST = ['A.','B.','C.','D.','E.','F.','G.','H.','I.','J.','K.','L.','M.','N.','O.','P.',
   'Q.','R.','S.','T.','U.','V.','W.','X.','Y.','Z.','Aa.','Bb.','Cc.','Dd.','Ee.','Ff.'];
 
+/** One student's answers, generated from their hidden profile. */
+function answerSheet(items, held, ability, rng) {
+  const row = [];
+  items.forEach(item => {
+    const ci = correctIndex(item);
+
+    if (item._weak === 'trivial') {
+      // Everyone can do it, so it separates nobody.
+      row.push(rng() < 0.97 ? ci : Math.floor(rng() * item.opts.length));
+      return;
+    }
+    if (item._weak === 'ambiguous') {
+      // Wording defeats ability: responses are near-uniform regardless of how
+      // strong the student is. This is what a zero-discrimination item looks
+      // like in real item analysis.
+      row.push(Math.floor(rng() * item.opts.length));
+      return;
+    }
+
+    const firing = [];
+    item.opts.forEach((o, oi) => { if (o.mis && held.has(o.mis)) firing.push(oi); });
+
+    if (firing.length && rng() < P_EXPRESS) {
+      row.push(firing[Math.floor(rng() * firing.length)]);
+      return;
+    }
+
+    const pCorrect = sigmoid(1.15 * ability + 1.85) * (1 - P_SLIP);
+    if (rng() < pCorrect) {
+      row.push(ci);
+    } else {
+      const wrong = item.opts.map((_, oi) => oi).filter(oi => oi !== ci);
+      row.push(wrong[Math.floor(rng() * wrong.length)]);
+    }
+  });
+  return row;
+}
+
 /**
  * Generate a class for a pack.
  * @returns {{students, responses, truth, pack, meta}}
@@ -86,40 +124,7 @@ export function generateClass(pack, { seed = 7, size = 28 } = {}) {
       if (!core.includes(m) && rng() < P_LEAK) held.add(m);
     });
 
-    // --- generate the answer sheet from the profile ------------------------
-    const row = [];
-    items.forEach(item => {
-      const ci = correctIndex(item);
-
-      if (item._weak === 'trivial') {
-        // Everyone can do it, so it separates nobody.
-        row.push(rng() < 0.97 ? ci : Math.floor(rng() * item.opts.length));
-        return;
-      }
-      if (item._weak === 'ambiguous') {
-        // Wording defeats ability: responses are near-uniform regardless of how
-        // strong the student is. This is what a zero-discrimination item looks
-        // like in real item analysis.
-        row.push(Math.floor(rng() * item.opts.length));
-        return;
-      }
-
-      const firing = [];
-      item.opts.forEach((o, oi) => { if (o.mis && held.has(o.mis)) firing.push(oi); });
-
-      if (firing.length && rng() < P_EXPRESS) {
-        row.push(firing[Math.floor(rng() * firing.length)]);
-        return;
-      }
-
-      const pCorrect = sigmoid(1.15 * ability + 1.85) * (1 - P_SLIP);
-      if (rng() < pCorrect) {
-        row.push(ci);
-      } else {
-        const wrong = item.opts.map((_, oi) => oi).filter(oi => oi !== ci);
-        row.push(wrong[Math.floor(rng() * wrong.length)]);
-      }
-    });
+    const row = answerSheet(items, held, ability, rng);
 
     students.push({
       id: `S${String(s + 1).padStart(2, '0')}`,
@@ -136,6 +141,24 @@ export function generateClass(pack, { seed = 7, size = 28 } = {}) {
     pack,
     meta: { seed, size, nItems: items.length, packId: pack.id }
   };
+}
+
+/**
+ * The same class sitting the same paper again after a reteach.
+ *
+ * Each held misconception is cleared with probability `cleared`, then a new
+ * answer sheet is generated from what is left. Set `cleared` to 0 and nothing
+ * changes except the noise, which is how a comparison is tested for inventing
+ * progress that did not happen.
+ */
+export function generateRetest(cls, { seed = 1, cleared = 0.7 } = {}) {
+  const rng = makeRng(seed);
+  const truth = cls.truth.map(t => ({
+    ...t,
+    held: new Set([...t.held].filter(() => rng() >= cleared))
+  }));
+  const responses = truth.map(t => answerSheet(cls.pack.items, t.held, t.ability, rng));
+  return { students: cls.students, responses, truth };
 }
 
 /** Score matrix: 1 if student s answered item i correctly. */

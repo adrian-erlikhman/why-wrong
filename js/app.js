@@ -12,7 +12,7 @@
 
 import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
-import { generateClass, totalScores } from './simulate.js';
+import { generateClass, generateRetest, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, coverage, PARAMS } from './infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf } from './itemstats.js';
@@ -23,6 +23,7 @@ import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
 import { classFile, readClassFile } from './session.js';
+import { compareSittings, progressCsv, READING } from './compare.js';
 import { mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
@@ -57,6 +58,8 @@ const state = {
   sorted: false, rows: [], apiKey: null,
   imported: null,     // { students, responses } when the class is the teacher's own
   unsaved: false,     // the imported class exists only in this tab
+  retest: null,       // { students, responses, simulated? } the same paper, after a reteach
+  importFor: 'class', // what the paste box is filling in: 'class' or 'retest'
   filterMis: null,    // highlight one misconception across the matrix
   itemFilter: 'problem'
 };
@@ -73,6 +76,9 @@ const ctx = () => ({
 function run() {
   const pack = state.pack;
   assignColours(pack);
+
+  // A retest belongs to one class. A re-rolled sample class is a different one.
+  if (!state.imported) state.retest = null;
 
   let cls;
   if (state.imported) {
@@ -104,6 +110,7 @@ function run() {
   renderGroups();
   renderStudents();
   renderItems();
+  renderProgress();
   renderValidation();
   renderMethod();
   wireExplainers();
@@ -717,6 +724,159 @@ function itemCard(s) {
 }
 
 /* ======================================================================== */
+/*  After the reteach                                                       */
+/* ======================================================================== */
+
+function renderProgress() {
+  const host = $('#progress');
+  host.innerHTML = '';
+  $('#export-progress').hidden = !state.retest;
+  $('#clear-retest').hidden = !state.retest;
+  if (!state.retest) { host.appendChild(progressEmpty()); return; }
+
+  const { pack, cls, retest } = state;
+  const cmp = compareSittings(pack, cls, retest);
+  const { totals: t, match } = cmp;
+
+  if (!match.pairs.length) {
+    const box = el('div', 'empty');
+    box.appendChild(el('h4', null, 'No student appears in both sittings.'));
+    box.appendChild(el('p', null, 'Students are matched by name, so check that the two sheets spell them the same way.'));
+    host.appendChild(box);
+    return;
+  }
+
+  host.appendChild(progressVerdict(t));
+
+  const metrics = el('div', 'metrics');
+  [
+    [t.students, 'students in both sittings', `Each one is compared with themselves.`],
+    [t.cleared, 'misunderstandings cleared', 'Held before the reteach and not after.'],
+    [t.stuck, 'still held', 'Held both times. These are your next reteach.'],
+    [t.emerged, 'new since last time', 'Not held before, held now.']
+  ].forEach(([v, k, x]) => {
+    const c = el('div', 'metric');
+    c.appendChild(el('div', 'metric-v', String(v)));
+    c.appendChild(el('div', 'metric-k', k));
+    c.appendChild(el('div', 'metric-x', x));
+    metrics.appendChild(c);
+  });
+  host.appendChild(metrics);
+
+  const byId = misById(pack);
+  const list = el('div', 'progs');
+  cmp.misconceptions.filter(m => m.before || m.after).forEach(m => list.appendChild(progressCard(m, byId, t.students)));
+  host.appendChild(list);
+
+  const missing = [
+    match.onlyBefore.length && `Only in the first sitting: ${match.onlyBefore.join(', ')}.`,
+    match.onlyAfter.length && `Only in the retest: ${match.onlyAfter.join(', ')}.`,
+    match.ambiguous.length && `Same name twice, so left out: ${match.ambiguous.join(', ')}.`
+  ].filter(Boolean);
+  if (missing.length) host.appendChild(el('p', 'note', missing.join(' ')));
+
+  if (retest.simulated) {
+    const held = rows => rows.reduce((n, r) => n + r.held.size, 0);
+    host.appendChild(el('p', 'note',
+      `This retest is simulated: ${Math.round(retest.simulated.cleared * 100)}% of each student's misunderstandings were removed before new answers were generated. The class really went from ${held(cls.truth)} held to ${held(retest.truth)}; the tool, which never saw that, reports ${t.before} to ${t.after}.`));
+  }
+}
+
+function progressEmpty() {
+  const box = el('div', 'empty');
+  box.appendChild(el('h4', null, 'Nothing to compare yet.'));
+  box.appendChild(el('p', null,
+    'After you reteach, give the class the same paper and paste the new answers. Students are matched by name, and you will see who moved rather than just whether the average rose.'));
+  const row = el('div', 'empty-actions');
+  const paste = el('button', 'btn btn-primary', 'Paste the retest');
+  paste.addEventListener('click', () => openImport('retest'));
+  row.appendChild(paste);
+  if (state.cls.truth) {
+    const sim = el('button', 'btn', 'Simulate a reteach');
+    sim.addEventListener('click', simulateReteach);
+    row.appendChild(sim);
+  }
+  box.appendChild(row);
+  return box;
+}
+
+function progressVerdict(t) {
+  const plural = n => `${n} student${n === 1 ? '' : 's'}`;
+  const split = `${plural(t.fewer)} ended up holding fewer misunderstandings and ${plural(t.more)} holding more`;
+  const [title, body] = {
+    improved: ['The class moved.', `${split}. A split that lopsided is unlikely to be chance.`],
+    worse: ['The class went backwards.', `${split}. A split that lopsided is unlikely to be chance.`],
+    unclear: ['No clear change yet.', `${split}. That could be chance on a class this size, so look at the misunderstandings one by one.`],
+    none: ['Nobody moved.', 'Every student holds the same misunderstandings as last time.']
+  }[t.reading];
+  const box = el('div', `prog-verdict is-${t.reading}`);
+  box.appendChild(el('h4', null, title));
+  box.appendChild(el('p', null, body));
+  box.appendChild(el('p', 'prog-caveat', 'Sitting the same paper twice teaches the paper, so read this as evidence rather than proof.'));
+  return box;
+}
+
+function progressCard(m, byId, n) {
+  const card = el('div', 'prog');
+
+  const top = el('div', 'prog-top');
+  const sw = el('span', 'sw');
+  sw.style.background = colourOf[m.id];
+  top.appendChild(sw);
+  top.appendChild(setMath(el('span', 'prog-name'), byId[m.id]?.name ?? m.id));
+  top.appendChild(el('span', `prog-read is-${m.reading}`, READING[m.reading]));
+  card.appendChild(top);
+
+  [['Before', m.before], ['After', m.after]].forEach(([label, v]) => {
+    const row = el('div', 'prog-row');
+    row.appendChild(el('span', 'prog-lab', label));
+    const track = el('span', 'prog-track');
+    const fill = el('span', 'prog-fill');
+    fill.style.width = `${Math.max(1.5, (v / n) * 100)}%`;
+    fill.style.background = colourOf[m.id];
+    if (label === 'Before') fill.style.opacity = '.45';
+    track.appendChild(fill);
+    row.appendChild(track);
+    row.appendChild(el('span', 'prog-n', String(v)));
+    card.appendChild(row);
+  });
+
+  const who = [['Still holding', m.stuck], ['Cleared', m.cleared], ['New', m.emerged], ['Not tested', m.untested]]
+    .filter(([, names]) => names.length);
+  if (who.length) {
+    const more = el('details', 'prog-who');
+    more.appendChild(el('summary', null, 'Who'));
+    who.forEach(([label, names]) => {
+      const line = el('p', null);
+      line.appendChild(el('b', null, `${label}: `));
+      line.appendChild(document.createTextNode(names.join(', ')));
+      more.appendChild(line);
+    });
+    card.appendChild(more);
+  }
+  return card;
+}
+
+/** A retest for the sample class, generated from its hidden profiles. */
+function simulateReteach() {
+  const cleared = 0.7;
+  const seed = (state.cls.meta.seed || 1) + 1;
+  state.retest = { ...generateRetest(state.cls, { seed, cleared }), simulated: { cleared } };
+  renderProgress();
+}
+
+function clearRetest() {
+  if (state.imported) state.unsaved = true;
+  state.retest = null;
+  renderProgress();
+}
+
+function exportProgress() {
+  download(`${state.pack.id}-after-reteach.csv`,
+    progressCsv(compareSittings(state.pack, state.cls, state.retest), misById(state.pack)));
+}
+
+/* ======================================================================== */
 /*  Validation                                                              */
 /* ======================================================================== */
 
@@ -804,6 +964,7 @@ function renderMethod() {
 /** Back to the sample class. */
 function dropClass() {
   state.imported = null;
+  state.retest = null;
   state.unsaved = false;
   $('#source').value = 'sample';
   document.body.classList.remove('has-import');
@@ -933,7 +1094,14 @@ async function doGenerate() {
 
 /* ---- import a class ---- */
 
-function openImport() {
+function openImport(mode = 'class') {
+  state.importFor = mode;
+  const retest = mode === 'retest';
+  $('#import-title').textContent = retest ? 'Paste the retest' : 'Paste your class';
+  $('#import-go').textContent = retest ? 'Compare with the first sitting' : 'Analyse this class';
+  $('#class-open').textContent = retest ? 'Open a saved retest…' : 'Open a saved class…';
+  $('#paste-demo').hidden = retest;
+  $('#import-text').value = '';
   $('#import-report').hidden = true;
   $('#import-report').innerHTML = '';
   openM('#import');
@@ -962,14 +1130,23 @@ function doImport() {
   const res = parseResponses(state.pack, $('#import-text').value);
   if (!reportImport(res)) return;
 
-  useClass(res);
   closeM('#import');
+  if (state.importFor === 'retest') { useRetest(res); return; }
+  useClass(res);
   showView('groups');
 }
 
+function useRetest({ students, responses }) {
+  state.retest = { students, responses };
+  if (state.imported) state.unsaved = true;
+  renderProgress();
+  showView('progress');
+}
+
 /** Make a class the one on screen. Typed answers exist only here until saved. */
-function useClass({ students, responses }, { saved = false } = {}) {
+function useClass({ students, responses, retest = null }, { saved = false } = {}) {
   state.imported = { students, responses };
+  state.retest = retest;
   state.unsaved = !saved;
   document.body.classList.add('has-import');
   $('#source').value = 'import';
@@ -982,7 +1159,7 @@ function saveClass() {
   const { pack, imported } = state;
   const day = new Date().toISOString().slice(0, 10);
   download(`${pack.id}-class-${day}.json`,
-    classFile({ pack, ...imported, builtIn: isBuiltIn(pack) }), 'application/json');
+    classFile({ pack, ...imported, retest: state.retest, builtIn: isBuiltIn(pack) }), 'application/json');
   state.unsaved = false;
   flashSaved();
 }
@@ -999,6 +1176,16 @@ async function openClassFile(file) {
     reportImport({ ok: false, errors: res.errors, warnings: [], responses: [] });
     return;
   }
+  if (state.importFor === 'retest') {
+    if (res.pack.id !== state.pack.id) {
+      reportImport({ ok: false, errors: ['That file was saved on a different test, so it cannot be compared with this class.'], warnings: [], responses: [] });
+      return;
+    }
+    closeM('#import');
+    useRetest(res);
+    return;
+  }
+
   // A test that lived only in the tab it was saved from comes back with its class.
   if (res.embedded) addPack(res.pack);
   state.pack = res.pack;
@@ -1144,7 +1331,7 @@ $('#materials').addEventListener('click', () => openM('#mats'));
 $('#mats-close').addEventListener('click', () => closeM('#mats'));
 
 $('#source').addEventListener('change', e => {
-  if (e.target.value === 'import') { openImport(); e.target.value = state.imported ? 'import' : 'sample'; }
+  if (e.target.value === 'import') { openImport('class'); e.target.value = state.imported ? 'import' : 'sample'; }
   else if (state.imported) {
     if (state.unsaved && !window.confirm('This class has not been saved. Switch back to the sample class and lose it?')) {
       e.target.value = 'import';
@@ -1177,6 +1364,8 @@ $('#class-file').addEventListener('change', e => {
   if (f) openClassFile(f);
 });
 $('#save-class').addEventListener('click', saveClass);
+$('#export-progress').addEventListener('click', exportProgress);
+$('#clear-retest').addEventListener('click', clearRetest);
 
 // Thirty typed answer sheets are not worth losing to a stray reload.
 window.addEventListener('beforeunload', e => {

@@ -23,7 +23,7 @@ A first visit opens a short guided tour of the real page (the map, the sort, a
 reteach group, the test audit, the recovery numbers); the **Demo** button
 replays it.
 
-Deep links: `?view=groups` (or `students`, `items`, `validation`, `method`) opens a tab
+Deep links: `?view=groups` (or `students`, `items`, `progress`, `validation`, `method`) opens a tab
 directly; `?sorted=1` starts with the class map already sorted into groups. Deep
 links never open the tour; `?demo=1` forces it and `?demo=0` suppresses it.
 
@@ -61,6 +61,24 @@ would keep a gradebook.
 
 Each file carries a fingerprint of its test. If the test has changed since, the
 file is refused rather than read as different answers.
+
+### After the reteach
+
+Give the same paper again and paste the new answers into **After the reteach**.
+Every student is compared with themselves, by name, and a misunderstanding only
+counts as cleared if its questions were answered both times.
+
+The counts alone would mislead, because diagnoses near the line flip between
+sittings with no teaching at all. What carries information is the split: how
+many students lost a misconception against how many gained it. The page runs an
+exact McNemar test on that split and says plainly when a change could be chance.
+Sitting the same paper twice also teaches the paper, so a good result is evidence
+rather than proof.
+
+On the sample class, **Simulate a reteach** removes 70% of each student's hidden
+misunderstandings and generates new answers, so the reported change can be
+checked against the real one. Over 40 classes of 28 per subject, `npm test`
+requires no more than 2 false calls when nothing was taught.
 
 ### A teacher's own test
 
@@ -180,8 +198,9 @@ k is chosen by mean silhouette, ties broken toward *fewer* groups. A teacher can
 act on three groups and not on eleven.
 
 **4 · Prescription.** Each failure mode gets a reteach aimed at the specific
-belief, plus verification items. Because those exist, the loop closes: reteach,
-re-run, watch the cluster shrink.
+belief, plus verification items. Then the paper is given again and each student
+is compared with themselves (`js/compare.js`), so the loop closes on evidence
+rather than on a feeling that the lesson went well.
 
 ## The test also gets graded
 
@@ -284,6 +303,7 @@ js/validate.js         recovery scoring against planted truth
 js/drawer.js           per-student evidence trail, per-question breakdown
 js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
 js/session.js          save and reopen a class as a local file
+js/compare.js          before-and-after comparison, exact McNemar test
 js/explain.js          inline glossary written for teachers
 js/llm.js              optional reteach adaptation, plain-language API errors
 js/tour.js             first-visit intro and guided tour

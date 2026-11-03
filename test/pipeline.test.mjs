@@ -10,13 +10,14 @@
 
 import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES } from '../js/pack.js';
-import { generateClass, totalScores } from '../js/simulate.js';
+import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
 import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from '../js/infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint } from '../js/session.js';
+import { compareSittings, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -271,6 +272,61 @@ for (const pack of BUILT_IN) {
   check('reordering a test changes its fingerprint', fingerprint(changed) !== fingerprint(pack));
   check('a class saved on an older version of a test is refused',
     !readClassFile(text, id => (id === pack.id ? changed : undefined)).ok);
+}
+
+// ---------------------------------------------------------- after the reteach
+// The comparison has to stay quiet when nothing changed, and speak up when
+// something did. The class's real change is known here, so both can be scored.
+{
+  console.log(`\n${'='.repeat(66)}\nAfter the reteach\n${'='.repeat(66)}`);
+  check('exact McNemar matches a hand count', Math.abs(mcnemarExact(8, 0) - 2 / 256) < 1e-12 && mcnemarExact(0, 0) === 1);
+  check('exact McNemar is symmetric', mcnemarExact(9, 2) === mcnemarExact(2, 9));
+
+  check('names match across case, spacing and accents', normName('  José   O. ') === normName('jose o'));
+  const m = matchStudents(
+    [{ name: 'Ada L.' }, { name: 'Ben O' }, { name: 'Sam' }, { name: 'Sam' }, { name: 'Gone' }],
+    [{ name: 'ada l' }, { name: 'BEN O.' }, { name: 'Sam' }, { name: 'New Kid' }]);
+  check('students pair up by name', m.pairs.length === 2);
+  check('a shared name is left out rather than guessed', m.ambiguous.includes('Sam'));
+  check('students in only one sitting are reported', m.onlyBefore.includes('Gone') && m.onlyAfter.includes('New Kid'));
+
+  for (const pack of BUILT_IN) {
+    const tally = { still: 0, moved: 0, trueBefore: 0, trueAfter: 0, repBefore: 0, repAfter: 0 };
+    const classes = 40;
+    for (let seed = 1; seed <= classes; seed++) {
+      const c = generateClass(pack, { seed, size: 28 });
+      const none = compareSittings(pack, c, generateRetest(c, { seed: seed + 500, cleared: 0 }));
+      if (none.totals.reading === 'improved' || none.totals.reading === 'worse') tally.still++;
+
+      const r = generateRetest(c, { seed: seed + 900, cleared: 0.7 });
+      const cmp = compareSittings(pack, c, r);
+      if (cmp.totals.reading === 'improved') tally.moved++;
+      const held = rows => rows.reduce((n, t) => n + t.held.size, 0);
+      tally.trueBefore += held(c.truth); tally.trueAfter += held(r.truth);
+      tally.repBefore += cmp.totals.before; tally.repAfter += cmp.totals.after;
+    }
+    const truth = 1 - tally.trueAfter / tally.trueBefore;
+    const seen = 1 - tally.repAfter / tally.repBefore;
+    console.log(`  ${pack.id}: nothing taught, class called changed ${tally.still}/${classes}; 70% cleared, called improved ${tally.moved}/${classes}; real drop ${(truth * 100).toFixed(0)}%, reported ${(seen * 100).toFixed(0)}%`);
+    check(`${pack.id}: no false progress when nothing was taught (at most 2 of ${classes})`, tally.still <= 2, String(tally.still));
+    check(`${pack.id}: real progress is called in at least 90% of classes`, tally.moved >= classes * 0.9, String(tally.moved));
+    check(`${pack.id}: the reported drop is within 15 points of the real one`, Math.abs(truth - seen) <= 0.15);
+  }
+
+  const pack = BUILT_IN[0];
+  const c = generateClass(pack, { seed: 4, size: 28 });
+  const r = generateRetest(c, { seed: 8, cleared: 0.7 });
+  const gone = { students: r.students, responses: r.responses.map(row => row.map(() => -1)) };
+  const blank = compareSittings(pack, c, gone);
+  check('a blank retest clears nothing', blank.totals.cleared === 0 && blank.totals.reading === 'none');
+  check('a blank retest is reported as not tested', blank.misconceptions.some(x => x.untested.length));
+
+  const csv = progressCsv(compareSittings(pack, c, r), Object.fromEntries(pack.misconceptions.map(x => [x.id, x])));
+  check('the spreadsheet has a row per misunderstanding', csv.split('\n').length === pack.misconceptions.length + 1);
+
+  const saved = readClassFile(classFile({ pack, students: c.students, responses: c.responses, retest: r, builtIn: true }),
+    id => BUILT_IN.find(p => p.id === id));
+  check('a saved class keeps its retest', saved.ok && JSON.stringify(saved.retest.responses) === JSON.stringify(r.responses));
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);
