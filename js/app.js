@@ -267,7 +267,7 @@ function renderSummary() {
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
-    if (c.go) n.addEventListener('click', () => showView(c.go));
+    if (c.go) n.addEventListener('click', () => { showView(c.go); scrollToView(); });
     host.appendChild(n);
   });
 
@@ -537,7 +537,13 @@ function renderLegend() {
     n.appendChild(setMath(el('span'), m.short || m.name));
     n.appendChild(el('span', 'leg-c', String(p.confident)));
     n.title = m.belief || m.name;
-    n.addEventListener('click', () => applyFilter(state.filterMis === p.id ? null : p.id));
+    n.addEventListener('click', () => {
+      applyFilter(state.filterMis === p.id ? null : p.id);
+      // On a phone the key is long, and by its last rows the map has left the screen.
+      if (state.filterMis && $('.board').getBoundingClientRect().bottom < window.innerHeight * 0.4) {
+        $('.board').scrollIntoView({ block: 'start' });
+      }
+    });
     host.appendChild(n);
   });
 
@@ -1692,8 +1698,18 @@ function showView(name) {
 
   // A long tab leaves you far down the page, and the next one should open at its
   // top rather than wherever that scroll position happens to land in it.
-  const top = $('.main').getBoundingClientRect().top + window.scrollY - $('.tabs').offsetHeight;
+  const top = viewTop();
   if (window.scrollY > top) window.scrollTo({ top, behavior: 'instant' });
+}
+
+/** Where the open tab starts, just under the tab bar. */
+function viewTop() {
+  return $('.main').getBoundingClientRect().top + window.scrollY - $('.tabs').offsetHeight;
+}
+
+/** For a control above the tabs: on a phone the tab it opens starts off screen. */
+function scrollToView() {
+  window.scrollTo({ top: viewTop(), behavior: 'smooth' });
 }
 
 /** On a phone the tabs scroll sideways, so keep the open one in view. */
@@ -1823,8 +1839,7 @@ $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.vie
 $$('[data-to-view]').forEach(a => a.addEventListener('click', e => {
   e.preventDefault();
   showView(a.dataset.toView);
-  const y = $('.main').getBoundingClientRect().top + window.scrollY - $('.tabs').offsetHeight;
-  window.scrollTo({ top: y, behavior: 'smooth' });
+  scrollToView();
 }));
 $$('#item-filter .seg-b').forEach(b => b.addEventListener('click', () => {
   $$('#item-filter .seg-b').forEach(x => x.classList.toggle('is-on', x === b));
