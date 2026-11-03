@@ -28,7 +28,7 @@ import { trapTab, focusInto } from './a11y.js';
 import { mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
-  parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter
+  parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter, normName
 } from './importer.js';
 
 const $ = s => document.querySelector(s);
@@ -122,13 +122,14 @@ function run() {
   const groups = separateThin(describeClusters(inf.posterior, cl.labels, inf.misIds, cl), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
-  Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null });
+  Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
 
   renderPackLine();
   renderExample();
   renderSummary();
   renderMatrix();
   renderGroups();
+  renderStudentFilter();
   renderStudents();
   renderItems();
   renderProgress();
@@ -678,6 +679,38 @@ function roster(g) {
 /*  Students                                                                */
 /* ======================================================================== */
 
+/** What a group is called wherever students are listed. */
+function groupLabel(g) {
+  return g.isThin ? 'Not enough answers'
+    : g.isSecure ? 'No reteach needed'
+    : `Group ${state.groups.indexOf(g) + 1}`;
+}
+
+/** One button per group, because nobody scrolls a list of 120 to find a group of 30. */
+function renderStudentFilter() {
+  const host = $('#student-filter');
+  host.innerHTML = '';
+  const { groups, cls } = state;
+  host.hidden = groups.length < 2;
+
+  const add = (label, n, key) => {
+    const b = el('button', key === null ? 'seg-b is-on' : 'seg-b', `${label} · ${n}`);
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(key === null));
+    b.addEventListener('click', () => {
+      state.studentGroup = key;
+      $$('#student-filter .seg-b').forEach(x => {
+        x.classList.toggle('is-on', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      renderStudents();
+    });
+    host.appendChild(b);
+  };
+  add('Everyone', cls.students.length, null);
+  groups.forEach((g, i) => add(groupLabel(g), g.members.length, i));
+}
+
 function renderStudents() {
   const host = $('#students');
   host.innerHTML = '';
@@ -685,7 +718,7 @@ function renderStudents() {
   const { pack, cls, inf, groups, cov } = state;
   const byId = misById(pack);
   const ci = pack.items.map(correctIndex);
-  const q = ($('#student-search').value || '').trim().toLowerCase();
+  const q = normName($('#student-search').value || '');
 
   const rows = cls.students.map((st, s) => {
     const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
@@ -701,10 +734,12 @@ function renderStudents() {
   // lowest score. A teacher opening this wants triage, not the register.
   rows.sort((a, b) => (b.held.length - a.held.length) || (a.score - b.score));
 
-  const shown = q ? rows.filter(r => r.st.name.toLowerCase().includes(q)) : rows;
+  const picked = state.studentGroup == null ? rows : rows.filter(r => r.group === groups[state.studentGroup]);
+  const shown = q ? picked.filter(r => normName(r.st.name).includes(q)) : picked;
+  $('#student-count').textContent = shown.length === rows.length ? '' : `${shown.length} of ${students(rows.length)}`;
 
   if (!shown.length) {
-    host.appendChild(el('p', 'note', 'No student by that name.'));
+    host.appendChild(el('p', 'note', state.studentGroup == null ? 'No student by that name.' : 'No student by that name in this group.'));
     return;
   }
 
@@ -713,10 +748,7 @@ function renderStudents() {
 
     const l = el('div', 'stu-l');
     l.appendChild(el('div', 'stu-name', r.st.name));
-    const placed = !r.group ? ''
-      : r.group.isThin ? 'Not enough answers'
-      : r.group.isSecure ? 'No reteach needed'
-      : `Group ${state.groups.indexOf(r.group) + 1}`;
+    const placed = r.group ? groupLabel(r.group) : '';
     const blank = cov[r.s].total - cov[r.s].answered;
     l.appendChild(el('div', 'stu-meta', blank ? `${placed} · ${blank} left blank` : placed));
     card.appendChild(l);

@@ -953,6 +953,10 @@ body.has-import .import-only { display: inline-flex; }
 .seg-b:hover { color: var(--ink); }
 .seg-b.is-on { background: var(--bg); color: var(--ink); border-color: var(--line); box-shadow: var(--shadow-1); }
 
+.seg-wrap { flex-wrap: wrap; }
+.student-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
+.student-count { color: var(--muted); font-size: 14.5px; }
+
 .search {
   font: inherit;
   font-size: 15.5px;
