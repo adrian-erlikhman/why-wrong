@@ -16,13 +16,13 @@ export const TERMS = {
   confidence: {
     term: 'Confidence',
     also: 'posterior probability',
-    body: 'How sure the analysis is that this student holds this particular misunderstanding, given every answer they gave. It is not a percentage of questions they got wrong — it is the weight of the evidence.',
+    body: 'How sure the analysis is that this student holds this particular misunderstanding, given every answer they gave. It is the weight of the evidence, not a percentage of questions they got wrong.',
     use: 'Above roughly 80% is worth acting on directly. Between 50% and 80%, check the evidence list before you plan around it.'
   },
   failureMode: {
     term: 'Reteach group',
     also: 'cluster',
-    body: 'A group of students whose wrong answers point at the same underlying misunderstanding. They are grouped by what they believe, not by their scores — two students with very different grades can sit in the same group.',
+    body: 'A group of students whose wrong answers point at the same underlying misunderstanding. They are grouped by what they believe, not by their scores, so two students with very different grades can sit in the same group.',
     use: 'This is your reteach group. One lesson can serve the whole group because they are wrong in the same way.'
   },
   separation: {
@@ -35,40 +35,40 @@ export const TERMS = {
     term: 'Difficulty',
     also: 'p-value / facility index',
     body: 'The proportion of the class that answered correctly. Confusingly, a HIGH number means an EASY question.',
-    use: 'Around 0.5–0.8 is the useful range. Above 0.93 the question separates nobody and is costing you time on the paper.'
+    use: 'Around 0.5 to 0.8 is the useful range. Above 0.93 the question separates nobody and is costing you time on the paper.'
   },
   discrimination: {
     term: 'Discrimination',
     also: 'corrected point-biserial correlation',
-    body: 'Whether students who did well on the rest of the test also got this question right. High means the question sorts strong from weak. Well below zero means it sorted them backwards — your best students got it wrong.',
-    use: 'Below 0.15 usually means the wording is unclear. But see "diagnosing, not ranking" — on a diagnostic test a low number is not automatically a fault.'
+    body: 'Whether students who did well on the rest of the test also got this question right. High means the question sorts strong from weak. Well below zero means it sorted them backwards: your best students got it wrong.',
+    use: 'Below 0.15 usually means the wording is unclear. But see "diagnosing, not ranking": on a diagnostic test a low number is not automatically a fault.'
   },
   diagnosing: {
     term: 'Diagnosing, not ranking',
-    body: 'A question aimed at one specific misunderstanding is missed by exactly the students who hold it — whatever their ability elsewhere. So it can look statistically weak while being the most informative question on the page.',
+    body: 'A question aimed at one specific misunderstanding is missed by exactly the students who hold it, whatever their ability elsewhere. So it can look statistically weak while being the most informative question on the page.',
     use: 'Keep these. The tool checks whether the rest of the test agrees with the question before it calls anything broken.'
   },
   consistency: {
     term: 'Internal consistency',
     also: "Cronbach's alpha",
     body: 'Whether all the questions behave as though they measure one single thing. A test built to detect several unrelated misunderstandings should NOT score highly here.',
-    use: 'A low number on this tool is expected and healthy. It means your questions are picking up genuinely different misunderstandings.'
+    use: 'A low number on this tool is expected and healthy. It means your questions are picking up different misunderstandings.'
   },
   slip: {
     term: 'Slip',
-    body: 'A wrong answer that does not match any known misunderstanding — arithmetic noise, a misread, a rushed guess. Everyone produces them.',
+    body: 'A wrong answer that does not match any known misunderstanding: arithmetic noise, a misread, a rushed guess. Everyone produces them.',
     use: 'Slips are not reteachable. If a student is mostly slips, they need practice and attention, not a reteach.'
   },
   recall: {
     term: 'Misunderstandings found',
     also: 'recall',
     body: 'In the simulated class, every student was given a hidden set of misunderstandings before any answers existed. This is the share of those the analysis managed to find using only the answer sheet.',
-    use: 'This is how you know the method works at all, rather than merely producing confident-looking output.'
+    use: 'This is how you know the method works and is not just producing confident-looking output.'
   },
   precision: {
     term: 'Diagnoses correct',
     also: 'precision',
-    body: 'Of every misunderstanding the analysis attributed to a student, the share that was genuinely there. The remainder are false accusations.',
+    body: 'Of every misunderstanding the analysis attributed to a student, the share that was correct. The remainder are false accusations.',
     use: 'High precision matters more than high recall here: telling a teacher a student is confused when they are not wastes a lesson.'
   },
   f1: {
@@ -79,7 +79,7 @@ export const TERMS = {
   ari: {
     term: 'Group recovery',
     also: 'adjusted Rand index',
-    body: 'Whether the groups the tool discovered match the groups the simulation actually planted. 1.00 is exact agreement, 0.00 is what random guessing would score.',
+    body: 'Whether the groups the tool discovered match the groups the simulation planted. 1.00 is exact agreement, 0.00 is what random guessing would score.',
     use: 'Evidence that the grouping reflects something real rather than shapes found in noise.'
   },
   evidence: {

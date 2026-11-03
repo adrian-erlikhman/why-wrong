@@ -113,7 +113,7 @@ export function quizHtml(pack, { withKey = false } = {}) {
   }).join('');
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<title>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</title>
+<title>${escapeHtml(pack.name)}${withKey ? ': answer key' : ''}</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
   h1{font-size:20px;margin:0 0 2px}
@@ -132,7 +132,7 @@ export function quizHtml(pack, { withKey = false } = {}) {
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <main>
-<h1>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</h1>
+<h1>${escapeHtml(pack.name)}${withKey ? ': answer key' : ''}</h1>
 <div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 ${withKey ? '' : '<div class="name">Name: ______________________________  Class: ____________  Date: ____________</div>'}
 <ol class="qs">${items}</ol>
@@ -165,7 +165,7 @@ export function reviewHtml(pack) {
   }).join('');
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<title>${escapeHtml(pack.name)} — labels to check</title>
+<title>${escapeHtml(pack.name)}: labels to check</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
   h1{font-size:20px;margin:0 0 2px}
@@ -194,7 +194,7 @@ export function reviewHtml(pack) {
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <main>
-<h1>${escapeHtml(pack.name)} — labels to check</h1>
+<h1>${escapeHtml(pack.name)}: labels to check</h1>
 <div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misunderstandings`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 
 <h2>1 · Before you see any results</h2>
@@ -255,7 +255,7 @@ ${body}
   }).join('');
 
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<title>${escapeHtml(pack.name)} — student slips</title>
+<title>${escapeHtml(pack.name)}: student slips</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
   h1{font-size:20px;margin:0 0 16px}
@@ -274,7 +274,7 @@ ${body}
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <main>
-<h1 class="noprint">${escapeHtml(pack.name)} — student slips</h1>
+<h1 class="noprint">${escapeHtml(pack.name)}: student slips</h1>
 ${slips}
 </main>
 </body></html>`;
@@ -624,7 +624,7 @@ export function parseResponses(pack, text, otherPacks = []) {
     warnings.push(`Only ${responses.length} student${responses.length === 1 ? '' : 's'}. Grouping needs roughly 12 or more to say anything meaningful; individual diagnoses will still work.`);
   }
   if (bad.length) {
-    warnings.push(`${bad.length} cell${bad.length === 1 ? ' could not be read and was' : 's could not be read and were'} treated as unanswered — ${bad.slice(0, 3).join('; ')}${bad.length > 3 ? '…' : ''}`);
+    warnings.push(`${bad.length} cell${bad.length === 1 ? ' could not be read and was' : 's could not be read and were'} treated as unanswered: ${bad.slice(0, 3).join('; ')}${bad.length > 3 ? '…' : ''}`);
   }
   if (omitted) {
     warnings.push(`${omitted} blank answer${omitted === 1 ? '' : 's'} treated as unanswered. These carry no evidence either way rather than counting against the student.`);
@@ -643,10 +643,10 @@ export function groupsCsv(pack, cls, groups, misIndex) {
   const rows = groups.map((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
     if (g.isThin) {
-      return ['Not enough answers', names, g.size, '—', 'Left at least half the paper blank. Get the rest of their answers before deciding anything.', '', '', ''];
+      return ['Not enough answers', names, g.size, 'n/a', 'Left at least half the paper blank. Get the rest of their answers before deciding anything.', '', '', ''];
     }
     if (g.isSecure) {
-      return [`Secure`, names, g.size, '—', 'No reteach needed. Practice and attention rather than a lesson.', '', '', ''];
+      return [`Secure`, names, g.size, 'n/a', 'No reteach needed. Practice and attention rather than a lesson.', '', '', ''];
     }
     const top = misIndex[g.signature[0]?.id];
     return [

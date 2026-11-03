@@ -50,7 +50,7 @@ const STEPS = [
     text: () => 'After you reteach, give the same paper again. This tab compares every student with themselves, shows who still needs it, and says when a change could just be chance.'
   },
   {
-    title: 'Does it actually work?',
+    title: 'Does it work?',
     view: 'validation', target: '#metrics',
     text: f => f.recall
       ? `The sample class was simulated with hidden misunderstandings the analysis never sees. It found ${f.recall} of them from the answers alone, and ${f.precision} of its diagnoses were right.`

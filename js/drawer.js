@@ -105,7 +105,7 @@ export function openStudent(ctx, s) {
     facts.appendChild(fact(`${Math.round((score / pack.items.length) * 100)}%`, 'correct'));
   }
   facts.appendChild(fact(
-    !group || group.isThin || group.isSecure ? '—' : `Group ${groups.indexOf(group) + 1}`,
+    !group || group.isThin || group.isSecure ? 'None' : `Group ${groups.indexOf(group) + 1}`,
     group?.isThin ? 'too few answers' : group?.isSecure ? 'no reteach needed' : 'reteach group'
   ));
   wrap.appendChild(facts);
@@ -243,11 +243,11 @@ export function openQuestion(ctx, i) {
   const verdict = {
     strong: ['Working well', 'This question separates students who understand from those who do not.'],
     ok: ['Acceptable', 'Not the sharpest question on the paper, but it is doing its job.'],
-    diagnostic: ['Diagnosing, not ranking', 'Statistically this looks weak, and it is not. It targets one misunderstanding, so exactly the students who hold that misunderstanding miss it — whatever their ability elsewhere.'],
+    diagnostic: ['Diagnosing, not ranking', 'Statistically this looks weak, and it is not. It targets one misunderstanding, so exactly the students who hold that misunderstanding miss it, whatever their ability elsewhere.'],
     minor: ['Minor issue', 'The question works. One of its options is going to waste.'],
     weak: ['Worth rewriting', 'This question is not earning its place on the paper.'],
     broken: ['Measuring backwards', 'Stronger students did worse on this than weaker ones, which usually means the wording misleads.']
-  }[st.quality] || ['—', ''];
+  }[st.quality] || ['', ''];
 
   const v = el('div', `dr-verdict v-${st.quality}`);
   v.appendChild(el('div', 'dr-verdict-t', verdict[0]));

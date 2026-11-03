@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Why Wrong — find the misconception behind every wrong answer</title>
-<meta name="description" content="Marks a class set, works out the specific misconception behind each wrong answer, groups students into the few failure modes they actually share, and tells you which of your questions measured anything. Any subject.">
+<title>Why Wrong: find the misconception behind every wrong answer</title>
+<meta name="description" content="Marks a class set, works out the specific misconception behind each wrong answer, groups students by the few misunderstandings they share, and tells you which of your questions measured anything. Any subject.">
 <link rel="canonical" href="https://adrian-erlikhman.github.io/why-wrong/">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='6' fill='%23fff' stroke='%23c3ccd8' stroke-width='1.5'/%3E%3Cpath d='M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z' fill='%23142033'/%3E%3Cpath d='M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3' fill='none' stroke='%23d1372b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Why Wrong">
-<meta property="og:title" content="Why Wrong — find the misconception behind every wrong answer">
-<meta property="og:description" content="Works out the specific misunderstanding behind each wrong answer, groups a class by what it actually believes, and audits which questions measured anything. Runs in your browser.">
+<meta property="og:title" content="Why Wrong: find the misconception behind every wrong answer">
+<meta property="og:description" content="Works out the specific misunderstanding behind each wrong answer, groups a class by what it believes, and audits which questions measured anything. Runs in your browser.">
 <meta property="og:url" content="https://adrian-erlikhman.github.io/why-wrong/">
 <meta property="og:image" content="https://adrian-erlikhman.github.io/why-wrong/og.png?v=2026-11-03-beach">
 <meta property="og:image:width" content="1200">
@@ -53,7 +53,7 @@
       <p class="lede">
         A red X tells a student nothing and a teacher less. Give Why Wrong a marked class set and it
         works out the <b>specific misunderstanding</b> behind each wrong answer, the few groups your
-        class actually splits into, and which of your questions measured anything at all.
+        class splits into, and which of your questions measured anything at all.
       </p>
       <div class="hero-cta">
         <button class="btn btn-primary btn-lg" type="button" data-demo>Take the 45-second tour</button>
@@ -214,7 +214,7 @@
         <h2>Every wrong answer, and what it tells you.</h2>
         <p class="sub">
           One row per student, one column per question. A cell is coloured by <b>the misunderstanding
-          that answer reveals</b> &mdash; not by right or wrong. Pale cells are correct; grey cells are
+          that answer reveals</b>, not by right or wrong. Pale cells are correct; grey cells are
           wrong but random, with no pattern behind them.
         </p>
       </div>
@@ -236,7 +236,7 @@
     <p class="note" id="matrix-note"></p>
 
     <div class="legend-head">
-      <span>Colour key &mdash; ordered by how many students are affected</span>
+      <span>Colour key, ordered by how many students are affected</span>
       <span class="legend-actions">
         <button id="show-letters" class="btn btn-tiny" type="button" aria-pressed="false">Show letters</button>
         <button id="clear-filter" class="btn btn-tiny" hidden>Show all</button>
@@ -249,7 +249,7 @@
   <section class="view" id="view-groups" role="tabpanel" aria-labelledby="tab-groups">
     <div class="view-head">
       <div>
-        <h2>What the class actually shares.</h2>
+        <h2>What the class shares.</h2>
         <p class="sub" id="groups-sub"></p>
       </div>
       <div class="head-actions">
@@ -268,7 +268,7 @@
         <h2>Every student, and what to do about them.</h2>
         <p class="sub">
           Sorted by how much there is to act on. Click any student for the full evidence trail behind
-          their diagnosis &mdash; every question that pointed to it, and every question that argued
+          their diagnosis: every question that pointed to it, and every question that argued
           against it.
         </p>
       </div>
@@ -326,7 +326,7 @@
   <section class="view" id="view-validation" role="tabpanel" aria-labelledby="tab-validation">
     <div class="view-head">
       <div>
-        <h2>Does any of this actually work?</h2>
+        <h2>Does any of this work?</h2>
         <p class="sub">
           A fair question, and the sample class exists to answer it. Every simulated student was given
           a hidden set of misunderstandings <em>before</em> any answers existed, and their answers were
@@ -347,9 +347,9 @@
         <h2>Four stages. Two of them are not a language model.</h2>
         <p class="sub">
           The division of labour is deliberate. A model writes the questions, because knowing how
-          students go wrong in a subject is knowledge-intensive work it is genuinely good at. Every
+          students go wrong in a subject is the kind of work it does well. Every
           judgement about <em>your</em> students is arithmetic, because arithmetic is reliable and can
-          be checked &mdash; and you can check it, on any student, on any question.
+          be checked. You can check it yourself on any student and any question.
         </p>
       </div>
     </div>
@@ -359,14 +359,14 @@
         <h3>Questions built to diagnose <span class="pill pill-ai">model-authored</span></h3>
         <p>
           On an ordinary test the wrong answers are filler. Here every wrong option is tied to one
-          specific misunderstanding, so choosing it means something. This is how genuine concept
-          inventories are built &mdash; the Force Concept Inventory in physics is the standard example
-          &mdash; and it is the reason a wrong answer can carry information rather than just costing a mark.
+          specific misunderstanding, so choosing it means something. This is how concept
+          inventories are built (the Force Concept Inventory in physics is the standard example), and
+          it is the reason a wrong answer can carry information instead of just costing a mark.
         </p>
         <p>
           Built-in subjects are hand-written. New ones are generated, then checked against the same
-          structural contract &mdash; enough questions per misunderstanding, every wrong option mapped,
-          exactly one right answer &mdash; and repaired until they pass. Nothing runs on a test that
+          structural rules (enough questions per misunderstanding, every wrong option mapped, exactly
+          one right answer) and repaired until they pass. Nothing runs on a test that
           failed the check.
         </p>
       </li>
@@ -395,9 +395,9 @@
         <h3>Finding the groups <span class="pill">no model</span></h3>
         <p>
           Students who are wrong in the same way get grouped together, by <em>what they believe</em>
-          rather than by score &mdash; so two students with very different grades can land in the same
-          group, which is the whole point. Students with no stable misunderstanding are set aside first,
-          because they are not a failure mode, they are the students who are fine.
+          rather than by score, so two students with very different grades can land in the same group.
+          Students with no stable misunderstanding are set aside first, because they don't need a
+          reteach.
         </p>
         <p>
           How many groups is decided by the data, with a floor on group size. That floor is a teaching
@@ -426,7 +426,7 @@
     <div class="foot-brand">
       <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="6" fill="#fff" stroke="#c3ccd8" stroke-width="1.5"/><path d="M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z" fill="#142033"/><path d="M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3" fill="none" stroke="#d1372b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <p>
-        <b>Why Wrong</b> &mdash; built by <a href="https://adrianerlikhman.is-a.dev">Adrian Erlikhman</a>.
+        <b>Why Wrong</b>, built by <a href="https://adrianerlikhman.is-a.dev">Adrian Erlikhman</a>.
         Everything runs in your browser: no server, no account, and no class data ever leaves this
         page.
       </p>
@@ -444,13 +444,13 @@
     <div class="intro-kicker"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="1" y="1" width="30" height="30" rx="6" fill="#fff" stroke="#c3ccd8" stroke-width="1.5"/><path d="M11.02 21.04 7.01 7.64H10.61L13.17 17.67H12.85L12.95 17.36L15.86 7.64H17.93L20.84 17.81H20.51L20.6 17.5L23.38 7.64H24.68L20.68 21.04H18.7L15.63 11.18H16.02L15.92 11.46L13.01 21.04ZM6.14 8.72V7.64H12.44V8.72L9.68 9.02H9.01ZM13.99 8.72V7.64H20.09V8.72L17.57 9.02H16.47ZM21.57 8.72V7.64H25.86V8.72L24.01 9.02H23.46Z" fill="#142033"/><path d="M6 25.9c3-1.6 4.7 1.4 7.6-.2 2.9-1.6 4.4 1.3 7.3-.2 2.4-1.2 3.9.4 5.3-.3" fill="none" stroke="#d1372b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Why Wrong &middot; 45-second tour</div>
     <h3 id="intro-title">Find the misunderstanding behind every wrong answer.</h3>
     <p>
-      A red X only says a student was wrong. Why Wrong works out <em>why</em> &mdash; which specific
-      misunderstanding each wrong answer reveals &mdash; then groups the class by what it believes and
+      A red X only says a student was wrong. Why Wrong works out <em>why</em>: which specific
+      misunderstanding each wrong answer reveals. Then it groups the class by what it believes and
       checks which of your questions measured anything.
     </p>
     <ol class="intro-steps">
       <li><span><b>The class map.</b> Every answer, coloured by what it reveals.</span></li>
-      <li><span><b>One click sorts the class</b> into the few groups it really forms.</span></li>
+      <li><span><b>One click sorts the class</b> into the few groups it forms.</span></li>
       <li><span><b>A reteach for each group,</b> and an audit of the test itself.</span></li>
       <li><span><b>Give it again</b> to see who moved.</span></li>
     </ol>
@@ -470,7 +470,7 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <h3 id="modal-title">Build questions for any topic</h3>
     <p>
-      Name a topic and a model will write the misunderstandings students actually have in it, plus a
+      Name a topic and a model will write the misunderstandings students have in it, plus a
       question bank where every wrong option is tied to one of them. The result is checked against the
       same structural rules as the built-in subjects, and repaired if it falls short, before any
       analysis runs.
@@ -510,7 +510,7 @@
     <h3 id="key-title">Rewrite the plans for this class</h3>
     <p>
       A model rewrites each group&rsquo;s reteach for the exact mix of misunderstandings that group
-      shares. That step needs an Anthropic API key &mdash; everything else on this page works without one.
+      shares. That step needs an Anthropic API key. Everything else on this page works without one.
     </p>
 
     <div class="modal-field">
@@ -535,9 +535,8 @@
     <p>
       One row per student, one column per question. Copy straight out of a spreadsheet. Answers can be
       letters (<span class="mono">A B C D</span>), numbers (<span class="mono">1 2 3 4</span>), or the
-      answer text itself &mdash; letters and numbers as printed on the paper from <b>Materials</b>.
-      Leave a cell blank if a student skipped it &mdash; blanks count as no evidence rather than as a
-      wrong answer.
+      answer text. Letters and numbers follow the paper from <b>Materials</b>.
+      Leave a cell blank if a student skipped it. Blanks count as no evidence, not as a wrong answer.
     </p>
 
     <div class="import-tools">

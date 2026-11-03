@@ -24,14 +24,14 @@ import { rewritePlan, setKey } from '../js/llm.js';
 let failures = 0;
 function check(name, cond, detail = '') {
   if (cond) console.log(`  PASS  ${name}`);
-  else { failures++; console.log(`  FAIL  ${name}${detail ? ' — ' + detail : ''}`); }
+  else { failures++; console.log(`  FAIL  ${name}${detail ? ': ' + detail : ''}`); }
 }
 
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 const min = a => Math.min(...a);
 
 for (const pack of BUILT_IN) {
-  console.log(`\n${'='.repeat(66)}\n${pack.name} (${pack.subject}) — ${pack.misconceptions.length} misconceptions, ${pack.items.length} items\n${'='.repeat(66)}`);
+  console.log(`\n${'='.repeat(66)}\n${pack.name} (${pack.subject}): ${pack.misconceptions.length} misconceptions, ${pack.items.length} items\n${'='.repeat(66)}`);
 
   // ---------------------------------------------------------------- contract
   console.log('\n-- pack contract --');

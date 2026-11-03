@@ -161,7 +161,7 @@ function renderPackLine() {
   const { pack, cls } = state;
   const line = $('#pack-line');
   line.textContent =
-    [pack.name, pack.subject, pack.level].filter(Boolean).join(' · ') + ' — ' +
+    [pack.name, pack.subject, pack.level].filter(Boolean).join(' · ') + ' · ' +
     `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
     (cls.meta.imported ? `${students(cls.students.length)}${savedOn(state.imported.savedAt)}` : `sample class, variant ${cls.meta.seed}`);
   if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));
@@ -251,13 +251,13 @@ function renderSummary() {
   const cards = [
     { v: String(cls.students.length), k: cls.students.length === 1 ? 'student' : 'students' },
     { v: String(real.length), k: `reteach group${real.length === 1 ? '' : 's'}`, cls: 'ok', go: 'groups' },
-    { v: biggest ? String(biggest.size) : '—',
+    { v: biggest ? String(biggest.size) : '0',
       k: biggest ? `in the biggest group` : 'no groups found', go: 'groups' },
     // The short labels are often notation ("x^a . x^b to x^(ab)"), which reads
     // badly inside a sentence. The name goes in the note below the strip instead.
-    { v: prev ? String(Math.round(prev.expected)) : '—',
+    { v: prev ? String(Math.round(prev.expected)) : '0',
       k: 'share the top misunderstanding', go: 'matrix' },
-    { v: answered ? `${Math.round((correct / answered) * 100)}%` : '—', k: hasBlanks ? 'correct of those answered' : 'class average' },
+    { v: answered ? `${Math.round((correct / answered) * 100)}%` : 'n/a', k: hasBlanks ? 'correct of those answered' : 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
       cls: bad.length ? 'warn' : 'ok', go: 'items' },
     { v: secure ? String(secure.size) : '0', k: 'need no reteach', go: 'groups' }
@@ -280,7 +280,7 @@ function renderSummary() {
   // With no groups, the note has to fit a class with no mistakes in it, or no answers.
   const noGroups = !answered ? ''
     : correct === answered ? 'Every answer was right, so there is nothing to reteach.'
-    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.';
+    : 'No shared pattern in this class. The mistakes are scattered, which usually means practice rather than reteaching.';
   $('#strip-note').textContent = ((real.length
     ? `Start with the biggest group. ${topName ? `The single most widespread problem is “${topName}”.` : ''}`
     : noGroups) + blanks).trim();
@@ -326,7 +326,7 @@ function renderMatrix() {
 
     const name = el('button', 'm-name', cls.students[s].name);
     name.tabIndex = -1;
-    name.title = `${cls.students[s].name} — click for the full evidence trail`;
+    name.title = `${cls.students[s].name}: click for the full evidence trail`;
     name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s); });
     const head = el('span', 'm-head');
     head.setAttribute('role', 'rowheader');
@@ -422,7 +422,7 @@ function setMatrixNote(sorted) {
   $('#matrix-note').textContent = !real
     ? 'This class does not split into groups, so sorting it will not bring out a pattern.'
     : sorted
-    ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes are the questions where a whole group made the same mistake for the same reason.`
+    ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'}. The vertical stripes are the questions where a whole group made the same mistake for the same reason.`
     : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
 }
 
@@ -587,7 +587,7 @@ function renderGroups() {
 
   sub.textContent = !real.length
     ? `No reteach groups in this class, just ${others.join(' and ')}.`
-    : `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
+    : `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together: ` +
       `${real.length} group${real.length === 1 ? '' : 's'} here` +
       (others.length ? `, plus ${others.join(', and ')}` : '') +
       `. One lesson can serve a whole group, because they are wrong for the same reason.` +
@@ -653,7 +653,7 @@ function groupCard(g, idx) {
     c.appendChild(sw);
     const m = byId[s.id];
     c.appendChild(setMath(el('span'), `${m?.short ?? s.id} · ${Math.round(s.inMean * 100)}%`));
-    c.title = `${m?.name ?? s.id} — click to highlight on the class map`;
+    c.title = `${m?.name ?? s.id}: click to highlight on the class map`;
     c.addEventListener('click', () => { showView('matrix'); applyFilter(s.id); });
     chips.appendChild(c);
   });
@@ -670,7 +670,7 @@ function groupCard(g, idx) {
   // rather than show it over nothing.
   const plan = g.aiPlan?.plan || details[0]?.reteach;
   if (plan) {
-    body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach — rewritten for this group' : 'Reteach'));
+    body.appendChild(el('div', 'lab accent', g.aiPlan ? 'Reteach, rewritten for this group' : 'Reteach'));
     body.appendChild(setMath(el('p', 'plan'), plan));
   }
 
@@ -877,7 +877,7 @@ function renderItems() {
 
   if (!list.length) {
     host.appendChild(el('p', 'note', state.itemFilter === 'problem'
-      ? 'Nothing to flag — every question on this paper is pulling its weight.'
+      ? 'Nothing to flag. Every question on this paper is pulling its weight.'
       : 'Nothing in this category.'));
   }
 
@@ -1166,7 +1166,7 @@ function renderValidation() {
   if (!cls.truth) {
     $('#validation-note').textContent = '';
     const box = el('div', 'empty');
-    box.appendChild(el('h3', null, 'Not available for your own class — and that is the point.'));
+    box.appendChild(el('h3', null, 'Not available for your own class.'));
     box.appendChild(el('p', null,
       'These numbers work by comparing the analysis against misunderstandings that were planted before any answers existed. Your real students did not come with an answer key to their own heads, so there is nothing to score against.'));
     box.appendChild(el('p', null,
@@ -1187,9 +1187,9 @@ function renderValidation() {
 
   [
     { v: fmtPct(dq.recall), k: 'misunderstandings found', key: 'recall',
-      x: `Of every misunderstanding actually planted in a student, ${fmtPct(dq.recall)} were recovered from their answers alone.` },
+      x: `Of every misunderstanding planted in a student, ${fmtPct(dq.recall)} were recovered from their answers alone.` },
     { v: fmtPct(dq.precision), k: 'diagnoses correct', key: 'precision',
-      x: `Of every misunderstanding the tool attributed to a student, ${fmtPct(dq.precision)} were genuinely there.` },
+      x: `Of every misunderstanding the tool attributed to a student, ${fmtPct(dq.precision)} were correct.` },
     { v: dq.f1.toFixed(2), k: 'combined score', key: 'f1',
       x: 'The two above in one number, so neither can be gamed by being reckless in one direction.' },
     { v: cq.ari.toFixed(2), k: 'groups recovered', key: 'ari',
@@ -1435,7 +1435,7 @@ async function doGenerate() {
     if (report.warnings.length) {
       progressStep(`Checked, with ${report.warnings.length} warning${report.warnings.length === 1 ? '' : 's'}.`, 'done');
     }
-    progressStep(`Ready — ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions.`, 'done');
+    progressStep(`Ready: ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions.`, 'done');
 
     addPack(pack);
     dropClass();

@@ -49,14 +49,15 @@ Produce exactly ${misconceptionCount} misconceptions and exactly ${itemCount} it
 
 Rules that are not negotiable:
 
-1. Misconceptions must be REAL and DOCUMENTED errors that students of this subject actually make — the kind that survive instruction and reappear later. Not random wrong facts. If the topic is too narrow to support ${misconceptionCount} genuine misconceptions, broaden slightly within the same subject rather than inventing filler.
+1. Misconceptions must be REAL and DOCUMENTED errors that students of this subject make: the kind that survive instruction and reappear later. Not random wrong facts. If the topic is too narrow to support ${misconceptionCount} genuine misconceptions, broaden slightly within the same subject rather than inventing filler.
 2. Every misconception must be probed by AT LEAST ${probesPer} different items. This is a hard requirement: the analysis holds items out one at a time, and with fewer probes it cannot function.
 3. Each item has 4 options, exactly one correct. Wrong options are either tagged with the misconception id that produces them, or tagged null when they are just an undirected slip. Aim for 2 tagged distractors and 1 null per item.
-4. A distractor tagged with a misconception must be genuinely what that misconception produces. Do not tag loosely.
+4. A distractor tagged with a misconception must be what that misconception produces. Do not tag loosely.
 5. Option text must be short and must be distinct within an item.
-6. Include EXACTLY ONE deliberately weak item at the end, with "weak": "trivial" — something so easy that essentially every student answers correctly, so it separates nobody. This is a control: the item analysis must be able to find it unaided. Do not mark it in any other way.
+6. Include EXACTLY ONE deliberately weak item at the end, with "weak": "trivial", meaning something so easy that essentially every student answers correctly, so it separates nobody. This is a control: the item analysis must be able to find it unaided. Do not mark it in any other way.
 7. Archetypes describe which misconceptions tend to co-occur in one student. Give 3 groups of related misconceptions, plus a final "broadly secure" group with an empty core.
-8. The reteach must be a real instructional move a teacher could run — what to do, not a restatement of the misconception. 2-4 sentences.
+8. The reteach must be a real instructional move a teacher could run: what to do, not a restatement of the misconception. 2-4 sentences.
+9. Write plainly, and do not use em dashes anywhere in the text.
 
 Respond with JSON only. No prose, no code fence, no commentary.
 
@@ -71,7 +72,7 @@ Respond with JSON only. No prose, no code fence, no commentary.
       "name": "<short name of the wrong belief>",
       "short": "<3-6 word label>",
       "belief": "<one sentence stating what the student wrongly believes>",
-      "student": "<1-2 plain sentences addressed to the student: 'You may be...', then what is actually true>",
+      "student": "<1-2 plain sentences addressed to the student: 'You may be...', then what is true>",
       "reteach": "<2-4 sentences: a concrete instructional move that targets this belief>",
       "verify": ["<check question 1>", "<check question 2>", "<check question 3>"]
     }
