@@ -368,7 +368,7 @@ class, rarer misconceptions, 15% blanks, and classes of 14 and 90. It also
 plants a flat question and a miskeyed one next to the built-in weak questions.
 Averaged over every scenario, 40 seeds each:
 
-| | Before (3 Nov, 13:46) | Now |
+| | Before (main, 3 Nov afternoon) | Now |
 | --- | --- | --- |
 | Diagnosis F1 | 0.799 | **0.868** |
 | False diagnoses per student, weakest quarter of the class | 0.42 | **0.34** |
