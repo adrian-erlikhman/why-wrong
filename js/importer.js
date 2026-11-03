@@ -122,7 +122,7 @@ export function quizHtml(pack, { withKey = false } = {}) {
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <h1>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</h1>
-<div class="meta">${escapeHtml(pack.subject)}${pack.level ? ' · ' + escapeHtml(pack.level) : ''} · ${pack.items.length} questions</div>
+<div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 ${withKey ? '' : '<div class="name">Name: ______________________________  Class: ____________  Date: ____________</div>'}
 <ol class="qs">${items}</ol>
 </body></html>`;
@@ -182,7 +182,7 @@ export function reviewHtml(pack) {
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <h1>${escapeHtml(pack.name)} — labels to check</h1>
-<div class="meta">${escapeHtml(pack.subject || '')}${pack.level ? ' · ' + escapeHtml(pack.level) : ''} · ${pack.items.length} questions · ${pack.misconceptions.length} misconceptions</div>
+<div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misconceptions`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 
 <h2>1 · Before you see any results</h2>
 <p>Tick the 2 or 3 misconceptions you expect to be most common in this class. If yours isn't listed, write it below.</p>

@@ -130,7 +130,7 @@ function renderPackLine() {
   const { pack, cls } = state;
   const line = $('#pack-line');
   line.textContent =
-    `${pack.name} · ${pack.subject}${pack.level ? ' · ' + pack.level : ''} — ` +
+    [pack.name, pack.subject, pack.level].filter(Boolean).join(' · ') + ' — ' +
     `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
     (cls.meta.imported ? `${cls.students.length} students imported` : `sample class, variant ${cls.meta.seed}`);
   if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));

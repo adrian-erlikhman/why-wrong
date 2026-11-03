@@ -205,6 +205,8 @@ for (const pack of BUILT_IN) {
   const bc = generateClass(bare, { seed: 5, size: 26 });
   const bi = inferMisconceptions(bare, bc.responses);
   check('inference on it gives real probabilities', bi.posterior.flat().every(p => p >= 0 && p <= 1));
+  check('a test with no subject prints no "undefined"',
+    !quizHtml(bare).includes('undefined') && !reviewHtml(bare).includes('undefined'));
   const sheet = reviewHtml(bare);
   check('the review sheet lists every misconception and question',
     bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
