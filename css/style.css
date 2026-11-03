@@ -1580,7 +1580,7 @@ html.key-above .legend { padding-bottom: 20px; }
   :root { --cell: 13px; --row: 16px; --gap: 2px; }
   .m-name { width: 84px; flex-basis: 84px; font-size: 12.5px; }
   .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; left: -60px; }
-  .band-tag { width: 46px; font-size: 11px; }
+  .band-tag { left: 8px; width: 54px; font-size: 10.5px; }
   .bar-t { width: 124px; flex-basis: 124px; }
   .bars-long .bar-row { flex-wrap: wrap; gap: 2px 12px; }
   .bars-long .bar-t { width: auto; flex: 1 1 100%; }

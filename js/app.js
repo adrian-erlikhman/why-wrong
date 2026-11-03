@@ -464,7 +464,7 @@ function sortRows() {
     bar.style.background = colour;
     host.appendChild(bar);
 
-    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no reteach' : (b.g.signature[0]?.id ?? ''));
+    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no reteach' : `Group ${state.groups.indexOf(b.g) + 1}`);
     tag.style.top = `${b.start * h - 1}px`;
     host.appendChild(tag);
 
@@ -648,8 +648,8 @@ function groupCard(g, idx) {
     const sw = el('span', 'sw');
     sw.style.background = colourOf[s.id];
     c.appendChild(sw);
-    c.appendChild(el('span', null, `${s.id} · ${Math.round(s.inMean * 100)}%`));
     const m = byId[s.id];
+    c.appendChild(setMath(el('span'), `${m?.short ?? s.id} · ${Math.round(s.inMean * 100)}%`));
     c.title = `${m?.name ?? s.id} — click to highlight on the class map`;
     c.addEventListener('click', () => { showView('matrix'); applyFilter(s.id); });
     chips.appendChild(c);
