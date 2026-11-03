@@ -447,7 +447,7 @@ body.has-import .import-only { display: inline-flex; }
   top: 0;
   z-index: 30;
   margin-top: 30px;
-  background: rgba(255,255,255,.96);
+  background: rgba(255,250,243,.96);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
