@@ -928,6 +928,8 @@ html.key-above .legend { padding-bottom: 20px; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-size: 15px;
 }
+.bars-long .bar-t { display: flex; width: 300px; flex-basis: 300px; white-space: normal; overflow: visible; }
+.bars-long .opt-l { flex: none; }
 .bar-row.correct .bar-t { color: var(--good); font-weight: 700; }
 
 /* The letter an option is printed under on paper. */
@@ -1574,6 +1576,8 @@ html.key-above .legend { padding-bottom: 20px; }
   .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; left: -60px; }
   .band-tag { width: 46px; font-size: 11px; }
   .bar-t { width: 124px; flex-basis: 124px; }
+  .bars-long .bar-row { flex-wrap: wrap; gap: 2px 12px; }
+  .bars-long .bar-t { width: auto; flex: 1 1 100%; }
   .stu { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .stu-r { justify-content: space-between; }
   .dr { padding: 4px 20px 32px; }

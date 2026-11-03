@@ -54,6 +54,9 @@ const BIG_CLASS = 40;
 
 const students = n => `${n} student${n === 1 ? '' : 's'}`;
 
+/** Options written as sentences, as in biology, need room that "x^7" does not. */
+const wordyOptions = item => item.opts.some(o => o.t.length > 18);
+
 /** Join names into a sentence, which a name ending in "A." should not end twice. */
 const sentence = s => (s.endsWith('.') ? s : `${s}.`);
 
@@ -915,7 +918,7 @@ function itemCard(s) {
 
   // Options in the order they are printed on paper, lettered to match.
   const item = state.pack.items[s.index];
-  const bars = el('div', 'bars');
+  const bars = el('div', wordyOptions(item) ? 'bars bars-long' : 'bars');
   paperOrder(item).map(oi => s.options[oi]).forEach((o, k) => {
     const row = el('div', `bar-row${o.correct ? ' correct' : ''}`);
     const t = el('span', 'bar-t');
