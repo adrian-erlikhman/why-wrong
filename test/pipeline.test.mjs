@@ -245,11 +245,12 @@ for (const pack of BUILT_IN) {
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   console.log(`  diagnosis  precision ${(dq.precision * 100).toFixed(1)}%  recall ${(dq.recall * 100).toFixed(1)}%  F1 ${(dq.f1 * 100).toFixed(1)}%`);
 
-  const cl = clusterStudents(inf.posterior, { seed: 42 });
+  const reportPosterior = posteriorForReporting(inf);
+  const cl = clusterStudents(reportPosterior, { seed: 42 });
   const cq = scoreClustering(cl.labels, cls.truth);
   console.log(`  clustering k=${cl.k} (silhouette ${cl.silhouette.toFixed(3)})  ARI ${cq.ari.toFixed(3)}`);
 
-  const desc = describeClusters(inf.posterior, cl.labels, inf.misIds, cl);
+  const desc = describeClusters(reportPosterior, cl.labels, inf.misIds, cl);
   check('clusters partition the class', desc.reduce((n, c) => n + c.size, 0) === 28);
   desc.forEach(c => console.log(`    group ${c.index}: n=${c.size}  ${c.isSecure ? '(no stable misconception)' : c.signature.map(s => s.id).join(',')}`));
 
@@ -314,7 +315,7 @@ for (const pack of BUILT_IN) {
     const reportPosterior = posteriorForReporting(i2);
     const d = scoreDiagnosis(diagnose(reportPosterior, i2.misIds), c.truth, i2.misIds);
     const reference = scoreDiagnosis(diagnose(reportPosterior, i2.misIds, 0.5), c.truth, i2.misIds);
-    const k = clusterStudents(i2.posterior, { seed: 42 });
+    const k = clusterStudents(reportPosterior, { seed: 42 });
     const s = scoreClustering(k.labels, c.truth);
     const flagged = new Set(problemItems(analyseItems(pack, c.responses, i2)).map(x => x.id));
     planted.forEach(id => { if (flagged.has(id)) plantedHits[id]++; });
@@ -420,8 +421,9 @@ for (const pack of BUILT_IN) {
   check('coverage counts answered questions', cov[1].answered === 6 && cov[0].answered === 0);
   check('under half answered is thin, exactly half is not', cov[1].thin && !cov[2].thin);
 
-  const cl = clusterStudents(inf.posterior, { seed: 42 });
-  const raw = describeClusters(inf.posterior, cl.labels, inf.misIds, cl);
+  const reportPosterior = posteriorForReporting(inf);
+  const cl = clusterStudents(reportPosterior, { seed: 42 });
+  const raw = describeClusters(reportPosterior, cl.labels, inf.misIds, cl);
   const g = separateThin(raw, cov);
   const thin = g.find(x => x.isThin);
   const secure = g.find(x => x.isSecure);
@@ -698,6 +700,29 @@ for (const pack of BUILT_IN) {
   console.log(`\n${'='.repeat(66)}\nAfter the reteach\n${'='.repeat(66)}`);
   check('exact McNemar matches a hand count', Math.abs(mcnemarExact(8, 0) - 2 / 256) < 1e-12 && mcnemarExact(0, 0) === 1);
   check('exact McNemar is symmetric', mcnemarExact(9, 2) === mcnemarExact(2, 9));
+  const directMcNemar = (up, down) => {
+    const n = up + down;
+    let term = 2 ** -n;
+    let tail = term;
+    for (let i = 1; i <= Math.min(up, down); i++) {
+      term *= (n - i + 1) / i;
+      tail += term;
+    }
+    return Math.min(1, 2 * tail);
+  };
+  check('exact McNemar matches direct binomial sums for small counts',
+    Array.from({ length: 21 }, (_, up) =>
+      Array.from({ length: 21 }, (_, down) =>
+        Math.abs(mcnemarExact(up, down) - directMcNemar(up, down)) < 1e-12)
+      ).flat().every(Boolean));
+  check('exact McNemar remains normalized when large binomial terms underflow',
+    mcnemarExact(550, 550) === 1 && mcnemarExact(551, 550) === 1);
+  check('exact McNemar handles large directional evidence without NaN',
+    Number.isFinite(mcnemarExact(1100, 0)) && mcnemarExact(1100, 0) >= 0);
+  check('exact McNemar rejects non-integer counts',
+    throwsAs(() => mcnemarExact(1.5, 0), TypeError));
+  check('exact McNemar rejects negative counts',
+    throwsAs(() => mcnemarExact(-1, 2), RangeError));
 
   check('names match across case, spacing and accents', normName('  José   O. ') === normName('jose o'));
   const m = matchStudents(

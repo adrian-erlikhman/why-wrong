@@ -53,16 +53,31 @@ export function matchStudents(before, after) {
 
 /** Two-sided exact McNemar p-value for `up` changes one way and `down` the other. */
 export function mcnemarExact(up, down) {
+  if (!Number.isSafeInteger(up) || !Number.isSafeInteger(down)) {
+    throw new TypeError('McNemar change counts must be safe integers.');
+  }
+  if (up < 0 || down < 0) {
+    throw new RangeError('McNemar change counts cannot be negative.');
+  }
+
   const n = up + down;
   if (n === 0) return 1;
   const k = Math.min(up, down);
-  let term = Math.pow(0.5, n);      // C(n,0) / 2^n
-  let tail = term;
+  if (k >= n / 2) return 1;
+
+  let logProbabilityAtK = -n * Math.LN2;
   for (let i = 1; i <= k; i++) {
-    term *= (n - i + 1) / i;
-    tail += term;
+    logProbabilityAtK += Math.log(n - i + 1) - Math.log(i);
   }
-  return Math.min(1, 2 * tail);
+
+  let relativeTail = 1;
+  let term = 1;
+  for (let i = k; i > 0; i--) {
+    term *= i / (n - i + 1);
+    relativeTail += term;
+  }
+
+  return Math.min(1, Math.exp(Math.LN2 + logProbabilityAtK + Math.log(relativeTail)));
 }
 
 const ALPHA = 0.05;
