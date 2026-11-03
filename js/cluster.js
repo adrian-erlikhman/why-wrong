@@ -15,6 +15,7 @@
  */
 
 import { makeRng } from './rng.js';
+import { PARAMS } from './infer.js';
 
 function dist2(a, b) {
   let s = 0;
@@ -124,8 +125,28 @@ function unit(v) {
  *   labels covers every student; secure students carry `secureLabel`.
  */
 export function clusterStudents(posterior, {
-  kMin = 2, kMax = 6, restarts = 12, seed = 42, threshold = 0.5
+  kMin = 2, kMax = 6, restarts = 12, seed = 42, threshold = PARAMS.decisionThreshold
 } = {}) {
+  if (!Array.isArray(posterior)) {
+    throw new TypeError('Posterior must be an array of probability rows.');
+  }
+  if (!Number.isFinite(threshold) || threshold < 0 || threshold > 1) {
+    throw new RangeError('Clustering threshold must be a probability between 0 and 1.');
+  }
+  const dimensions = posterior[0]?.length ?? 0;
+  for (let i = 0; i < posterior.length; i++) {
+    const row = posterior[i];
+    if (!Array.isArray(row) || row.length !== dimensions) {
+      throw new RangeError(`Posterior row ${i + 1} must have ${dimensions} probabilities.`);
+    }
+    for (let j = 0; j < row.length; j++) {
+      const p = row[j];
+      if (!Number.isFinite(p) || p < 0 || p > 1) {
+        throw new RangeError(`Posterior value ${j + 1} for student ${i + 1} must be a probability.`);
+      }
+    }
+  }
+
   const rng = makeRng(seed);
 
   const secure = [];

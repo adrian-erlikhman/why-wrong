@@ -157,6 +157,19 @@ check('one strong answer can raise the raw estimate but is not reportable before
 const oneProbeClusters = clusterStudents(posteriorForReporting(oneProbeInference));
 check('one answered probe cannot pull a student into a reteach cluster',
   oneProbeClusters.secure.includes(0) && oneProbeClusters.labels[0] === oneProbeClusters.secureLabel);
+const belowThresholdClusters = clusterStudents([[0.55, PARAMS.prior], [PARAMS.prior, 0.55]]);
+check('students below the reporting cutoff are not clustered as reteach cases',
+  belowThresholdClusters.secure.length === 2);
+check('clustering rejects a non-matrix input',
+  throwsAs(() => clusterStudents(null), TypeError));
+check('clustering rejects ragged probability rows',
+  throwsAs(() => clusterStudents([[0.2], [0.2, 0.4]]), RangeError));
+check('clustering rejects a missing student row',
+  throwsAs(() => clusterStudents(Array(1)), RangeError));
+check('clustering rejects non-probability values',
+  throwsAs(() => clusterStudents([[1.1]]), RangeError));
+check('clustering rejects an invalid confidence threshold',
+  throwsAs(() => clusterStudents([[0.2]], { threshold: NaN }), RangeError));
 const oneProbeSlip = slipsHtml(singleDiagnosticPack,
   { students: [{ name: 'Student' }], responses: [[1]] },
   oneProbeInference, coverage(singleDiagnosticPack, [[1]]));
