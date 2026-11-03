@@ -810,6 +810,8 @@ html.key-above .legend { padding-bottom: 20px; }
 
 .lab.accent { color: var(--accent); }
 .lab.warn { color: var(--warn); }
+.lab-n { font-weight: 500; color: var(--muted); }
+.roster-note { margin: 0 0 6px; }
 .sub-group + .sub-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
 .sub-group .plan { margin-bottom: 10px; }
 

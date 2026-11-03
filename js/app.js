@@ -131,7 +131,11 @@ function run() {
   const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl, { ability: inf.ability }), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
-  Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
+  // The beliefs reported for each student, once: the group cards, the plan
+  // export and the student list all read the same answer.
+  const dx = diagnose(reportPosterior, inf.misIds);
+
+  Object.assign(state, { cls, inf, dx, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
 
   fitMapToClass(cls.students.length);
   showTestNudge();
@@ -685,8 +689,13 @@ function groupCard(g, idx) {
   card.appendChild(top);
 
   const body = el('div', 'group-body');
+  // A group is defined by what it shares on average, so not every member
+  // holds every belief in it: say how many hold the one the plan is for.
+  const lead = g.signature[0]?.id;
   if (details[0]?.belief) {
-    body.appendChild(el('div', 'lab', 'Pattern suggests'));
+    const lab = el('div', 'lab', 'Pattern suggests');
+    if (lead) lab.appendChild(el('span', 'lab-n', ` · ${g.members.filter(m => state.dx[m].has(lead)).length} of ${g.size} hold it`));
+    body.appendChild(lab);
     body.appendChild(setMath(el('p', 'belief'), details[0].belief));
   }
 
@@ -729,8 +738,25 @@ function groupCard(g, idx) {
   }
 
   body.appendChild(roster(g));
+
+  // A reteach reaches only the students in the room for it. Anyone else who
+  // holds the belief, but was grouped by a different one, belongs there too.
+  const outside = lead ? alsoBringIn(g) : [];
+  if (outside.length) {
+    const box = roster({ ...g, members: outside });
+    box.querySelector('.lab').textContent = `Also bring in · ${outside.length}`;
+    box.insertBefore(el('p', 'roster-note', 'They show this pattern too, but were grouped by another one.'), box.querySelector('.roster-names'));
+    body.appendChild(box);
+  }
+
   card.appendChild(body);
   return card;
+}
+
+/** Students outside group `g` who are reported with its lead belief. */
+function alsoBringIn(g) {
+  const lead = g.signature[0]?.id;
+  return state.dx.map((held, s) => (held.has(lead) && !g.members.includes(s) ? s : -1)).filter(s => s >= 0);
 }
 
 function roster(g) {
@@ -1657,7 +1683,7 @@ function wireMaterials() {
 
 function exportPlan() {
   download(`${state.pack.id}-reteach-plan.csv`,
-    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack)));
+    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack), state.dx));
 }
 
 /** Print with everything unfolded, since paper has no way to open a section. */
