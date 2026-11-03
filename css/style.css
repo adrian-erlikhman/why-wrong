@@ -1453,7 +1453,7 @@ html.key-above .legend { padding-bottom: 20px; }
   margin-bottom: 28px;
   box-shadow: none;
 }
-.dr-fact { background: var(--bg-2); padding: 14px 16px; flex: 1; min-width: 0; }
+.dr-fact { background: var(--bg-2); padding: 14px 16px; flex: 1 1 auto; min-width: 0; }
 .dr-fact-v { font-family: var(--display); font-size: 23px; font-weight: 600; letter-spacing: -0.02em; }
 .dr-fact-k { font-size: 14px; color: var(--muted); margin-top: 4px; }
 
