@@ -49,6 +49,9 @@ const SMALL_CLASS = 20;
 /** Under this many, there is nothing to compare one question or group against. */
 const TOO_FEW = 5;
 
+/** Past this many students the map no longer fits a screen. */
+const BIG_CLASS = 40;
+
 const students = n => `${n} student${n === 1 ? '' : 's'}`;
 
 /** Join names into a sentence, which a name ending in "A." should not end twice. */
@@ -124,6 +127,7 @@ function run() {
 
   Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
 
+  fitMapToClass(cls.students.length);
   renderPackLine();
   renderExample();
   renderSummary();
@@ -276,6 +280,24 @@ function renderSummary() {
 /* ======================================================================== */
 /*  Matrix                                                                  */
 /* ======================================================================== */
+
+/**
+ * A whole year group needs to read as one picture, so its rows tighten. The key
+ * moves above the map too, since below it would be 1,500px from the rows it
+ * filters. Not on a phone, where the key alone fills the screen.
+ */
+function fitMapToClass(n) {
+  const big = n > BIG_CLASS;
+  const above = big && window.innerWidth > 720;
+  const root = document.documentElement;
+  root.classList.toggle('big-class', big);
+  root.classList.toggle('key-above', above);
+
+  const [head, key, board] = [$('.legend-head'), $('#legend'), $('.board')];
+  if (above === (key.nextElementSibling === board)) return;
+  if (above) board.before(head, key);
+  else $('#matrix-note').after(head, key);
+}
 
 function renderMatrix() {
   const host = $('#matrix');
@@ -1772,6 +1794,7 @@ $$('#item-filter .seg-b').forEach(b => b.addEventListener('click', () => {
 
 window.addEventListener('resize', () => {
   if (!state.cls) return;
+  fitMapToClass(state.cls.students.length);
   // Crossing a breakpoint changes the row height, and the group bands were
   // drawn at the old one, so a sorted map is redrawn rather than just moved.
   if (state.sorted && ROW_H() !== laidRowH) sortRows();

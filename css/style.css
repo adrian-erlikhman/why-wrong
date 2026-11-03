@@ -589,7 +589,7 @@ body.has-import .import-only { display: inline-flex; }
 
 .m-cell {
   width: var(--cell);
-  height: var(--cell);
+  height: var(--cell-h, var(--cell));
   border-radius: 3px;
   background: var(--correct);
   flex: 0 0 var(--cell);
@@ -599,6 +599,14 @@ body.has-import .import-only { display: inline-flex; }
   transition: opacity .2s;
 }
 .m-cell.slip { background: var(--slip); }
+
+html.big-class { --row: 12px; --cell-h: 10px; }
+html.big-class .m-cell { border-radius: 2px; }
+html.big-class .m-name, html.big-class .m-score { font-size: 11px; line-height: 12px; }
+html.big-class .show-letters .m-cell[data-letter]::after { font-size: 9px; }
+html.key-above .legend-head { margin-top: 0; padding-top: 0; border-top: none; }
+html.key-above .legend { padding-bottom: 20px; }
+
 .show-letters .m-cell[data-letter], .show-letters .leg .sw[data-letter] { display: grid; place-items: center; }
 .show-letters .m-cell[data-letter]::after, .show-letters .leg .sw[data-letter]::after {
   content: attr(data-letter);
