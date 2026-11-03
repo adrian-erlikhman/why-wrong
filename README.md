@@ -215,7 +215,8 @@ decisions matter more than the choice of algorithm:
   misconception at all.
 
 k is chosen by mean silhouette, ties broken toward *fewer* groups. A teacher can
-act on three groups and not on eleven.
+act on three groups and not on eleven. Students are put in a fixed order before
+any of this runs, so the groups do not change with the order of the sheet.
 
 **4 · Prescription.** Each failure mode gets a reteach aimed at the specific
 belief, plus verification items. Then the paper is given again and each student
@@ -269,8 +270,8 @@ whatever seed is loaded:
 | Diagnosis precision | 91.3% | 96.3% |
 | Diagnosis recall | 82.7% | 69.3% |
 | Diagnosis F1 | **0.867** | **0.804** |
-| Group recovery (Adjusted Rand Index) | **0.680** | **0.540** |
-| Correct number of groups recovered | 37/40 | 30/40 |
+| Group recovery (Adjusted Rand Index) | **0.674** | **0.535** |
+| Correct number of groups recovered | 36/40 | 30/40 |
 
 Two deliberately defective questions are planted in the item bank — one trivial,
 one ambiguously worded — and marked nowhere in the data. The item analysis has to

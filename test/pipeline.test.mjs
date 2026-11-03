@@ -12,7 +12,7 @@ import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES } from '../js/pack.js';
 import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
 import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from '../js/infer.js';
-import { clusterStudents, describeClusters, separateThin, reteachGroups } from '../js/cluster.js';
+import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, csvCell, groupsCsv } from '../js/importer.js';
@@ -270,6 +270,29 @@ for (const pack of BUILT_IN) {
   check('blanks leave difficulty out of the denominator', Math.abs(firstStat.difficulty - hit / 20) < 1e-12 && firstStat.answered === 20);
   check('a question left blank by half the class is flagged', firstStat.flags.some(f => f.kind === 'skipped'));
   check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
+}
+
+// -------------------------------------------------------------- row order
+// The order of rows on a sheet is an accident. It must not change who is grouped
+// with whom.
+{
+  console.log(`\n${'='.repeat(66)}\nRow order\n${'='.repeat(66)}`);
+  for (const pack of BUILT_IN) {
+    let same = 0, total = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const c = generateClass(pack, { seed, size: 28 });
+      const base = clusterStudents(inferMisconceptions(pack, c.responses).posterior, { seed: 42 });
+      for (let t = 1; t <= 3; t++) {
+        const order = c.responses.map((_, i) => i).sort((a, b) => Math.sin(a * 12.9 + t * seed) - Math.sin(b * 12.9 + t * seed));
+        const moved = clusterStudents(inferMisconceptions(pack, order.map(i => c.responses[i])).posterior, { seed: 42 });
+        const back = [];
+        order.forEach((orig, pos) => { back[orig] = moved.labels[pos]; });
+        total++;
+        if (scoreClusteringPair(base.labels, back) > 0.999) same++;
+      }
+    }
+    check(`${pack.id}: reordering the sheet leaves the groups the same (${same}/${total})`, same === total);
+  }
 }
 
 // -------------------------------------------------------------- student slips

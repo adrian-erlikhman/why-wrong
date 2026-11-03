@@ -137,6 +137,17 @@ export function clusterStudents(posterior, {
     else active.push({ i, v: u });
   });
 
+  // k-means draws its starting points by position, so the same class pasted in a
+  // different order could come out in different groups. A teacher should get the
+  // same answer whether the sheet is by register or by surname, so the students
+  // are put in an order that depends only on their answers.
+  active.sort((a, b) => {
+    for (let d = 0; d < a.v.length; d++) {
+      if (a.v[d] !== b.v[d]) return a.v[d] - b.v[d];
+    }
+    return 0;
+  });
+
   const labels = new Array(posterior.length).fill(-1);
 
   // Degenerate case: too few students carry a confident misconception to talk
@@ -186,7 +197,7 @@ export function clusterStudents(posterior, {
   // partition is not worth handing a teacher an extra group to act on.
   //
   // Measured over 40 seeds on both built-in packs, this recovers the true
-  // number of groups in 36/40 and 29/40 seeds respectively, against 27/40 and
+  // number of groups in 36/40 and 30/40 seeds respectively, against 27/40 and
   // 4/40 for plain silhouette maximisation.
   const minClusterSize = Math.max(3, Math.min(4, Math.floor(points.length / 4)));
   const viable = scan.filter(s => s.minSize >= minClusterSize);
