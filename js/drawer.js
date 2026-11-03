@@ -105,8 +105,8 @@ export function openStudent(ctx, s) {
     facts.appendChild(fact(`${Math.round((score / pack.items.length) * 100)}%`, 'correct'));
   }
   facts.appendChild(fact(
-    group?.isThin ? '—' : group ? (group.isSecure ? 'None' : (group.signature[0]?.id ?? '—')) : '—',
-    group?.isThin ? 'too few answers' : group?.isSecure ? 'no stable pattern' : 'main misunderstanding'
+    !group || group.isThin || group.isSecure ? '—' : `Group ${groups.indexOf(group) + 1}`,
+    group?.isThin ? 'too few answers' : group?.isSecure ? 'no reteach needed' : 'reteach group'
   ));
   wrap.appendChild(facts);
 
