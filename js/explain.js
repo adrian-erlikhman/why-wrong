@@ -16,7 +16,7 @@ export const TERMS = {
   confidence: {
     term: 'Confidence',
     also: 'posterior probability',
-    body: 'How sure the analysis is that this student holds this particular misconception, given every answer they gave. It is not a percentage of questions they got wrong — it is the weight of the evidence.',
+    body: 'How sure the analysis is that this student holds this particular misunderstanding, given every answer they gave. It is not a percentage of questions they got wrong — it is the weight of the evidence.',
     use: 'Above roughly 80% is worth acting on directly. Between 50% and 80%, check the evidence list before you plan around it.'
   },
   failureMode: {
@@ -45,30 +45,30 @@ export const TERMS = {
   },
   diagnosing: {
     term: 'Diagnosing, not ranking',
-    body: 'A question aimed at one specific misconception is missed by exactly the students who hold it — whatever their ability elsewhere. So it can look statistically weak while being the most informative question on the page.',
+    body: 'A question aimed at one specific misunderstanding is missed by exactly the students who hold it — whatever their ability elsewhere. So it can look statistically weak while being the most informative question on the page.',
     use: 'Keep these. The tool checks whether the rest of the test agrees with the question before it calls anything broken.'
   },
   consistency: {
     term: 'Internal consistency',
     also: "Cronbach's alpha",
-    body: 'Whether all the questions behave as though they measure one single thing. A test built to detect several unrelated misconceptions should NOT score highly here.',
+    body: 'Whether all the questions behave as though they measure one single thing. A test built to detect several unrelated misunderstandings should NOT score highly here.',
     use: 'A low number on this tool is expected and healthy. It means your questions are picking up genuinely different misunderstandings.'
   },
   slip: {
     term: 'Slip',
-    body: 'A wrong answer that does not match any known misconception — arithmetic noise, a misread, a rushed guess. Everyone produces them.',
+    body: 'A wrong answer that does not match any known misunderstanding — arithmetic noise, a misread, a rushed guess. Everyone produces them.',
     use: 'Slips are not reteachable. If a student is mostly slips, they need practice and attention, not a reteach.'
   },
   recall: {
-    term: 'Misconceptions found',
+    term: 'Misunderstandings found',
     also: 'recall',
-    body: 'In the simulated class, every student was given a hidden set of misconceptions before any answers existed. This is the share of those the analysis managed to find using only the answer sheet.',
+    body: 'In the simulated class, every student was given a hidden set of misunderstandings before any answers existed. This is the share of those the analysis managed to find using only the answer sheet.',
     use: 'This is how you know the method works at all, rather than merely producing confident-looking output.'
   },
   precision: {
     term: 'Diagnoses correct',
     also: 'precision',
-    body: 'Of every misconception the analysis attributed to a student, the share that was genuinely there. The remainder are false accusations.',
+    body: 'Of every misunderstanding the analysis attributed to a student, the share that was genuinely there. The remainder are false accusations.',
     use: 'High precision matters more than high recall here: telling a teacher a student is confused when they are not wastes a lesson.'
   },
   f1: {

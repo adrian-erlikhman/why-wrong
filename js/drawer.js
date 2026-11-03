@@ -105,7 +105,7 @@ export function openStudent(ctx, s) {
   }
   facts.appendChild(fact(
     group?.isThin ? '—' : group ? (group.isSecure ? 'None' : (group.signature[0]?.id ?? '—')) : '—',
-    group?.isThin ? 'too few answers' : group?.isSecure ? 'no stable pattern' : 'main misconception'
+    group?.isThin ? 'too few answers' : group?.isSecure ? 'no stable pattern' : 'main misunderstanding'
   ));
   wrap.appendChild(facts);
 
@@ -119,8 +119,8 @@ export function openStudent(ctx, s) {
 
   const h = el('div', 'dr-h');
   h.appendChild(el('span', null, acted.length
-    ? `${acted.length} misconception${acted.length === 1 ? '' : 's'} identified`
-    : thin ? 'Too few answers to say' : 'No misconception identified'));
+    ? `${acted.length} misunderstanding${acted.length === 1 ? '' : 's'} identified`
+    : thin ? 'Too few answers to say' : 'No misunderstanding identified'));
   h.appendChild(infoButton('confidence'));
   wrap.appendChild(h);
 
@@ -132,7 +132,7 @@ export function openStudent(ctx, s) {
       'This student’s wrong answers do not repeat and do not point anywhere in particular. That is a slip profile: they need practice and attention rather than a reteach.'));
   }
 
-  // A misconception with its questions left blank has not been ruled out, even
+  // A misunderstanding with its questions left blank has not been ruled out, even
   // when the rest of the paper was answered.
   const notTested = untested(inf, s);
   if (notTested.length && !thin) {
@@ -218,7 +218,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   const blank = ev.filter(c => c.omitted).length;
   const seen = ev.length - blank;
   list.appendChild(el('p', 'ev-sum',
-    `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} that test this point to the misconception${blank ? `; ${blank} left blank` : ''}.`));
+    `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} that test this point to the misunderstanding${blank ? `; ${blank} left blank` : ''}.`));
 
   card.appendChild(list);
   return card;
@@ -241,7 +241,7 @@ export function openQuestion(ctx, i) {
   const verdict = {
     strong: ['Working well', 'This question separates students who understand from those who do not.'],
     ok: ['Acceptable', 'Not the sharpest question on the paper, but it is doing its job.'],
-    diagnostic: ['Diagnosing, not ranking', 'Statistically this looks weak, and it is not. It targets one misconception, so exactly the students who hold that misconception miss it — whatever their ability elsewhere.'],
+    diagnostic: ['Diagnosing, not ranking', 'Statistically this looks weak, and it is not. It targets one misunderstanding, so exactly the students who hold that misunderstanding miss it — whatever their ability elsewhere.'],
     minor: ['Minor issue', 'The question works. One of its options is going to waste.'],
     weak: ['Worth rewriting', 'This question is not earning its place on the paper.'],
     broken: ['Measuring backwards', 'Stronger students did worse on this than weaker ones, which usually means the wording misleads.']
@@ -306,7 +306,7 @@ export function openQuestion(ctx, i) {
       t.appendChild(el('span', null, byId[o.mis]?.name || ''));
       row.appendChild(t);
     } else {
-      row.appendChild(el('div', 'opt-tag opt-slip', 'Not linked to a misconception'));
+      row.appendChild(el('div', 'opt-tag opt-slip', 'Not linked to a misunderstanding'));
     }
 
     // Naming the students is the point: this is what turns a statistic into

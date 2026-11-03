@@ -171,7 +171,7 @@ function renderExample() {
       ? 'Correct'
       : o.mis
         ? `<span class="sw" style="background:${colourOf[o.mis]}"></span>${mathHtml(byId[o.mis]?.name ?? o.mis)}`
-        : 'Wrong, with no misconception behind it';
+        : 'Wrong, with no misunderstanding behind it';
     return `<li class="ex-opt ${kind}">
       <span class="ex-l">${paperLetter(item, k)}</span>
       <span class="ex-t">${mathHtml(o.t)}</span>
@@ -264,6 +264,7 @@ function renderMatrix() {
   const { pack, cls } = state;
   const scores = totalScores(pack, cls.responses);
   const ci = pack.items.map(correctIndex);
+  const byId = misById(pack);
   state.rows = [];
 
   cls.responses.forEach((row, s) => {
@@ -295,7 +296,7 @@ function renderMatrix() {
         what = 'correct';
       } else {
         const mis = item.opts[choice].mis;
-        if (mis) { c.style.background = colourOf[mis]; c.dataset.mis = mis; what = mis; }
+        if (mis) { c.style.background = colourOf[mis]; c.dataset.mis = mis; what = byId[mis]?.short ?? mis; }
         else { c.classList.add('slip'); what = 'wrong, no pattern'; }
       }
 
@@ -742,7 +743,7 @@ function renderItems() {
 
   const alpha = cronbachAlpha(pack, cls.responses);
   const note = $('#alpha-note');
-  note.textContent = `How consistent is the paper overall? ${interpretAlpha(alpha)} `;
+  note.textContent = `How consistent is the paper overall? ${interpretAlpha(alpha, pack.misconceptions.length)} `;
   const a = el('span', 'x-anchor', ' ');
   a.appendChild(infoButton('consistency'));
   note.appendChild(a);
@@ -813,6 +814,8 @@ function renderProgress() {
   const { totals: t, match } = cmp;
 
   if (!match.pairs.length) {
+    $('#export-progress').hidden = true;
+    $('#print-progress').hidden = true;
     const box = el('div', 'empty');
     box.appendChild(el('h3', null, 'No student appears in both sittings.'));
     box.appendChild(el('p', null, 'Students are matched by name, so check that the two sheets spell them the same way.'));

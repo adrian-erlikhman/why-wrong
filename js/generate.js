@@ -217,7 +217,7 @@ export async function generatePack(apiKey, topic, {
     }
   };
 
-  onProgress({ stage: 'writing', attempt: 1, message: 'Writing the misconception taxonomy and item bank…' });
+  onProgress({ stage: 'writing', attempt: 1, message: 'Writing the misunderstandings and the questions…' });
   let reply = await callModel(apiKey, messages);
   let { pack, report } = read(reply);
   let attempts = 1;
@@ -232,7 +232,7 @@ export async function generatePack(apiKey, topic, {
     onProgress({
       stage: 'repairing',
       attempt: attempts + 1,
-      message: `Validating… ${notes.length} structural problem${notes.length === 1 ? '' : 's'} to repair.`,
+      message: `Checking… ${notes.length} problem${notes.length === 1 ? '' : 's'} to fix.`,
       notes
     });
 
@@ -251,6 +251,6 @@ export async function generatePack(apiKey, topic, {
     throw new Error(`The questions could not be built after ${attempts} tries, so nothing was added. Try again, or a narrower topic. The last problem was: ${report.errors[0]}`);
   }
 
-  onProgress({ stage: 'done', attempt: attempts, message: 'Instrument ready.' });
+  onProgress({ stage: 'done', attempt: attempts, message: 'The test is ready.' });
   return { pack, report, attempts };
 }

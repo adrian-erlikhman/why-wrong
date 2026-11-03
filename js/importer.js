@@ -96,7 +96,7 @@ export function answerKeyCsv(pack) {
     const ci = it.opts.findIndex(o => o.c);
     return [it.id, it.topic || '', it.stem, paperLetter(it, ci), it.opts[ci].t];
   });
-  return [['Item', 'Topic', 'Question', 'Key', 'Correct answer'], ...rows]
+  return [['Number', 'Topic', 'Question', 'Key', 'Correct answer'], ...rows]
     .map(r => r.map(csvCell).join(',')).join('\n');
 }
 
@@ -191,16 +191,16 @@ export function reviewHtml(pack) {
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
 <h1>${escapeHtml(pack.name)} — labels to check</h1>
-<div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misconceptions`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
+<div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misunderstandings`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 
 <h2>1 · Before you see any results</h2>
-<p>Tick the 2 or 3 misconceptions you expect to be most common in this class. If yours isn't listed, write it below.</p>
+<p>Tick the 2 or 3 misunderstandings you expect to be most common in this class. If yours isn't listed, write it below.</p>
 <ul class="pred">${predict}</ul>
 <p>Other: </p><div class="lines"></div>
 <p>Class / period: ______________ &nbsp; Date: ______________</p>
 
 <h2 class="brk">2 · The labels</h2>
-<p>Each wrong answer is labelled with the misconception that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
+<p>Each wrong answer is labelled with the misunderstanding that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
 <ol class="qs">${items}</ol>
 </body></html>`;
 }
@@ -490,7 +490,7 @@ export function parseResponses(pack, text) {
 
     const available = free.length;
     if (available < pack.items.length) {
-      errors.push(`This instrument has ${pack.items.length} questions but the pasted data has ${Math.max(0, available)} answer column${available === 1 ? '' : 's'}. Add the missing columns, or use a header row naming each question id.`);
+      errors.push(`This test has ${pack.items.length} questions but the pasted data has ${Math.max(0, available)} answer column${available === 1 ? '' : 's'}. Add the missing columns, or use a header row naming each question id.`);
     } else if (available > pack.items.length) {
       warnings.push(`Ignoring ${available - pack.items.length} extra column${available - pack.items.length === 1 ? '' : 's'} beyond question ${pack.items.length}.`);
     }
@@ -573,7 +573,7 @@ export function parseResponses(pack, text) {
 
 /** The reteach plan as a spreadsheet, one row per group. */
 export function groupsCsv(pack, cls, groups, misIndex) {
-  const head = ['Group', 'Students', 'Size', 'Misconceptions', 'Reteach', 'Check 1', 'Check 2', 'Check 3'];
+  const head = ['Group', 'Students', 'Size', 'Misunderstandings', 'Reteach', 'Check 1', 'Check 2', 'Check 3'];
   const rows = groups.map((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
     if (g.isThin) {

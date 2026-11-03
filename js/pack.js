@@ -58,8 +58,8 @@ export function validatePack(pack) {
   const warnings = [];
 
   if (!pack || typeof pack !== 'object') return { ok: false, errors: ['Pack is not an object.'], warnings };
-  if (!Array.isArray(pack.misconceptions) || !pack.misconceptions.length) errors.push('Pack has no misconceptions.');
-  if (!Array.isArray(pack.items) || !pack.items.length) errors.push('Pack has no items.');
+  if (!Array.isArray(pack.misconceptions) || !pack.misconceptions.length) errors.push('This test lists no misconceptions.');
+  if (!Array.isArray(pack.items) || !pack.items.length) errors.push('This test has no questions.');
   if (errors.length) return { ok: false, errors, warnings };
 
   // A file can hold anything. A hole in it should be reported, not thrown.
@@ -80,12 +80,12 @@ export function validatePack(pack) {
 
   const itemIds = new Set();
   pack.items.forEach((it, i) => {
-    const label = it.id || `item ${i}`;
-    if (!it.id) errors.push(`Item ${i} has no id.`);
+    const label = it.id || `Question ${i + 1}`;
+    if (!it.id) errors.push(`Question ${i + 1} has no id.`);
     else if (itemIds.has(it.id)) errors.push(`Duplicate item id ${it.id}.`);
     else itemIds.add(it.id);
 
-    if (!String(it.stem ?? '').trim()) errors.push(`${label} has no stem.`);
+    if (!String(it.stem ?? '').trim()) errors.push(`${label} has no question text.`);
     // Two options is a true/false question: one wrong answer, still a probe.
     if (!Array.isArray(it.opts) || it.opts.length < 2) {
       errors.push(`${label} needs at least 2 options.`);
@@ -116,7 +116,7 @@ export function validatePack(pack) {
   // become coin flips dressed up as probabilities.
   pack.misconceptions.forEach(m => {
     const n = itemsProbing(pack, m.id).length;
-    if (n === 0) errors.push(`${m.id} is never probed by any item.`);
+    if (n === 0) errors.push(`No question tests ${m.id}.`);
     else if (n < MIN_PROBES) warnings.push(`${m.id} is probed by only ${n} item${n === 1 ? '' : 's'}; ${MIN_PROBES} is the minimum for a stable diagnosis.`);
   });
 

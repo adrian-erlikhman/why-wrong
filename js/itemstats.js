@@ -147,14 +147,14 @@ export function analyseItems(pack, responses, inference = null) {
     const backwardBar = -noise;
 
     const flags = [];
-    if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so the item separates nobody.` });
+    if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so the question separates nobody.` });
     // A low mean score is only evidence of a problem when the item also fails
     // to separate students. A hard item that strong students get right and weak
     // students get wrong is doing its job, however low the class average is --
     // so difficulty near chance is reported only alongside weak discrimination.
-    if (p <= chance + 0.06 && r < 0.15) flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% correct against ${Math.round(chance * 100)}% for pure guessing, with no discrimination to offset it -- responses are indistinguishable from random.` });
-    if (r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Discrimination is negative (r = ${r.toFixed(2)}): stronger students did worse on it than weaker ones.` });
-    else if (r < weakBar) flags.push({ kind: 'no-discrimination', text: `Discrimination is ${r.toFixed(2)}: your strongest and weakest students answered it alike.` });
+    if (p <= chance + 0.06 && r < 0.15) flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% correct, against ${Math.round(chance * 100)}% for pure guessing, and strong students did no better than weak ones. These answers look random.` });
+    if (r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Stronger students did worse on this than weaker ones (discrimination ${r.toFixed(2)}).` });
+    else if (r < weakBar) flags.push({ kind: 'no-discrimination', text: `Your strongest and weakest students answered this alike (discrimination ${r.toFixed(2)}).` });
 
     // An item whose wrong answers are mapped to nothing, and on which the class
     // is performing at chance, produces neither a ranking nor a diagnosis. That
@@ -170,13 +170,13 @@ export function analyseItems(pack, responses, inference = null) {
     const indistinguishableFromGuessing = zAboveChance < 1.64;
 
     if (diagnosticShare === 0 && indistinguishableFromGuessing && r < 0.30) {
-      flags.push({ kind: 'uninformative', text: `None of this item's wrong answers correspond to a known misconception, and ${Math.round(p * 100)}% correct is not statistically distinguishable from guessing at ${Math.round(chance * 100)}% (z = ${zAboveChance.toFixed(2)}). It yields neither a ranking nor a diagnosis.` });
+      flags.push({ kind: 'uninformative', text: `None of this question's wrong answers point to a known misunderstanding, and ${Math.round(p * 100)}% correct is no better than guessing at ${Math.round(chance * 100)}%. It tells you neither who is strong nor what anyone believes.` });
     }
 
     if (omitted / nStudents >= 0.20) flags.push({ kind: 'skipped', text: Math.round((omitted / nStudents) * 100) + '% of the class left this blank, which usually means it ran long, sat past a time limit, or read as unanswerable.' });
 
     const dead = options.filter(o => o.dead);
-    if (dead.length) flags.push({ kind: 'dead-distractor', text: `${dead.length} option${dead.length > 1 ? 's were' : ' was'} chosen by almost nobody (${dead.map(o => `"${o.text}"`).join(', ')}), so the item is effectively shorter than it looks.` });
+    if (dead.length) flags.push({ kind: 'dead-distractor', text: `${dead.length} option${dead.length > 1 ? 's were' : ' was'} chosen by almost nobody (${dead.map(o => `"${o.text}"`).join(', ')}), so the question has fewer real choices than it looks.` });
 
     // Classify.
     //
@@ -209,7 +209,7 @@ export function analyseItems(pack, responses, inference = null) {
     else quality = r >= 0.3 ? 'strong' : 'ok';
 
     const note = quality === 'diagnostic'
-      ? `Correlation with total score is ${r.toFixed(2)}, which on an ability test would look bad. It is not. Of the ${agreementN} students who chose "${options.find(o => o.mis === signalMis && o.count > 0)?.text ?? ''}", ${Math.round(modelAgreement * 100)}% are independently diagnosed with ${signalMis} by the rest of the test. This item is diagnosing rather than ranking, and should be kept.`
+      ? `This question does not track overall score (${r.toFixed(2)}), which would look bad on an ordinary test. Here it does not. Of the ${agreementN} students who chose "${options.find(o => o.mis === signalMis && o.count > 0)?.text ?? ''}", ${Math.round(modelAgreement * 100)}% show the same misunderstanding on the rest of the paper. It is finding a misunderstanding rather than ranking students, so keep it.`
       : null;
 
     return {
@@ -304,15 +304,15 @@ export function cronbachAlpha(pack, allResponses) {
 }
 
 /** Plain-language reading of an alpha value for a multidimensional instrument. */
-export function interpretAlpha(alpha) {
+export function interpretAlpha(alpha, nMisconceptions) {
   if (alpha === null) return 'Not enough fully answered papers to say.';
   if (alpha >= 0.8) {
-    return `${alpha.toFixed(2)} -- high. The items are behaving as though they measure one common skill, which for a misconception inventory suggests the distractors are not separating distinct errors as intended.`;
+    return `${alpha.toFixed(2)}, which is high. The questions are behaving as though they measure one common skill, which on a test like this suggests the wrong answers are not separating different misunderstandings as intended.`;
   }
   if (alpha >= 0.5) {
-    return `${alpha.toFixed(2)} -- moderate. Some shared variance across items, some independent misconception signal.`;
+    return `${alpha.toFixed(2)}, which is moderate. Part of this is one shared skill, and part is separate misunderstandings.`;
   }
-  return `${alpha.toFixed(2)} -- low, and appropriately so. Alpha assumes a single underlying trait; this instrument targets twelve distinct misconceptions, so low internal consistency is evidence of multidimensionality rather than of an unreliable test.`;
+  return `${alpha.toFixed(2)}, which is low, and that is expected. This number assumes a test measures one thing, and this one is looking for ${nMisconceptions} different misunderstandings.`;
 }
 
 /** Items with only cosmetic defects (a wasted option), worth a second pass. */
