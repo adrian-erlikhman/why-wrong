@@ -16,7 +16,7 @@
  */
 
 import { makeRng, shuffled } from './rng.js';
-import { isTested, PARAMS } from './infer.js';
+import { isTested, strength } from './infer.js';
 import { escapeHtml, mathHtml } from './notation.js';
 import { correctIndex } from './pack.js';
 
@@ -215,9 +215,11 @@ export function slipsHtml(pack, cls, inf, cov, only = null) {
   const slips = wanted.map(s => {
     const st = cls.students[s];
     const hasUntested = inf.misIds.some((_, k) => !isTested(inf, s, k));
+    // Only what is reported to the teacher goes to the student: a belief that
+    // rests on a single answer is a question for the teacher to ask first.
     const held = inf.misIds
-      .map((id, k) => ({ m: byId[id], p: inf.posterior[s][k] }))
-      .filter((x, k) => x.m && isTested(inf, s, k) && x.p >= PARAMS.decisionThreshold)
+      .map((id, k) => ({ m: byId[id], p: inf.posterior[s][k], level: strength(inf, s, k).level }))
+      .filter(x => x.m && (x.level === 'clear' || x.level === 'likely'))
       .sort((a, b) => b.p - a.p)
       .slice(0, 2);
 

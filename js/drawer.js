@@ -4,7 +4,7 @@
  */
 
 import { correctIndex, misById } from './pack.js';
-import { PARAMS, isTested, untested } from './infer.js';
+import { untested, strength } from './infer.js';
 import { shownFlags } from './itemstats.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
@@ -102,12 +102,12 @@ export function openStudent(ctx, s) {
 
   // --- ranked diagnoses ----------------------------------------------------
   const ranked = inf.misIds
-    .map((mid, k) => ({ mid, p: inf.posterior[s][k], k }))
+    .map((mid, k) => ({ mid, k, ...strength(inf, s, k) }))
     .sort((a, b) => b.p - a.p);
 
-  const tested = ranked.filter(r => isTested(inf, s, r.k));
-  const acted = tested.filter(r => r.p >= PARAMS.decisionThreshold);
-  const rest = tested.filter(r => r.p < PARAMS.decisionThreshold && r.p >= 0.12);
+  const acted = ranked.filter(r => r.level === 'clear' || r.level === 'likely');
+  const check = ranked.filter(r => r.level === 'check');
+  const rest = ranked.filter(r => r.level === 'none' && r.p >= 0.12);
 
   const h = el('div', 'dr-h');
   h.appendChild(el('span', null, acted.length
@@ -134,6 +134,13 @@ export function openStudent(ctx, s) {
   }
 
   acted.forEach(r => wrap.appendChild(diagnosisCard(ctx, s, r, byId, colourOf, true)));
+
+  // Over the line on a single answer: right less than half the time, so it is
+  // offered as a question to ask rather than as a diagnosis.
+  if (check.length) {
+    wrap.appendChild(el('div', 'dr-h', 'Worth one more question'));
+    check.forEach(r => wrap.appendChild(diagnosisCard(ctx, s, r, byId, colourOf, false)));
+  }
 
   if (rest.length) {
     const more = el('details', 'dr-more');
@@ -212,6 +219,14 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   const seen = ev.length - blank;
   list.appendChild(el('p', 'ev-sum',
     `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} supported this estimate${blank ? `; ${blank} ${blank === 1 ? 'was' : 'were'} left blank` : ''}.`));
+
+  // Resting on one answer: name the question that would settle it.
+  if (r.level === 'check' && m?.verify?.length) {
+    const ask = el('p', 'ev-ask');
+    ask.appendChild(el('b', null, 'Before acting on it, ask: '));
+    ask.appendChild(setMath(el('span'), m.verify[0]));
+    list.appendChild(ask);
+  }
 
   card.appendChild(list);
   return card;

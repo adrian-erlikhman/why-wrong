@@ -1037,6 +1037,8 @@ html.key-above .legend { padding-bottom: 20px; }
 .chip-more, .chip-clear { color: var(--muted); cursor: default; }
 .chip-clear { background: var(--good-tint); border-color: var(--good-line); color: var(--good); font-weight: 600; }
 .chip-thin { background: var(--warn-tint); border-color: var(--warn-line); color: var(--warn); font-weight: 600; cursor: default; }
+/* One answer points here: a question to ask, not a diagnosis. */
+.chip-check { border-style: dashed; border-color: var(--warn-line); background: var(--warn-tint); color: var(--warn); cursor: default; }
 
 /* ------------------------------ validation ----------------------------- */
 
@@ -1515,6 +1517,8 @@ html.key-above .legend { padding-bottom: 20px; }
 .ev-row.for .ev-w { color: var(--bad); }
 .ev-row.against .ev-w { color: var(--good); }
 .ev-row.blank .ev-w, .ev-row.blank .ev-what { color: var(--muted); }
+.ev-ask { font-size: 15px; color: var(--ink-2); margin-top: 10px; padding: 10px 12px; border-radius: var(--r-s); background: var(--warn-tint); border: 1px dashed var(--warn-line); }
+.ev-ask b { color: var(--warn); font-weight: 700; }
 .ev-sum { font-size: 14.5px; color: var(--muted); margin-top: 10px; }
 
 .dr-more { margin-top: 8px; }

@@ -13,7 +13,7 @@
 import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
-import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS } from './infer.js';
+import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS, strength } from './infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf, shownFlags } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
@@ -771,12 +771,11 @@ function renderStudents() {
 
   const rows = cls.students.map((st, s) => {
     const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
-    const held = inf.misIds
-      .map((mid, k) => ({ mid, k, p: inf.posterior[s][k] }))
-      .filter(x => isTested(inf, s, x.k) && x.p >= PARAMS.decisionThreshold)
-      .sort((a, b) => b.p - a.p);
+    const levels = inf.misIds.map((mid, k) => ({ mid, k, ...strength(inf, s, k) })).sort((a, b) => b.p - a.p);
+    const held = levels.filter(x => x.level === 'clear' || x.level === 'likely');
+    const check = levels.filter(x => x.level === 'check');
     const group = groups.find(g => g.members.includes(s));
-    return { s, st, score, held, group };
+    return { s, st, score, held, check, group };
   });
 
   // Most to act on first: students with the most confident misconceptions, then
@@ -824,8 +823,15 @@ function renderStudents() {
       if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
     } else if (r.group?.isThin) {
       mid.appendChild(el('span', 'chip chip-thin', 'Not enough answers for an estimate'));
-    } else {
+    } else if (!r.check.length) {
       mid.appendChild(el('span', 'chip chip-clear', 'No clear pattern found'));
+    }
+    // A belief resting on one answer is not a diagnosis; it is a question to ask.
+    if (r.check.length && r.held.length < 3) {
+      const c = el('span', 'chip chip-check');
+      c.appendChild(setMath(el('span'), `Check: ${byId[r.check[0].mid]?.short || r.check[0].mid}`));
+      c.title = 'Only one answer points here. Ask one more question before acting on it.';
+      mid.appendChild(c);
     }
     card.appendChild(mid);
 
