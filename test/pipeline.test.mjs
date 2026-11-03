@@ -483,6 +483,30 @@ for (const pack of BUILT_IN) {
   check('a distractor is not defended by fewer than two answered independent probes',
     sparseAgreement.signalN === 4 && sparseAgreement.agreementN === 0 &&
     sparseAgreement.modelAgreement === null && sparseAgreement.quality !== 'diagnostic');
+
+  const supportedAgreementPack = {
+    ...sparseAgreementPack,
+    items: [
+      ...sparseAgreementPack.items,
+      ...Array.from({ length: 10 }, (_, n) => ({
+        id: `C${n + 1}`,
+        stem: `Control question ${n + 1}`,
+        opts: [{ t: 'Correct', c: true }, { t: 'Other' }]
+      }))
+    ]
+  };
+  const supportedResponses = [
+    ...Array.from({ length: 3 }, () => [1, 1, 1, ...Array(10).fill(0)]),
+    ...Array.from({ length: 3 }, () => [0, 0, 0, ...Array(10).fill(1)])
+  ];
+  const supportedInference = inferMisconceptions(supportedAgreementPack, supportedResponses);
+  const supportedAgreement = analyseItems(supportedAgreementPack, supportedResponses, supportedInference)[0];
+  check('item agreement uses only distractor choosers with two independent probes',
+    supportedAgreement.quality === 'diagnostic' &&
+    supportedAgreement.signalN === 3 && supportedAgreement.agreementN === 3 &&
+    supportedAgreement.modelAgreement === 1 &&
+    supportedAgreement.note.includes('Of the 3 students') &&
+    supportedAgreement.note.includes('100% of those did'));
 }
 
 // -------------------------------------------------------------- row order
