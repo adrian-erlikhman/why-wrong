@@ -319,6 +319,9 @@ for (const pack of BUILT_IN) {
   check('a blank paper gets a slip about finishing it', slips[0].includes('left a lot of this blank'));
   const allRight = { ...c, responses: c.responses.map(() => pack.items.map(correctIndex)) };
   const rightSlips = slipsHtml(pack, allRight, inferMisconceptions(pack, allRight.responses), coverage(pack, allRight.responses));
+  const noLines = { ...pack, misconceptions: pack.misconceptions.map(({ student, ...m }) => m) };
+  check('a test with no student lines keeps teacher wording off the slip',
+    !pack.misconceptions.some(m => slipsHtml(noLines, c, inf, coverage(pack, c.responses)).includes(m.belief.split(',')[0])));
   check('a perfect paper is not told to slow down', rightSlips.includes('nothing to fix') && !rightSlips.includes('Your mistakes'));
   const heldBy = inf.posterior.findIndex((row, s) => s > 1 && row.some(p => p >= 0.5));
   const top = inf.misIds[inf.posterior[heldBy].indexOf(Math.max(...inf.posterior[heldBy]))];
