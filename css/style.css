@@ -765,6 +765,11 @@ body.has-import .import-only { display: inline-flex; }
   color: var(--ink);
   margin-bottom: 6px;
 }
+.group-more { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.group-more summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.group-more h4 { margin: 14px 0 4px; font-family: var(--display); font-size: 16.5px; font-weight: 600; }
+.group-more-p { font-family: var(--mono); font-size: 14px; font-weight: 400; color: var(--muted); }
+
 .lab.accent { color: var(--accent); }
 
 .plan { font-size: 16px; color: var(--ink); margin-bottom: 20px; }
@@ -1601,7 +1606,8 @@ body.has-import .import-only { display: inline-flex; }
   body.print-progress .view#view-groups { display: none !important; }
   body.print-progress .view#view-progress { display: block !important; }
   .prog, .prog-group, .prog-verdict, .metric { break-inside: avoid; page-break-inside: avoid; background: #fff; box-shadow: none; }
-  .prog-who summary { display: none; }
+  .prog-who summary, .group-more summary { display: none; }
+  .group { break-inside: auto; page-break-inside: auto; }
   .progs { display: block; }
   .metrics { grid-template-columns: repeat(4, 1fr); }
   .prog { margin-bottom: 8pt; }

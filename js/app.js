@@ -602,6 +602,28 @@ function groupCard(g, idx) {
     body.appendChild(ul);
   }
 
+  // The plan above is for the group's main misunderstanding. The rest are held
+  // by most of the group too, and each has its own reteach.
+  const others = g.aiPlan ? [] : details.slice(1);
+  if (others.length) {
+    const more = el('details', 'group-more');
+    more.appendChild(el('summary', null, `${others.length} more this group shares`));
+    others.forEach(m => {
+      const held = g.signature.find(s => s.id === m.id);
+      const h4 = setMath(el('h4'), m.name);
+      h4.appendChild(el('span', 'group-more-p', ` ${Math.round(held.inMean * 100)}%`));
+      more.appendChild(h4);
+      if (m.belief) more.appendChild(setMath(el('p', 'belief'), m.belief));
+      if (m.reteach) more.appendChild(setMath(el('p', 'plan'), m.reteach));
+      if (m.verify?.length) {
+        const ul = el('ul', 'checks');
+        m.verify.forEach(v => ul.appendChild(setMath(el('li'), v)));
+        more.appendChild(ul);
+      }
+    });
+    body.appendChild(more);
+  }
+
   body.appendChild(roster(g));
   card.appendChild(body);
   return card;
@@ -992,15 +1014,9 @@ function exportProgress() {
 function printProgress() {
   showView('progress');
   closeDrawer();
-  // Names are the point of the printout, so nothing stays folded on paper.
-  const folded = $$('#progress details:not([open])');
-  folded.forEach(d => { d.open = true; });
   document.body.classList.add('print-progress');
-  window.addEventListener('afterprint', () => {
-    document.body.classList.remove('print-progress');
-    folded.forEach(d => { d.open = false; });
-  }, { once: true });
-  window.print();
+  window.addEventListener('afterprint', () => document.body.classList.remove('print-progress'), { once: true });
+  printUnfolded($('#progress'));
 }
 
 /* ======================================================================== */
@@ -1434,10 +1450,18 @@ function exportPlan() {
     groupsCsv(state.pack, state.cls, state.groups, misById(state.pack)));
 }
 
+/** Print with everything unfolded, since paper has no way to open a section. */
+function printUnfolded(root) {
+  const folded = [...root.querySelectorAll('details:not([open])')];
+  folded.forEach(d => { d.open = true; });
+  window.addEventListener('afterprint', () => { folded.forEach(d => { d.open = false; }); }, { once: true });
+  window.print();
+}
+
 function printPlan() {
   showView('groups');
   closeDrawer();
-  window.print();
+  printUnfolded($('#groups'));
 }
 
 /* ======================================================================== */
