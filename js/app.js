@@ -134,6 +134,7 @@ function run() {
   fitMapToClass(cls.students.length);
   showTestNudge();
   renderPackLine();
+  renderHeroMap();
   renderExample();
   renderSummary();
   renderMatrix();
@@ -165,6 +166,82 @@ function renderPackLine() {
     `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
     (cls.meta.imported ? `${students(cls.students.length)}${savedOn(state.imported.savedAt)}` : `sample class, variant ${cls.meta.seed}`);
   if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));
+}
+
+/* ======================================================================== */
+/*  Hero map                                                                */
+/* ======================================================================== */
+
+const HERO_HUES = ['var(--coral)', 'var(--sun)', 'var(--lagoon)', '#a9c1ff', '#e6b3f2', '#ffb48f'];
+
+/**
+ * The class map at its most legible: one colour per reteach group, so the
+ * stripes read from across a room. It is drawn from the first sample class only,
+ * and never from a teacher's own, because this is the shop window.
+ */
+function renderHeroMap() {
+  const host = $('#hero-map');
+  if (host.firstChild || state.imported) return;
+
+  const { pack, cls, groups } = state;
+  const real = reteachGroups(groups);
+  const nRows = cls.students.length;
+  const nCols = pack.items.length;
+  const ci = pack.items.map(correctIndex);
+
+  // Each misunderstanding wears the colour of the group that holds it most.
+  const owner = {};
+  real.forEach((g, i) => g.signature.forEach(s => {
+    if (!owner[s.id] || s.inMean > owner[s.id].held) owner[s.id] = { held: s.inMean, hue: HERO_HUES[i % HERO_HUES.length] };
+  }));
+
+  const order = groups.flatMap(g => g.members);
+  const grid = el('div', 'hmap-grid');
+  grid.style.setProperty('--cols', nCols);
+  grid.style.setProperty('--rows', nRows);
+
+  cls.responses.forEach((row, s) => {
+    const r = el('div', 'hmap-row');
+    r.style.setProperty('--i', order.indexOf(s));
+    r.style.setProperty('--at', s);
+    r.dataset.to = order.indexOf(s);
+    row.forEach((choice, i) => {
+      const c = document.createElement('i');
+      if (choice >= 0 && choice !== ci[i]) {
+        const mis = pack.items[i].opts[choice].mis;
+        if (owner[mis]) c.style.background = owner[mis].hue;
+        else c.className = 's';
+      }
+      r.appendChild(c);
+    });
+    grid.appendChild(r);
+  });
+
+  let start = 0;
+  real.forEach((g, i) => {
+    const band = el('span', 'hmap-band');
+    band.style.top = `${(start / nRows) * 100}%`;
+    band.style.height = `calc(${(g.size / nRows) * 100}% - 4px)`;
+    band.style.background = HERO_HUES[i % HERO_HUES.length];
+    grid.appendChild(band);
+    start += g.size;
+  });
+
+  grid.setAttribute('role', 'img');
+  grid.setAttribute('aria-label',
+    `A class map of ${nRows} students and ${nCols} questions, sorted into ${real.length} reteach groups. ` +
+    'Each group shows as vertical stripes, on the questions it gets wrong for the same reason.');
+  host.appendChild(grid);
+  host.appendChild(el('figcaption', null,
+    `A sample class of ${nRows}, sorted by what students believe rather than by score.`));
+
+  const settle = () => {
+    host.classList.add('is-sorted');
+    host.querySelectorAll('.hmap-row').forEach(r => r.style.setProperty('--at', r.dataset.to));
+  };
+  // The first visit opens on the intro, and this should not play behind it.
+  const play = () => { if ($('#intro').hidden) setTimeout(settle, 700); else setTimeout(play, 300); };
+  setTimeout(play, 300);
 }
 
 /* ======================================================================== */
@@ -526,7 +603,9 @@ function renderLegend() {
   host.innerHTML = '';
   const byId = misById(state.pack);
 
-  prevalence(state.inf.posterior, state.inf.misIds).forEach(p => {
+  // Sorted by the figure printed beside each entry, so the list visibly is in order.
+  const byCount = prevalence(state.inf.posterior, state.inf.misIds).sort((a, b) => b.confident - a.confident);
+  byCount.forEach(p => {
     const m = byId[p.id];
     if (!m) return;
     const n = el('button', 'leg');
@@ -535,7 +614,6 @@ function renderLegend() {
     sw.style.background = colourOf[p.id];
     sw.dataset.letter = letterOf[p.id];
     n.appendChild(sw);
-    n.appendChild(el('span', 'leg-n', p.id));
     n.appendChild(setMath(el('span'), m.short || m.name));
     n.appendChild(el('span', 'leg-c', String(p.confident)));
     n.title = m.belief || m.name;
@@ -549,7 +627,7 @@ function renderLegend() {
     host.appendChild(n);
   });
 
-  [['var(--correct)', 'correct'], ['var(--slip)', 'wrong, no pattern'], ['transparent', 'not answered', true]]
+  [['var(--cell-ok)', 'correct'], ['var(--cell-slip)', 'wrong, no pattern'], ['transparent', 'not answered', true]]
     .forEach(([bg, label, dashed]) => {
       const n = el('span', 'leg leg-static');
       const sw = el('span', `sw${dashed ? ' sw-omit' : ''}`);

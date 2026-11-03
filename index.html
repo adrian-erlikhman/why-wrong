@@ -21,7 +21,7 @@
 <!-- Loaded without blocking: school networks often filter this host, and a
      stylesheet that never answers would hold the whole page blank. -->
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Lexend:wght@500;600&family=Source+Serif+4:opsz,wght@8..60,700&family=Source+Sans+3:wght@400;600;700&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<meta name="theme-color" content="#fffaf3">
+<meta name="theme-color" content="#0b2545">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -29,7 +29,7 @@
 <!-- ================================ NAV ================================ -->
 <header class="bar">
   <div class="bar-top">
-    <a class="brand" href="./">Why <span class="brand-u">Wrong<svg viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C14 1.5 20 8 33 4.5S52 7.5 64 4.2 84 7.2 98 3.6" fill="none" stroke="#d1372b" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span></a>
+    <a class="brand" href="./">Why <span class="brand-u">Wrong<svg viewBox="0 0 100 9" preserveAspectRatio="none" aria-hidden="true"><path d="M2 5.5C14 1.5 20 8 33 4.5S52 7.5 64 4.2 84 7.2 98 3.6" fill="none" stroke="#ff6f59" stroke-width="2.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg></span></a>
     <nav class="nav-links" aria-label="Page">
       <a href="#how">How it works</a>
       <a href="#app">Try it</a>
@@ -62,7 +62,7 @@
       <p class="hero-trust">Runs in your browser. No account, and no class data leaves the page.</p>
     </div>
 
-    <figure class="ex" id="example" aria-label="A worked example from the sample class"></figure>
+    <figure class="hmap" id="hero-map"></figure>
   </div>
 </section>
 
@@ -73,6 +73,7 @@
       <h2>How it works</h2>
       <p>Four steps, from a multiple-choice quiz to knowing the reteach worked.</p>
     </div>
+    <div class="how-grid">
     <ol class="steps">
       <li class="how-step">
         <span class="how-n">1</span>
@@ -114,6 +115,8 @@
         </p>
       </li>
     </ol>
+    <figure class="ex" id="example" aria-label="A worked example from the sample class"></figure>
+    </div>
   </div>
 </section>
 
@@ -214,7 +217,7 @@
         <h2>Every wrong answer, and what it tells you.</h2>
         <p class="sub">
           One row per student, one column per question. A cell is coloured by <b>the misunderstanding
-          that answer reveals</b>, not by right or wrong. Pale cells are correct; grey cells are
+          that answer reveals</b>, not by right or wrong. Dark cells are correct; grey cells are
           wrong but random, with no pattern behind them.
         </p>
       </div>
