@@ -517,7 +517,7 @@ export function parseResponses(pack, text, otherPacks = []) {
 
     const available = free.length;
     if (available < pack.items.length) {
-      errors.push(`This test has ${pack.items.length} questions but the pasted data has ${Math.max(0, available)} answer column${available === 1 ? '' : 's'}. Add the missing columns, or use a header row naming each question id.`);
+      errors.push(`This test has ${pack.items.length} questions, but what you pasted has ${Math.max(0, available)} answer column${available === 1 ? '' : 's'}. Add the missing columns, or name each question in the top row (${pack.items[0].id}, ${pack.items[1]?.id ?? ''} and so on).`);
     } else if (available > pack.items.length) {
       warnings.push(`Ignoring ${available - pack.items.length} extra column${available - pack.items.length === 1 ? '' : 's'} beyond question ${pack.items.length}.`);
     }
@@ -584,6 +584,10 @@ export function parseResponses(pack, text, otherPacks = []) {
   }
 
   if (!responses.length) errors.push('No student rows found.');
+  // Reading on would show a class with nothing in it, as if they had all left it blank.
+  if (bad.length && responses.every(row => row.every(v => v === OMITTED))) {
+    errors.push(`None of these answers could be read, for example ${bad[0]}. Use the letters printed on the paper, option numbers, or the answer text.`);
+  }
   if (responses.length && responses.length < 5) {
     warnings.push(`Only ${responses.length} student${responses.length === 1 ? '' : 's'}. Grouping needs roughly 12 or more to say anything meaningful; individual diagnoses will still work.`);
   }

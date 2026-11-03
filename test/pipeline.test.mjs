@@ -428,6 +428,9 @@ for (const pack of BUILT_IN) {
     ...letters.map((row, s) => [`kid.${s}@students.example.org`, `Kid ${s}`, ...row].join(','))].join('\n'));
   check('a name column beats an email column', both.ok && both.students[3].name === 'Kid 3');
 
+  const nonsense = parseResponses(pack, [['Student', ...ids].join(','), ...letters.map((row, s) => [`Kid ${s}`, ...row.map(() => 'Z')].join(','))].join('\n'));
+  check('a paste with no readable answer is refused', !nonsense.ok && /could be read/.test(nonsense.errors[0]));
+
   const twice = parseResponses(pack, `${plain}\n${q(c.students[0].name.toUpperCase())},${letters[1].join(',')}`);
   check('a repeated name is flagged at paste', twice.ok && twice.warnings.some(w => /more than once/.test(w)));
 }
