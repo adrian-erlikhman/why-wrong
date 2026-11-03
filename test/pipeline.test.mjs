@@ -124,7 +124,7 @@ for (const pack of BUILT_IN) {
     readsBack(parseResponses(pack, asCsv((it, c) => String(paperOrder(it).indexOf(c) + 1)))));
   check('answer text reads back exactly',
     readsBack(parseResponses(pack, asCsv((it, c) => `"${it.opts[c].t.replace(/"/g, '""')}"`))));
-  const perfect = parseResponses(pack, `${header}\nKey,${keyRow.join(',')}`);
+  const perfect = parseResponses(pack, `${header}\nTop mark,${keyRow.join(',')}`);
   check('the printed key scores full marks',
     perfect.ok && totalScores(pack, perfect.responses)[0] === pack.items.length);
 
@@ -257,6 +257,63 @@ for (const pack of BUILT_IN) {
   check('blanks leave difficulty out of the denominator', Math.abs(firstStat.difficulty - hit / 20) < 1e-12 && firstStat.answered === 20);
   check('a question left blank by half the class is flagged', firstStat.flags.some(f => f.kind === 'skipped'));
   check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
+}
+
+// -------------------------------------------------------- messy spreadsheets
+// What real sheets look like, as opposed to the template.
+{
+  console.log(`\n${'='.repeat(66)}\nMessy spreadsheets\n${'='.repeat(66)}`);
+  const pack = BUILT_IN[1];
+  const c = generateClass(pack, { seed: 6, size: 14 });
+  const letters = c.responses.map(row => row.map((v, i) => paperLetter(pack.items[i], v)));
+  const texts = c.responses.map(row => row.map((v, i) => pack.items[i].opts[v].t));
+  const q = s => `"${String(s).replace(/"/g, '""')}"`;
+  const same = res => res.ok && res.responses.length === 14 &&
+    res.responses.every((row, s) => row.every((v, i) => v === c.responses[s][i]));
+  const ids = pack.items.map(i => i.id);
+
+  const forms = [
+    ['Timestamp', 'Email Address', 'Score', 'Name', ...pack.items.map(i => q(i.stem))].join(','),
+    ...c.students.map((st, s) => [q('2026/11/03 9:01:00 AM'), `kid${s}@school.org`, '12 / 24', q(st.name), ...texts[s].map(q)].join(','))
+  ].join('\n');
+  const f = parseResponses(pack, forms);
+  check('a Google Forms export reads back exactly', same(f), f.errors.join('; '));
+  check('it is matched by the question text', f.matchedBy === 'question text');
+  check('its names come from the Name column', f.students[3]?.name === c.students[3].name);
+
+  const numbered = [
+    ['Timestamp', 'Name', ...pack.items.map((it, i) => q(`${i + 1}. ${it.stem}`)), 'Feedback [Score]'].join(','),
+    ...c.students.map((st, s) => ['x', q(st.name), ...texts[s].map(q), '1'].join(','))
+  ].join('\n');
+  check('numbered question headers still match', same(parseResponses(pack, numbered)));
+
+  const noName = [
+    ['Timestamp', 'Email Address', ...ids].join(','),
+    ...letters.map((row, s) => [`t${s}`, `kid${s}@school.org`, ...row].join(','))
+  ].join('\n');
+  const n = parseResponses(pack, noName);
+  check('with no name column, the email is used', same(n) && n.students[2].name === 'kid2@school.org');
+
+  const untitled = ['Timestamp', 'Name', ...ids.map((_, i) => `Column ${i + 1}`)].join(',');
+  const u = parseResponses(pack, [untitled, ...letters.map((row, s) => [`t${s}`, q(c.students[s].name), ...row].join(','))].join('\n'));
+  check('labelled columns are stepped over when reading by position', same(u));
+
+  const headless = letters.map((row, s) => [q(c.students[s].name), ...row].join(',')).join('\n');
+  const h = parseResponses(pack, headless);
+  check('with no header row, the first student is kept', same(h) && h.warnings.some(w => /header row/.test(w)));
+
+  const plain = [['Student', ...ids].join(','), ...letters.map((row, s) => [q(c.students[s].name), ...row].join(','))].join('\n');
+  check('an Excel BOM is ignored', same(parseResponses(pack, `\uFEFF${plain}`)));
+
+  const keyed = parseResponses(pack, `${plain}\nAnswer Key,${pack.items.map(it => paperLetter(it, it.opts.findIndex(o => o.c))).join(',')}`);
+  check('a row called Key is not a student', same(keyed) && keyed.warnings.some(w => /row called Key/.test(w)));
+
+  const commas = parseResponses(pack, [['Student', ...ids].join(','), ...letters.map((row, s) => [`Last${s}, First`, ...row].join(','))].join('\n'));
+  check('an unquoted "Last, First" stays one name', commas.ok && commas.students[2].name === 'Last2, First' &&
+    commas.responses.every((row, s) => row.every((v, i) => v === c.responses[s][i])));
+
+  const twice = parseResponses(pack, `${plain}\n${q(c.students[0].name.toUpperCase())},${letters[1].join(',')}`);
+  check('a repeated name is flagged at paste', twice.ok && twice.warnings.some(w => /more than once/.test(w)));
 }
 
 // -------------------------------------------------------------- saved class

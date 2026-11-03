@@ -20,13 +20,9 @@
 
 import { misIds } from './pack.js';
 import { inferMisconceptions, PARAMS, MIN_PROBES_ANSWERED } from './infer.js';
-import { csvCell } from './importer.js';
+import { csvCell, normName } from './importer.js';
 
-/** Case, spacing, accents and punctuation should not split a student in two. */
-export function normName(name) {
-  return String(name).normalize('NFKD').replace(/[̀-ͯ]/g, '')
-    .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-}
+export { normName };
 
 /**
  * Pair students across two sittings by name. Two students sharing a name cannot

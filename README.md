@@ -38,8 +38,10 @@ The loop closes in both directions, on paper.
    answer sheet as a spreadsheet with one column per question.
 3. Give it. Mark it, or don't — you only need which option each student picked.
 4. **Class → Paste my class** and paste the sheet back in. Letters, numbers, or
-   the answer text all work (a Google Forms export included); blanks are read
-   as unanswered rather than wrong. Letters and numbers mean what is printed on
+   the answer text all work. A Google Forms export works as it comes: timestamp,
+   email and score columns are stepped over, and questions are matched by their
+   text. A row called Key is left out, and a repeated name is flagged. Blanks are
+   read as unanswered rather than wrong. Letters and numbers mean what is printed on
    the paper: each question's options are shuffled, seeded by its id, so the
    key is not "A" every time and the printout, the answer key and the paste-back
    always agree.

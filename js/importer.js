@@ -255,6 +255,23 @@ function detectDelim(rows) {
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+/* What a spreadsheet puts around the answers. A Google Forms export leads with
+   a timestamp and an email, and a quiz adds score and feedback columns. None of
+   these are answers, and reading them as answers shifts every column after. */
+const META_COL = /^(time\s*stamp|date|e-?mail(\s+address)?|user\s*name|score|total(\s+score)?|points|grade|class|period|section)$|\[(score|feedback)\]$/i;
+const EMAIL_COL = /^e-?mail(\s+address)?$|^user\s*name$/i;
+const NAME_COL = /^(student|student\s+name|name|full\s+name|your\s+name|pupil|learner)$/i;
+const KEY_ROW = /^(answer\s*)?key$/i;
+
+const textKey = s => String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+const withoutNumber = s => String(s).replace(/^\s*(q(uestion)?\s*)?\d+\s*[.):-]?\s*/i, '');
+
+/** Case and spacing should not split one student into two. */
+export function normName(name) {
+  return String(name).normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
 const isBlank = v => !v || v === '-' || v === '.';
 const asLetter = (v, n) => {
   const li = v.length === 1 ? LETTERS.indexOf(v.toUpperCase()) : -1;
@@ -318,6 +335,14 @@ function readCell(raw, item, coding = 'letters') {
   return null;
 }
 
+/** Does this row read as a student's answers rather than as column titles? */
+function looksLikeAnswers(pack, row) {
+  const cells = row.slice(-pack.items.length);
+  if (cells.length < pack.items.length) return false;
+  const readable = cells.filter((c, i) => c.trim() && readCell(c, pack.items[i]) !== null).length;
+  return readable >= cells.length * 0.8;
+}
+
 /**
  * Parse pasted responses against a pack.
  *
@@ -326,7 +351,7 @@ function readCell(raw, item, coding = 'letters') {
 export function parseResponses(pack, text) {
   const errors = [];
   const warnings = [];
-  const rows = splitRows(text || '');
+  const rows = splitRows(String(text || '').replace(/^\uFEFF/, ''));   // Excel's BOM
 
   if (rows.length < 2) {
     return { ok: false, errors: ['Paste at least a header row and one student row.'], warnings: [], students: [], responses: [] };
@@ -336,16 +361,26 @@ export function parseResponses(pack, text) {
   const table = rows.map(r => splitCells(r, delim));
   const header = table[0];
 
-  // Does the header name our items? If so, map columns by id and tolerate
-  // reordering or extra columns. Otherwise fall back to positional order.
+  // Does the header name our items? A blank sheet from Materials uses their ids
+  // and a Forms export repeats the question text. Either way, map the columns
+  // and tolerate reordering or extras. Otherwise fall back to positional order.
   const idIndex = {};
+  let byText = 0;
   pack.items.forEach(it => {
-    const at = header.findIndex(h => h.trim().toLowerCase() === it.id.toLowerCase());
+    let at = header.findIndex(h => h.trim().toLowerCase() === it.id.toLowerCase());
+    if (at < 0) {
+      const stem = textKey(it.stem);
+      at = header.findIndex(h => !META_COL.test(h.trim()) &&
+        (textKey(h) === stem || textKey(withoutNumber(h)) === stem));
+      if (at >= 0) byText++;
+    }
     if (at >= 0) idIndex[it.id] = at;
   });
 
   const matchedById = Object.keys(idIndex).length >= Math.ceil(pack.items.length * 0.8);
+  const emailCol = header.findIndex(h => EMAIL_COL.test(h.trim()));
   let nameCol = 0;
+  let dataStart = 1;
   let cols;
 
   if (matchedById) {
@@ -354,18 +389,35 @@ export function parseResponses(pack, text) {
       errors.push(`These questions are missing from the header: ${missing.slice(0, 6).map(m => m.id).join(', ')}${missing.length > 6 ? `, +${missing.length - 6} more` : ''}.`);
     }
     cols = pack.items.map(it => idIndex[it.id]);
-    const named = header.findIndex(h => /^(student|name|pupil)$/i.test(h.trim()));
-    nameCol = named >= 0 ? named : -1;
+    const named = header.findIndex(h => NAME_COL.test(h.trim()));
+    const spare = header.findIndex((h, i) => !cols.includes(i) && !META_COL.test(h.trim()));
+    nameCol = named >= 0 ? named : emailCol >= 0 ? emailCol : spare;
   } else {
-    // Positional: assume the first column is a name if it is not readable as an
-    // answer, then one column per item in pack order.
-    const probe = table[1] || [];
-    const firstLooksLikeAnswer = readCell(probe[0], pack.items[0]) !== null && String(probe[0] ?? '').trim() !== '';
-    nameCol = firstLooksLikeAnswer ? -1 : 0;
-    const start = nameCol === 0 ? 1 : 0;
-    cols = pack.items.map((_, i) => start + i);
+    // Positional: assume the first free column is a name if it is not readable
+    // as an answer, then one column per item in pack order. Columns the header
+    // says are something else are stepped over.
+    const skip = new Set(header.map((h, i) => (META_COL.test(h.trim()) ? i : -1)).filter(i => i >= 0));
+    const named = header.findIndex(h => NAME_COL.test(h.trim()));
 
-    const available = (probe.length || 0) - start;
+    // No labels at all, and the first row reads as answers: there is no header
+    // row, and treating one student as a header would silently lose them.
+    if (!skip.size && named < 0 && looksLikeAnswers(pack, table[0])) {
+      dataStart = 0;
+      warnings.push('No header row found, so the first row was read as a student.');
+    }
+
+    const probe = table[dataStart] || [];
+    const first = probe.findIndex((_, i) => !skip.has(i));
+    if (named >= 0) nameCol = named;
+    else if (emailCol >= 0) nameCol = emailCol;
+    else {
+      const firstLooksLikeAnswer = readCell(probe[first], pack.items[0]) !== null && String(probe[first] ?? '').trim() !== '';
+      nameCol = firstLooksLikeAnswer ? -1 : first;
+    }
+    const free = probe.map((_, i) => i).filter(i => i !== nameCol && !skip.has(i));
+    cols = pack.items.map((_, i) => free[i]);
+
+    const available = free.length;
     if (available < pack.items.length) {
       errors.push(`This instrument has ${pack.items.length} questions but the pasted data has ${Math.max(0, available)} answer column${available === 1 ? '' : 's'}. Add the missing columns, or use a header row naming each question id.`);
     } else if (available > pack.items.length) {
@@ -376,24 +428,37 @@ export function parseResponses(pack, text) {
 
   if (errors.length) return { ok: false, errors, warnings, students: [], responses: [] };
 
-  const coding = detectCoding(pack, table.slice(1), cols);
+  // "Last, First" typed into a comma-separated sheet splits the name in two and
+  // pushes every answer one column right. One cell too many in a named row is
+  // exactly that, so put the name back together.
+  const rowsIn = table.slice(dataStart).map(row => {
+    if (delim === ',' && nameCol === 0 && row.length === header.length + 1) {
+      return [`${row[0]}, ${row[1]}`, ...row.slice(2)];
+    }
+    return row;
+  });
+
+  const coding = detectCoding(pack, rowsIn, cols);
   const students = [];
   const responses = [];
   let omitted = 0;
   const bad = [];
 
-  for (let r = 1; r < table.length; r++) {
-    const row = table[r];
+  let keyRow = false;
+
+  for (let r = 0; r < rowsIn.length; r++) {
+    const row = rowsIn[r];
     if (!row.some(c => c.trim())) continue;
 
     const name = nameCol >= 0 && row[nameCol]?.trim() ? row[nameCol].trim() : `Student ${responses.length + 1}`;
+    if (KEY_ROW.test(name)) { keyRow = true; continue; }     // the answers, not a student
     const out = [];
 
     pack.items.forEach((it, i) => {
       const cell = row[cols[i]];
       const idx = readCell(cell, it, coding);
       if (idx === null) {
-        bad.push(`row ${r + 1} (${name}), ${it.id}: “${String(cell).slice(0, 14)}”`);
+        bad.push(`row ${r + dataStart + 1} (${name}), ${it.id}: “${String(cell).slice(0, 14)}”`);
         out.push(OMITTED);
       } else {
         if (idx === OMITTED) omitted++;
@@ -403,6 +468,18 @@ export function parseResponses(pack, text) {
 
     students.push({ id: `S${String(responses.length + 1).padStart(2, '0')}`, name });
     responses.push(out);
+  }
+
+  if (keyRow) warnings.push('Left out the row called Key, since it is the answers rather than a student.');
+
+  const seen = new Map();
+  students.forEach(s => {
+    const k = normName(s.name);
+    seen.set(k, [...(seen.get(k) || []), s.name]);
+  });
+  const twice = [...seen.values()].filter(v => v.length > 1).map(v => v[0]);
+  if (twice.length) {
+    warnings.push(`${twice.slice(0, 4).join(', ')}${twice.length > 4 ? ` and ${twice.length - 4} more` : ''} ${twice.length === 1 ? 'appears' : 'appear'} more than once. Check for a pasted-twice row, and give two students with one name different labels so a retest can tell them apart.`);
   }
 
   if (!responses.length) errors.push('No student rows found.');
@@ -419,7 +496,7 @@ export function parseResponses(pack, text) {
   return {
     ok: errors.length === 0,
     errors, warnings, students, responses, omitted, coding,
-    matchedBy: matchedById ? 'question id' : 'column order'
+    matchedBy: matchedById ? (byText ? 'question text' : 'question id') : 'column order'
   };
 }
 
