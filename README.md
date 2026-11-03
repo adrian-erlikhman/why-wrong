@@ -337,7 +337,10 @@ test/pipeline.test.mjs runs every built-in pack, plus the paper round trip
   assessment.
 - At 28 students, per-item statistics are noisy. Several items pick up marginal
   low-discrimination flags that are sample noise, which is why findings are
-  ranked by severity and the marginal ones are collapsed.
+  ranked by severity and the marginal ones are collapsed. Below 28 the bars widen
+  with the noise, which took a class of 12 from about 10 flags to about 7 on
+  Algebra, at a cost of 4 points of planted-defect detection, and the page says
+  the figures are rough under 20 students.
 - Unanswered questions carry no evidence either way, rather than counting as
   wrong. So a student who skipped most of the paper has no diagnosis, which is
   not the same as a clean one. Anyone who answered under half the paper is moved

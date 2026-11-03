@@ -156,6 +156,15 @@ for (const pack of BUILT_IN) {
   check('mean ARI above 0.40', mean(agg.ari) > 0.40, mean(agg.ari).toFixed(3));
   planted.forEach(id =>
     check(`${id} caught in >=85% of seeds`, plantedHits[id] >= 34, `${plantedHits[id]}/40`));
+
+  // A class of 12 should not bury a teacher in flags that are only noise.
+  const flagged = size => mean(Array.from({ length: 30 }, (_, n) => {
+    const c = generateClass(pack, { seed: n + 1, size });
+    return problemItems(analyseItems(pack, c.responses, inferMisconceptions(pack, c.responses))).length;
+  }));
+  const [small, usual] = [flagged(12), flagged(28)];
+  console.log(`  questions flagged  class of 12: ${small.toFixed(1)}  class of 28: ${usual.toFixed(1)}`);
+  check('a small class is flagged about as often as a normal one', small <= usual * 1.6, `${small} vs ${usual}`);
 }
 
 // --------------------------------------------------- a teacher's own test

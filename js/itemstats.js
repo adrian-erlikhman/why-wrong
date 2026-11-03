@@ -139,6 +139,13 @@ export function analyseItems(pack, responses, inference = null) {
       }
     }
 
+    // A correlation over a dozen students swings by about 0.3 on noise alone, so
+    // the bars below move with class size. Above a class of 28, where the rules
+    // of thumb in the header were set, they stay where they are.
+    const noise = Math.max(0, 1 / Math.sqrt(Math.max(1, col.length - 1)) - 1 / Math.sqrt(27));
+    const weakBar = 0.15 - noise;
+    const backwardBar = -noise;
+
     const flags = [];
     if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so the item separates nobody.` });
     // A low mean score is only evidence of a problem when the item also fails
@@ -146,8 +153,8 @@ export function analyseItems(pack, responses, inference = null) {
     // students get wrong is doing its job, however low the class average is --
     // so difficulty near chance is reported only alongside weak discrimination.
     if (p <= chance + 0.06 && r < 0.15) flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% correct against ${Math.round(chance * 100)}% for pure guessing, with no discrimination to offset it -- responses are indistinguishable from random.` });
-    if (r < 0) flags.push({ kind: 'negative-discrimination', text: `Discrimination is negative (r = ${r.toFixed(2)}): stronger students did worse on it than weaker ones.` });
-    else if (r < 0.15) flags.push({ kind: 'no-discrimination', text: `Discrimination is ${r.toFixed(2)}: your strongest and weakest students answered it alike.` });
+    if (r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Discrimination is negative (r = ${r.toFixed(2)}): stronger students did worse on it than weaker ones.` });
+    else if (r < weakBar) flags.push({ kind: 'no-discrimination', text: `Discrimination is ${r.toFixed(2)}: your strongest and weakest students answered it alike.` });
 
     // An item whose wrong answers are mapped to nothing, and on which the class
     // is performing at chance, produces neither a ranking nor a diagnosis. That
@@ -186,7 +193,7 @@ export function analyseItems(pack, responses, inference = null) {
     // item that fails to discriminate *and* whose errors are scattered across
     // untagged slips is actually broken.
     const concentrated = modelAgreement !== null && modelAgreement >= 0.6;
-    const lowDiscrim = r < 0.15;
+    const lowDiscrim = r < weakBar;
 
     // Severity also matters. A dead distractor is a cosmetic defect -- the item
     // still works, one of its options is just wasted -- and grouping it with
@@ -196,7 +203,7 @@ export function analyseItems(pack, responses, inference = null) {
     let quality;
     if (p >= 0.93) quality = 'weak';                       // separates nobody, whatever else is true
     else if (concentrated && lowDiscrim) quality = 'diagnostic';
-    else if (r < 0) quality = 'broken';
+    else if (r < backwardBar) quality = 'broken';
     else if (serious.length) quality = 'weak';
     else if (flags.length) quality = 'minor';
     else quality = r >= 0.3 ? 'strong' : 'ok';

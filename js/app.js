@@ -43,6 +43,12 @@ function el(tag, cls, text) {
 
 const ROW_H = () => parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row'), 10) || 19;
 
+/** Under this many students, per-question statistics are mostly noise. */
+const SMALL_CLASS = 20;
+
+/** Separation below this and the groups are a rough sketch (see explain.js). */
+const ROUGH_GROUPS = 0.2;
+
 const VERDICTS = {
   strong: 'Working well', ok: 'Fine', diagnostic: 'Diagnosing, not ranking',
   minor: 'Minor issue', weak: 'Worth rewriting', broken: 'Measuring backwards'
@@ -505,7 +511,10 @@ function renderGroups() {
     `${real.length} group${real.length === 1 ? '' : 's'} here` +
     (secure ? `, plus ${secure.size} who need no reteach` : '') +
     (thin ? `, and ${thin.size} with too few answers to say` : '') +
-    `. One lesson can serve a whole group, because they are wrong for the same reason.`;
+    `. One lesson can serve a whole group, because they are wrong for the same reason.` +
+    (real.length && state.cl.silhouette < ROUGH_GROUPS
+      ? ' These groups overlap a lot, so treat them as a sketch and check the individual students.'
+      : '');
   sub.appendChild(el('span', 'x-anchor', ' '));
   sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
@@ -700,7 +709,10 @@ function renderItems() {
   const sub = $('#items-sub');
   sub.textContent =
     `The same answers score your questions too. ${strong} of ${pack.items.length} are doing real work; ` +
-    `${bad.length} ${bad.length === 1 ? 'has' : 'have'} a problem worth a look. Click any question to see how the class answered it.`;
+    `${bad.length} ${bad.length === 1 ? 'has' : 'have'} a problem worth a look. Click any question to see how the class answered it.` +
+    (cls.students.length < SMALL_CLASS
+      ? ` With ${cls.students.length} students these figures are rough, so treat a flag as a reason to reread the question, not a verdict.`
+      : '');
 
   let list;
   if (state.itemFilter === 'problem') list = bad;
