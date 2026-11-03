@@ -1271,6 +1271,7 @@ function renderMethod() {
 
 /** Back to the sample class. */
 function dropClass() {
+  showPasteNotes();
   state.imported = null;
   state.retest = null;
   state.predictions = new Set();
@@ -1429,22 +1430,26 @@ function openImport(mode = 'class') {
   $('#import-text').focus();
 }
 
+/** Say why a paste failed. One that worked closes this box, so its notes go on the page. */
 function reportImport(res) {
   const box = $('#import-report');
-  box.hidden = false;
+  box.hidden = res.ok;
   box.innerHTML = '';
-  box.className = `import-report ${res.ok ? 'good' : 'bad'}`;
-
-  if (res.ok) {
-    const readAs = { letters: 'letters', numbers: 'option numbers', text: 'answer text' }[res.coding];
-    box.appendChild(el('div', 'ir-h',
-      `Read ${res.responses.length} student${res.responses.length === 1 ? '' : 's'} × ${state.pack.items.length} questions, matched by ${res.matchedBy}, answers read as ${readAs}.`));
-  } else {
-    box.appendChild(el('div', 'ir-h', 'Could not read this yet.'));
-  }
+  if (res.ok) return true;
+  box.appendChild(el('div', 'ir-h', 'Could not read this yet.'));
   res.errors.forEach(e => box.appendChild(el('div', 'ir-e', e)));
-  res.warnings.forEach(w => box.appendChild(el('div', 'ir-w', w)));
-  return res.ok;
+  return false;
+}
+
+/** A repeated name or an unreadable cell has to outlast the box it was found in. */
+function showPasteNotes(res) {
+  const notes = res?.warnings ?? [];
+  $('#paste-notes').hidden = !notes.length;
+  if (!notes.length) return;
+  const readAs = { letters: 'letters', numbers: 'option numbers', text: 'answer text' }[res.coding];
+  $('#paste-notes-title').textContent =
+    `Read ${students(res.responses.length)} × ${state.pack.items.length} questions, matched by ${res.matchedBy}, answers read as ${readAs}.`;
+  $('#paste-notes-list').replaceChildren(...notes.map(w => el('li', null, w)));
 }
 
 function doImport() {
@@ -1452,12 +1457,16 @@ function doImport() {
   if (!reportImport(res)) return;
 
   closeM('#import');
-  if (state.importFor === 'retest') { useRetest(res); return; }
-  useClass(res);
-  showView('groups');
+  if (state.importFor === 'retest') useRetest(res);
+  else {
+    useClass(res);
+    showView('groups');
+  }
+  showPasteNotes(res);
 }
 
 function useRetest({ students, responses }) {
+  showPasteNotes();
   state.retest = { students, responses };
   if (state.imported) markUnsaved(true);
   renderProgress();
@@ -1466,6 +1475,7 @@ function useRetest({ students, responses }) {
 
 /** Make a class the one on screen. Typed answers exist only here until saved. */
 function useClass({ students, responses, retest = null, predictions = [], savedAt = null }, { saved = false } = {}) {
+  showPasteNotes();
   state.imported = { students, responses, savedAt };
   state.retest = retest;
   state.predictions = new Set(predictions);
@@ -1745,6 +1755,7 @@ $('#class-file').addEventListener('change', e => {
 });
 $('#save-class').addEventListener('click', saveClass);
 $('#save-nudge-go').addEventListener('click', saveClass);
+$('#paste-notes-close').addEventListener('click', () => { $('#paste-notes').hidden = true; });
 $('#export-progress').addEventListener('click', exportProgress);
 $('#print-progress').addEventListener('click', printProgress);
 $('#clear-retest').addEventListener('click', clearRetest);
