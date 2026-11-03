@@ -20,7 +20,7 @@ export const TERMS = {
     use: 'Above roughly 80% is worth acting on directly. Between 50% and 80%, check the evidence list before you plan around it.'
   },
   failureMode: {
-    term: 'Failure mode',
+    term: 'Reteach group',
     also: 'cluster',
     body: 'A group of students whose wrong answers point at the same underlying misunderstanding. They are grouped by what they believe, not by their scores — two students with very different grades can sit in the same group.',
     use: 'This is your reteach group. One lesson can serve the whole group because they are wrong in the same way.'
@@ -40,7 +40,7 @@ export const TERMS = {
   discrimination: {
     term: 'Discrimination',
     also: 'corrected point-biserial correlation',
-    body: 'Whether students who did well on the rest of the test also got this question right. High means the question sorts strong from weak. Negative means it sorted them backwards — your best students got it wrong.',
+    body: 'Whether students who did well on the rest of the test also got this question right. High means the question sorts strong from weak. Well below zero means it sorted them backwards — your best students got it wrong.',
     use: 'Below 0.15 usually means the wording is unclear. But see "diagnosing, not ranking" — on a diagnostic test a low number is not automatically a fault.'
   },
   diagnosing: {
