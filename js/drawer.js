@@ -19,6 +19,7 @@ import { PARAMS, untested } from './infer.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
+import { trapTab } from './a11y.js';
 
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -29,6 +30,7 @@ const el = (tag, cls, text) => {
 
 let host = null;
 let onCloseCb = null;
+let openedFrom = null;
 
 function ensureHost() {
   if (host) return host;
@@ -37,7 +39,11 @@ function ensureHost() {
   host.innerHTML = '<div class="drawer-scrim"></div><aside class="drawer-panel" role="dialog" aria-modal="true"></aside>';
   document.body.appendChild(host);
   host.querySelector('.drawer-scrim').addEventListener('click', closeDrawer);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !host.hidden) closeDrawer(); });
+  document.addEventListener('keydown', e => {
+    if (host.hidden) return;
+    if (e.key === 'Escape') closeDrawer();
+    else trapTab(host.querySelector('.drawer-panel'), e);
+  });
   return host;
 }
 
@@ -45,11 +51,14 @@ export function closeDrawer() {
   if (!host || host.hidden) return;
   host.classList.remove('is-open');
   setTimeout(() => { host.hidden = true; }, 200);
+  openedFrom?.focus?.();
+  openedFrom = null;
   if (onCloseCb) { const cb = onCloseCb; onCloseCb = null; cb(); }
 }
 
 function openWith(node, onClose) {
   ensureHost();
+  openedFrom = document.activeElement;
   onCloseCb = onClose || null;
   const panel = host.querySelector('.drawer-panel');
   panel.innerHTML = '';
@@ -64,6 +73,7 @@ function openWith(node, onClose) {
 
   host.hidden = false;
   panel.scrollTop = 0;
+  x.focus();
   setTimeout(() => host.classList.add('is-open'), 10);
 }
 

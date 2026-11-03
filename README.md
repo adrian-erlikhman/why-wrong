@@ -120,6 +120,9 @@ students who picked it**.
 
 ### Other things worth knowing
 
+- **It works from the keyboard.** The class map is one tab stop and the arrow keys
+  walk it like a spreadsheet; left and right move between the tabs.
+
 - **Click a colour** in the key to show only that misunderstanding across the
   whole class map.
 - **Every statistic has a "?"** next to it. Plain-language explanation of what it
@@ -310,6 +313,7 @@ js/drawer.js           per-student evidence trail, per-question breakdown
 js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
 js/session.js          save and reopen a class as a local file
 js/compare.js          before-and-after comparison, exact McNemar test
+js/a11y.js             focus handling for dialogs
 js/explain.js          inline glossary written for teachers
 js/llm.js              optional reteach adaptation, plain-language API errors
 js/tour.js             first-visit intro and guided tour

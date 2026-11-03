@@ -41,6 +41,7 @@
   </div>
 </header>
 
+<main>
 <!-- =============================== HERO ================================ -->
 <section class="hero">
   <div class="wrap hero-grid">
@@ -167,20 +168,20 @@
 <!-- =============================== TABS ================================ -->
 <nav class="tabs" aria-label="Analysis views">
   <div class="wrap tabs-in" role="tablist">
-    <button class="tab is-active" role="tab" data-view="matrix" aria-selected="true">Class map</button>
-    <button class="tab" role="tab" data-view="groups" aria-selected="false">Reteach groups</button>
-    <button class="tab" role="tab" data-view="students" aria-selected="false">Students</button>
-    <button class="tab" role="tab" data-view="items" aria-selected="false">Your questions</button>
-    <button class="tab" role="tab" data-view="progress" aria-selected="false">After the reteach</button>
-    <button class="tab" role="tab" data-view="validation" aria-selected="false">Does it work?</button>
-    <button class="tab" role="tab" data-view="method" aria-selected="false">Method</button>
+    <button class="tab is-active" role="tab" id="tab-matrix" data-view="matrix" aria-controls="view-matrix" aria-selected="true">Class map</button>
+    <button class="tab" role="tab" id="tab-groups" data-view="groups" aria-controls="view-groups" aria-selected="false" tabindex="-1">Reteach groups</button>
+    <button class="tab" role="tab" id="tab-students" data-view="students" aria-controls="view-students" aria-selected="false" tabindex="-1">Students</button>
+    <button class="tab" role="tab" id="tab-items" data-view="items" aria-controls="view-items" aria-selected="false" tabindex="-1">Your questions</button>
+    <button class="tab" role="tab" id="tab-progress" data-view="progress" aria-controls="view-progress" aria-selected="false" tabindex="-1">After the reteach</button>
+    <button class="tab" role="tab" id="tab-validation" data-view="validation" aria-controls="view-validation" aria-selected="false" tabindex="-1">Does it work?</button>
+    <button class="tab" role="tab" id="tab-method" data-view="method" aria-controls="view-method" aria-selected="false" tabindex="-1">Method</button>
   </div>
 </nav>
 
-<main class="wrap main">
+<div class="wrap main">
 
   <!-- ---------------------------- MATRIX ---------------------------- -->
-  <section class="view is-active" id="view-matrix" role="tabpanel">
+  <section class="view is-active" id="view-matrix" role="tabpanel" aria-labelledby="tab-matrix">
     <div class="view-head">
       <div>
         <h2>Every wrong answer, and what it tells you.</h2>
@@ -201,7 +202,7 @@
 
     <div class="board">
       <div class="board-scroll">
-        <div id="matrix" class="matrix" role="img" aria-label="Class response map"></div>
+        <div id="matrix" class="matrix" role="grid" aria-label="Class map: one row per student, one column per question. Use the arrow keys to move."></div>
       </div>
     </div>
 
@@ -215,7 +216,7 @@
   </section>
 
   <!-- --------------------------- GROUPS ----------------------------- -->
-  <section class="view" id="view-groups" role="tabpanel">
+  <section class="view" id="view-groups" role="tabpanel" aria-labelledby="tab-groups">
     <div class="view-head">
       <div>
         <h2>What the class actually shares.</h2>
@@ -231,7 +232,7 @@
   </section>
 
   <!-- --------------------------- STUDENTS --------------------------- -->
-  <section class="view" id="view-students" role="tabpanel">
+  <section class="view" id="view-students" role="tabpanel" aria-labelledby="tab-students">
     <div class="view-head">
       <div>
         <h2>Every student, and what to do about them.</h2>
@@ -249,7 +250,7 @@
   </section>
 
   <!-- --------------------------- QUESTIONS -------------------------- -->
-  <section class="view" id="view-items" role="tabpanel">
+  <section class="view" id="view-items" role="tabpanel" aria-labelledby="tab-items">
     <div class="view-head">
       <div>
         <h2>Now about your questions.</h2>
@@ -268,7 +269,7 @@
   </section>
 
   <!-- ------------------------ AFTER THE RETEACH --------------------- -->
-  <section class="view" id="view-progress" role="tabpanel">
+  <section class="view" id="view-progress" role="tabpanel" aria-labelledby="tab-progress">
     <div class="view-head">
       <div>
         <h2>Did the reteach work?</h2>
@@ -287,7 +288,7 @@
   </section>
 
   <!-- ---------------------------- VALIDATION ------------------------ -->
-  <section class="view" id="view-validation" role="tabpanel">
+  <section class="view" id="view-validation" role="tabpanel" aria-labelledby="tab-validation">
     <div class="view-head">
       <div>
         <h2>Does any of this actually work?</h2>
@@ -305,7 +306,7 @@
   </section>
 
   <!-- ------------------------------ METHOD -------------------------- -->
-  <section class="view" id="view-method" role="tabpanel">
+  <section class="view" id="view-method" role="tabpanel" aria-labelledby="tab-method">
     <div class="view-head">
       <div>
         <h2>Four stages. Two of them are not a language model.</h2>
@@ -375,6 +376,7 @@
     </ol>
   </section>
 
+</div>
 </main>
 
 <footer class="foot">

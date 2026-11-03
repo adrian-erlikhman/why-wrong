@@ -24,6 +24,7 @@ import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
 import { classFile, readClassFile } from './session.js';
 import { compareSittings, progressCsv, READING } from './compare.js';
+import { trapTab, focusInto } from './a11y.js';
 import { mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
@@ -261,16 +262,23 @@ function renderMatrix() {
   cls.responses.forEach((row, s) => {
     const r = el('div', 'm-row');
     r.dataset.student = String(s);
+    r.setAttribute('role', 'row');
 
     const name = el('button', 'm-name', cls.students[s].name);
+    name.tabIndex = -1;
     name.title = `${cls.students[s].name} — click for the full evidence trail`;
     name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s); });
-    r.appendChild(name);
+    const head = el('span', 'm-head');
+    head.setAttribute('role', 'rowheader');
+    head.appendChild(name);
+    r.appendChild(head);
 
     row.forEach((choice, i) => {
       const item = pack.items[i];
       const c = el('button', 'm-cell');
       c.dataset.item = String(i);
+      c.setAttribute('role', 'gridcell');
+      c.tabIndex = -1;
 
       let what;
       if (choice === OMITTED || choice == null) {
@@ -285,6 +293,7 @@ function renderMatrix() {
       }
 
       c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose ${paperLetter(item, choice)} “${item.opts[choice].t}”` : 'left blank'} (${what})`;
+      c.setAttribute('aria-label', c.title.replace('\n', ', '));
       c.addEventListener('click', e => { e.stopPropagation(); openQuestion(ctx(), i); });
       r.appendChild(c);
     });
@@ -295,8 +304,52 @@ function renderMatrix() {
   });
 
   layout(cls.responses.map((_, i) => i));
+  resetMatrixStop(0);
   renderLegend();
   setMatrixNote(false);
+}
+
+/** The map's one tab stop, on the name of the student shown first. */
+function resetMatrixStop(student) {
+  $('#matrix').querySelectorAll('[tabindex="0"]').forEach(n => { n.tabIndex = -1; });
+  state.rows[student].querySelector('.m-name').tabIndex = 0;
+}
+
+/** Students in the order they sit on screen. */
+const rowOrder = () => (state.sorted
+  ? state.groups.flatMap(g => g.members)
+  : state.cls.responses.map((_, i) => i));
+
+/**
+ * Arrow keys walk the map like a spreadsheet. Without this a keyboard user would
+ * have to Tab through every cell of a 28-by-36 grid to reach the next section,
+ * so the map holds one tab stop and the arrows do the rest.
+ */
+function moveInMatrix(e) {
+  const at = e.target.closest('.m-cell, .m-name');
+  if (!at) return;
+
+  const order = rowOrder();
+  const nItems = state.pack.items.length;
+  const student = Number(at.closest('.m-row').dataset.student);
+  let row = order.indexOf(student);
+  let col = at.classList.contains('m-name') ? -1 : Number(at.dataset.item);
+
+  switch (e.key) {
+    case 'ArrowRight': col = Math.min(nItems - 1, col + 1); break;
+    case 'ArrowLeft': col = Math.max(-1, col - 1); break;
+    case 'ArrowDown': row = Math.min(order.length - 1, row + 1); break;
+    case 'ArrowUp': row = Math.max(0, row - 1); break;
+    case 'Home': col = -1; break;
+    case 'End': col = nItems - 1; break;
+    default: return;
+  }
+  e.preventDefault();
+
+  const next = state.rows[order[row]].querySelector(col < 0 ? '.m-name' : `.m-cell[data-item="${col}"]`);
+  $('#matrix').querySelectorAll('[tabindex="0"]').forEach(n => { n.tabIndex = -1; });
+  next.tabIndex = 0;
+  next.focus();
 }
 
 function setMatrixNote(sorted) {
@@ -330,6 +383,7 @@ function sortRows() {
   });
 
   layout(order);
+  if (order.length) resetMatrixStop(order[0]);
   host.classList.add('sorted');
   host.querySelectorAll('.band, .band-tag').forEach(n => n.remove());
 
@@ -370,6 +424,7 @@ function toggleSort() {
     host.classList.remove('sorted');
     host.querySelectorAll('.band, .band-tag').forEach(n => n.classList.remove('on'));
     layout(state.cls.responses.map((_, i) => i));
+    resetMatrixStop(0);
     state.sorted = false;
     btn.textContent = 'Sort into groups';
     setMatrixNote(false);
@@ -660,7 +715,7 @@ function renderItems() {
 
   if (state.itemFilter === 'defended' && list.length) {
     const box = el('div', 'defended');
-    box.appendChild(el('h4', null, 'These look weak by the usual measure. Keep them.'));
+    box.appendChild(el('h3', null, 'These look weak by the usual measure. Keep them.'));
     const p = el('p', null,
       'The standard check asks whether students who did well overall also got the question right. That assumes the test measures one thing. This one does not: a question aimed at one misunderstanding is missed by exactly the students who hold it, whatever their ability elsewhere. Before calling anything broken, the tool checks whether the rest of the paper agrees with the question.');
     box.appendChild(p);
@@ -746,7 +801,7 @@ function renderProgress() {
 
   if (!match.pairs.length) {
     const box = el('div', 'empty');
-    box.appendChild(el('h4', null, 'No student appears in both sittings.'));
+    box.appendChild(el('h3', null, 'No student appears in both sittings.'));
     box.appendChild(el('p', null, 'Students are matched by name, so check that the two sheets spell them the same way.'));
     host.appendChild(box);
     return;
@@ -826,7 +881,7 @@ function progressGroup(g, byId) {
 
 function progressEmpty() {
   const box = el('div', 'empty');
-  box.appendChild(el('h4', null, 'Nothing to compare yet.'));
+  box.appendChild(el('h3', null, 'Nothing to compare yet.'));
   box.appendChild(el('p', null,
     'After you reteach, give the class the same paper and paste the new answers. Students are matched by name, and you will see who moved rather than just whether the average rose.'));
   const row = el('div', 'empty-actions');
@@ -852,7 +907,7 @@ function progressVerdict(t) {
     none: ['Nobody moved.', 'Every student holds the same misunderstandings as last time.']
   }[t.reading];
   const box = el('div', `prog-verdict is-${t.reading}`);
-  box.appendChild(el('h4', null, title));
+  box.appendChild(el('h3', null, title));
   box.appendChild(el('p', null, body));
   box.appendChild(el('p', 'prog-caveat', 'Sitting the same paper twice teaches the paper, so read this as evidence rather than proof.'));
   return box;
@@ -948,7 +1003,7 @@ function renderValidation() {
   if (!cls.truth) {
     $('#validation-note').textContent = '';
     const box = el('div', 'empty');
-    box.appendChild(el('h4', null, 'Not available for your own class — and that is the point.'));
+    box.appendChild(el('h3', null, 'Not available for your own class — and that is the point.'));
     box.appendChild(el('p', null,
       'These numbers work by comparing the analysis against misunderstandings that were planted before any answers existed. Your real students did not come with an answer key to their own heads, so there is nothing to score against.'));
     box.appendChild(el('p', null,
@@ -986,7 +1041,7 @@ function renderValidation() {
 
   const thead = el('thead');
   const hr = el('tr');
-  hr.appendChild(el('th', null, ''));
+  hr.appendChild(el('th', null, 'Found'));
   plantedIds.forEach(p => hr.appendChild(el('th', null, `planted ${p}`)));
   thead.appendChild(hr);
   t.appendChild(thead);
@@ -1058,8 +1113,20 @@ function switchPack(id) {
 /*  Modals                                                                  */
 /* ======================================================================== */
 
-function openM(sel) { $(sel).hidden = false; }
-function closeM(sel) { $(sel).hidden = true; }
+let openedFrom = null;
+
+function openM(sel) {
+  openedFrom = document.activeElement;
+  const m = $(sel);
+  m.hidden = false;
+  focusInto(m.querySelector('.modal-card'));
+}
+
+function closeM(sel) {
+  $(sel).hidden = true;
+  openedFrom?.focus?.();
+  openedFrom = null;
+}
 
 /* ---- new subject ---- */
 
@@ -1364,14 +1431,30 @@ function showView(name) {
     const on = t.dataset.view === name;
     t.classList.toggle('is-active', on);
     t.setAttribute('aria-selected', String(on));
+    t.tabIndex = on ? 0 : -1;
   });
   $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
 
   // Rows are absolutely positioned, so they need re-laying out whenever the
   // matrix returns from display:none at a possibly different width.
-  if (name === 'matrix' && state.cls) {
-    layout(state.sorted ? state.groups.flatMap(g => g.members) : state.cls.responses.map((_, i) => i));
-  }
+  if (name === 'matrix' && state.cls) layout(rowOrder());
+}
+
+/** Left and right move between tabs, as they do in any tab list. */
+function moveInTabs(e) {
+  const tabs = $$('.tab');
+  const at = tabs.indexOf(document.activeElement);
+  if (at < 0) return;
+  const next = {
+    ArrowRight: (at + 1) % tabs.length,
+    ArrowLeft: (at - 1 + tabs.length) % tabs.length,
+    Home: 0,
+    End: tabs.length - 1
+  }[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  showView(tabs[next].dataset.view);
+  tabs[next].focus();
 }
 
 /* ======================================================================== */
@@ -1380,6 +1463,8 @@ function showView(name) {
 
 $('#run').addEventListener('click', run);
 $('#reorder').addEventListener('click', toggleSort);
+$('#matrix').addEventListener('keydown', moveInMatrix);
+$('.tabs-in').addEventListener('keydown', moveInTabs);
 $('#clear-filter').addEventListener('click', () => applyFilter(null));
 $('#pack').addEventListener('change', e => switchPack(e.target.value));
 $('#new-subject').addEventListener('click', openSubject);
@@ -1446,10 +1531,12 @@ function setToolbar(open) {
 }
 $('#bar-toggle').addEventListener('click', () => setToolbar(!document.body.classList.contains('toolbar-open')));
 
-$$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.hidden = true; }));
+$$('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeM(`#${m.id}`); }));
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
-  $$('.modal').forEach(m => { m.hidden = true; });
+  const open = $$('.modal').find(m => !m.hidden);
+  if (!open) return;
+  if (e.key === 'Escape') closeM(`#${open.id}`);
+  else trapTab(open.querySelector('.modal-card'), e);
 });
 
 $$('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
@@ -1476,7 +1563,7 @@ window.addEventListener('resize', () => {
   // Crossing a breakpoint changes the row height, and the group bands were
   // drawn at the old one, so a sorted map is redrawn rather than just moved.
   if (state.sorted && ROW_H() !== laidRowH) sortRows();
-  else layout(state.sorted ? state.groups.flatMap(g => g.members) : state.cls.responses.map((_, i) => i));
+  else layout(rowOrder());
 });
 
 /* ======================================================================== */
