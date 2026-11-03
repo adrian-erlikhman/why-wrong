@@ -27,7 +27,7 @@ import { compareSittings, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
 import { mathHtml, setMath } from './notation.js';
 import {
-  templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
+  templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter
 } from './importer.js';
 
@@ -1530,6 +1530,9 @@ $('#print-plan').addEventListener('click', printPlan);
 $('#export-plan').addEventListener('click', exportPlan);
 $('#regen').addEventListener('click', adaptPlans);
 $('#student-search').addEventListener('input', renderStudents);
+$('#print-slips').addEventListener('click', () => {
+  if (!openPrintable(slipsHtml(state.pack, state.cls, state.inf, state.cov))) alert('Allow pop-ups to print the slips.');
+});
 
 $('#key-cancel').addEventListener('click', () => closeM('#keymodal'));
 $('#key-go').addEventListener('click', submitKey);

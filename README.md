@@ -52,6 +52,11 @@ The loop closes in both directions, on paper.
 Nothing is uploaded. There is no account, no server, and the class data never
 leaves the tab.
 
+**Students → Print student slips** gives each student their own slip to go back
+with the paper: what their answers suggest they might be thinking, and the check
+questions for it. Slips carry no percentages or group numbers, and each one says
+it is a best guess and not a grade.
+
 ### Keeping a class
 
 A pasted class exists only in the tab, so **Save class** writes it to a file on

@@ -15,7 +15,7 @@ import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from 
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
-import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml } from '../js/importer.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint } from '../js/session.js';
 import { compareSittings, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 
@@ -266,6 +266,28 @@ for (const pack of BUILT_IN) {
   check('blanks leave difficulty out of the denominator', Math.abs(firstStat.difficulty - hit / 20) < 1e-12 && firstStat.answered === 20);
   check('a question left blank by half the class is flagged', firstStat.flags.some(f => f.kind === 'skipped'));
   check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
+}
+
+// -------------------------------------------------------------- student slips
+// Slips are read by students, so what they leave out matters as much as what
+// they say.
+{
+  console.log(`\n${'='.repeat(66)}\nStudent slips\n${'='.repeat(66)}`);
+  const pack = BUILT_IN[0];
+  const c = generateClass(pack, { seed: 9, size: 28 });
+  c.responses[0] = c.responses[0].map(() => -1);
+  c.students[1].name = '<b>Bo</b> & Co';
+  const inf = inferMisconceptions(pack, c.responses);
+  const html = slipsHtml(pack, c, inf, coverage(pack, c.responses));
+  const slips = html.split('<article class="slip">').slice(1);
+  check('every student gets one slip', slips.length === 28);
+  check('every slip says it is not a grade', slips.every(s => s.includes('not a grade')));
+  check('a slip carries no percentages', !slips.some(s => /\d+%/.test(s)));
+  check('a blank paper gets a slip about finishing it', slips[0].includes('left a lot of this blank'));
+  const heldBy = inf.posterior.findIndex((row, s) => s > 1 && row.some(p => p >= 0.5));
+  const top = inf.misIds[inf.posterior[heldBy].indexOf(Math.max(...inf.posterior[heldBy]))];
+  check('a slip names what the student most likely holds', slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));
+  check('names are escaped', slips[1].includes('&lt;b&gt;Bo&lt;/b&gt; &amp; Co'));
 }
 
 // ---------------------------------------------------------- broken test files

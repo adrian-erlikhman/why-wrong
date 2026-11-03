@@ -21,6 +21,8 @@
  */
 
 import { makeRng, shuffled } from './rng.js';
+import { PARAMS } from './infer.js';
+import { mathHtml } from './notation.js';
 
 const LETTERS = 'ABCDEFGH';
 
@@ -191,6 +193,66 @@ export function reviewHtml(pack) {
 <h2 class="brk">2 · The labels</h2>
 <p>Each wrong answer is labelled with the misconception that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
 <ol class="qs">${items}</ol>
+</body></html>`;
+}
+
+/**
+ * One slip per student, to hand back with the paper. It is written to the
+ * student, so it carries no percentages, group numbers or rankings, and it says
+ * plainly that it is a guess: a sixteen-year-old should be able to read it and
+ * tell the teacher it is wrong.
+ */
+export function slipsHtml(pack, cls, inf, cov) {
+  const byId = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
+
+  const slips = cls.students.map((st, s) => {
+    const held = inf.misIds
+      .map((id, k) => ({ m: byId[id], p: inf.posterior[s][k] }))
+      .filter(x => x.m && x.p >= PARAMS.decisionThreshold)
+      .sort((a, b) => b.p - a.p)
+      .slice(0, 2);
+
+    let body;
+    if (held.length) {
+      body = `<p class="lead">Your answers point to this mix-up:</p>` + held.map(({ m }) => {
+        const tryThese = (m.verify || []).map(v => `<li>${mathHtml(v)}</li>`).join('');
+        return `<h3>${mathHtml(m.name)}</h3>
+${m.belief ? `<p>${mathHtml(m.belief)}</p>` : ''}
+${tryThese ? `<p class="try">Try these:</p><ol>${tryThese}</ol>` : ''}`;
+      }).join('');
+    } else if (cov[s].thin) {
+      body = `<p class="lead">You left a lot of this blank, so there is not enough here to go on yet. Talk to your teacher about finishing it.</p>`;
+    } else {
+      body = `<p class="lead">Your mistakes do not follow one pattern, which usually means slips rather than a misunderstanding. Slow down, check your work, and keep practising.</p>`;
+    }
+
+    return `<article class="slip">
+<h2>${escapeHtml(st.name)}</h2>
+<div class="meta">${escapeHtml(pack.name)}</div>
+${body}
+<p class="foot">This is not a grade. It is a best guess from the pattern in your answers, so tell your teacher if it looks wrong.</p>
+</article>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<title>${escapeHtml(pack.name)} — student slips</title>
+<style>
+  body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
+  .slip{border:1px dashed #888;padding:16px 20px;margin-bottom:20px;page-break-inside:avoid;break-inside:avoid}
+  h2{font-size:18px;margin:0}
+  h3{font-size:15px;margin:12px 0 2px}
+  p{margin:4px 0}
+  ol{margin:4px 0 0;padding-left:22px}
+  .meta{font-size:12px;color:#555;margin-bottom:8px}
+  .lead{margin-top:8px}
+  .try{font-weight:bold;margin-top:8px}
+  .foot{font-size:12px;color:#555;margin-top:12px}
+  @media print{body{margin:0}.noprint{display:none}}
+  .noprint{margin-bottom:20px}
+  button{font:inherit;padding:6px 13px;cursor:pointer}
+</style></head><body>
+<div class="noprint"><button onclick="window.print()">Print</button></div>
+${slips}
 </body></html>`;
 }
 
