@@ -20,8 +20,8 @@ Built for the Prometheus August AI Challenge (August 2026).
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
 A first visit opens a short guided tour of the real page (the map, the sort, a
-reteach group, the test audit, the recovery numbers); the **Demo** button
-replays it.
+reteach group, the test audit, the recovery numbers); **Take the tour** replays
+it.
 
 Deep links: `?view=groups` (or `students`, `items`, `progress`, `validation`, `method`) opens a tab
 directly; `?sorted=1` starts with the class map already sorted into groups. Deep
@@ -143,6 +143,13 @@ students who picked it**.
   anyone who cannot tell the colours apart.
 - **Every statistic has a "?"** next to it. Plain-language explanation of what it
   means, and what to do about the number in front of you.
+- **Students** shows one group at a time, and search finds a name typed without
+  its accents.
+- **A whole year group fits.** Over 40 students the map's rows tighten, and on a
+  computer the colour key moves above it.
+- **What a paste turned up stays on the page**: a name pasted twice, a cell that
+  could not be read, a class too small to group. A paste with no readable answers
+  is refused.
 - Groups are formed by *what students believe*, not by score — two students with
   very different grades routinely land in the same group, which is the point.
 - Students with no stable misunderstanding are separated out rather than forced
