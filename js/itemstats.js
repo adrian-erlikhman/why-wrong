@@ -20,7 +20,7 @@
  */
 
 import { correctIndex } from './pack.js';
-import { posteriorWithout, PARAMS } from './infer.js';
+import { posteriorWithout, PARAMS, MIN_PROBES_ANSWERED } from './infer.js';
 
 const isAnswered = c => c != null && c >= 0;
 
@@ -106,6 +106,7 @@ export function analyseItems(pack, responses, inference = null) {
     // so the item is not permitted to vote on its own validity.
     let modelAgreement = null;
     let agreementN = 0;
+    let signalN = 0;
     let signalMis = null;
 
     if (inference) {
@@ -117,7 +118,10 @@ export function analyseItems(pack, responses, inference = null) {
         const chosers = responses
           .map((row, s) => (row[i] === top.index ? s : -1))
           .filter(s => s >= 0);
-        agreementN = chosers.length;
+        signalN = chosers.length;
+        const assessable = chosers.filter(s =>
+          inference.evidence[s][mIndex]?.filter(c => !c.omitted && c.itemId !== item.id).length >= MIN_PROBES_ANSWERED);
+        agreementN = assessable.length;
         if (agreementN >= 3 && mIndex >= 0) {
           // The test asks whether the remaining items provide *net positive
           // evidence*, not whether they independently clear 50%. With each
@@ -126,7 +130,7 @@ export function analyseItems(pack, responses, inference = null) {
           // threshold -- that is the whole premise of the inference model. The
           // right question for the evidence that survives is directional: does
           // it push the probability above the prior, or below it?
-          const agreeing = chosers.filter(s =>
+          const agreeing = assessable.filter(s =>
             posteriorWithout(inference, s, mIndex, item.id) > PARAMS.prior).length;
           modelAgreement = agreeing / agreementN;
         }
@@ -199,7 +203,7 @@ export function analyseItems(pack, responses, inference = null) {
     else quality = r >= 0.3 ? 'strong' : 'ok';
 
     const note = quality === 'diagnostic'
-      ? `This question has a weak relationship with overall scores (${r.toFixed(2)}). Of the ${agreementN} students who chose "${options.find(o => o.mis === signalMis && o.count > 0)?.text ?? ''}", ${Math.round(modelAgreement * 100)}% show a similar pattern on the other questions. Review that evidence before deciding whether to keep the item.`
+      ? `This question has a weak relationship with overall scores (${r.toFixed(2)}). Of the ${signalN} students who chose "${options.find(o => o.mis === signalMis && o.count > 0)?.text ?? ''}", ${agreementN} answered enough other questions to check for a similar pattern; ${Math.round(modelAgreement * 100)}% of those did. Review that evidence before deciding whether to keep the item.`
       : null;
 
     return {
@@ -215,6 +219,7 @@ export function analyseItems(pack, responses, inference = null) {
       omitted,
       modelAgreement,
       agreementN,
+      signalN,
       signalMis,
       options,
       flags,

@@ -460,6 +460,29 @@ for (const pack of BUILT_IN) {
   check('blanks leave difficulty out of the denominator', Math.abs(firstStat.difficulty - hit / 20) < 1e-12 && firstStat.answered === 20);
   check('a question left blank by half the class is flagged', firstStat.flags.some(f => f.kind === 'skipped'));
   check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
+
+}
+
+{
+  const sparseAgreementPack = {
+    misconceptions: [{ id: 'M', name: 'Pattern' }],
+    items: [1, 2, 3].map(n => ({
+      id: `A${n}`,
+      stem: `Agreement question ${n}`,
+      opts: [{ t: 'Correct', c: true }, { t: 'Pattern', mis: 'M' }, { t: 'Other' }]
+    }))
+  };
+  const sparseAgreementResponses = [
+    [1, 1, -1],
+    [1, 1, -1],
+    [1, 1, -1],
+    [1, -1, 1]
+  ];
+  const sparseAgreementInference = inferMisconceptions(sparseAgreementPack, sparseAgreementResponses);
+  const sparseAgreement = analyseItems(sparseAgreementPack, sparseAgreementResponses, sparseAgreementInference)[0];
+  check('a distractor is not defended by fewer than two answered independent probes',
+    sparseAgreement.signalN === 4 && sparseAgreement.agreementN === 0 &&
+    sparseAgreement.modelAgreement === null && sparseAgreement.quality !== 'diagnostic');
 }
 
 // -------------------------------------------------------------- row order
