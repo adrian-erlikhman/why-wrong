@@ -33,12 +33,12 @@ export const TERMS = {
     term: 'Discrimination',
     also: 'corrected point-biserial correlation',
     body: 'How closely correct answers to this question track scores on the rest of the test. A negative value means students with higher scores on the other questions were less likely to get this one right.',
-    use: 'A low value can flag a question for review, but it does not prove the wording is unclear. A diagnostic question may reveal a specific misunderstanding without tracking overall score.'
+    use: 'A low value can flag a question for review, but it does not prove the wording is unclear. With one class it is a noisy number, so the tool only calls it low when even its plausible upper end is low, and otherwise says it is too early to tell. A diagnostic question may reveal a specific misunderstanding without tracking overall score.'
   },
   diagnosing: {
     term: 'Diagnosing, not ranking',
     body: 'A question designed to reveal one misunderstanding may be missed by students with that misunderstanding, even if they do well elsewhere. That can lower its relationship with the overall score without making it unhelpful.',
-    use: 'Check whether answers to the other questions support the same pattern before deciding whether to keep or revise the item.'
+    use: 'The tool checks whether the students who picked its wrong answer show the same misunderstanding on the other questions clearly more often than the rest of the class does. Review that evidence before deciding whether to keep or revise the item.'
   },
   consistency: {
     term: 'Internal consistency',

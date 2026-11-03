@@ -15,7 +15,7 @@ import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS } from './infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
-import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf } from './itemstats.js';
+import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf, shownFlags } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
 import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
@@ -65,8 +65,8 @@ const ROUGH_GROUPS = 0.2;
 
 const VERDICTS = {
   strong: 'Working well', ok: 'Acceptable', diagnostic: 'Diagnosing, not ranking',
-  minor: 'Minor issue', weak: 'Worth reviewing', broken: 'Unexpected pattern',
-  insufficient: 'Too little evidence'
+  minor: 'Minor issue', watch: 'Too early to tell', weak: 'Worth reviewing',
+  broken: 'Unexpected pattern', insufficient: 'Too little evidence', key: 'Check the key'
 };
 
 let colourOf = Object.create(null);
@@ -917,14 +917,17 @@ function itemCard(s) {
   top.appendChild(el('span', `verdict v-${s.quality}`, VERDICTS[s.quality] || ''));
   card.appendChild(top);
 
-  if (s.flags.length) {
+  // A question defended as diagnostic carries the flags that made it look
+  // weak; on its card the defence is the finding, so it is what is shown.
+  const shown = shownFlags(s);
+  if (s.note) {
+    card.appendChild(setMath(el('p', 'item-note'), s.note));
+  } else if (shown.length) {
     const flags = el('ul', 'flags');
-    s.flags.slice(0, 2).forEach(f => {
-      flags.appendChild(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null, f.text));
+    shown.slice(0, 2).forEach(f => {
+      flags.appendChild(setMath(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null), f.text));
     });
     card.appendChild(flags);
-  } else if (s.note) {
-    card.appendChild(el('p', 'item-note', s.note));
   }
 
   // Options in the order they are printed on paper, lettered to match.

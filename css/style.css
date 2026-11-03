@@ -878,10 +878,10 @@ html.key-above .legend { padding-bottom: 20px; }
   background: var(--ic, var(--line-hi));
 }
 .item:hover { border-color: var(--line-hi); box-shadow: var(--shadow-2); }
-.item.broken { --ic: var(--bad); }
+.item.broken, .item.key { --ic: var(--bad); }
 .item.weak { --ic: var(--warn); }
 .item.diagnostic { --ic: var(--good); }
-.item.minor { --ic: var(--muted); }
+.item.minor, .item.watch { --ic: var(--muted); }
 .item.strong, .item.ok { --ic: var(--line-hi); }
 
 .item-top {
@@ -905,7 +905,7 @@ html.key-above .legend { padding-bottom: 20px; }
   color: var(--ink-2);
   border: 1px solid var(--line);
 }
-.v-broken { background: var(--bad-tint); color: var(--bad); border-color: var(--bad-line); }
+.v-broken, .v-key { background: var(--bad-tint); color: var(--bad); border-color: var(--bad-line); }
 .v-weak { background: var(--warn-tint); color: var(--warn); border-color: var(--warn-line); }
 .v-diagnostic, .v-strong { background: var(--good-tint); color: var(--good); border-color: var(--good-line); }
 
@@ -1524,10 +1524,10 @@ html.key-above .legend { padding-bottom: 20px; }
 .dr-verdict { border-radius: 12px; padding: 15px 18px; margin-bottom: 20px; background: var(--bg-2); border: 1px solid var(--line); }
 .dr-verdict-t { font-family: var(--display); font-size: 17px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.01em; }
 .dr-verdict-b { font-size: 15px; color: var(--ink-2); }
-.dr-verdict.v-broken { background: var(--bad-tint); border-color: var(--bad-line); }
+.dr-verdict.v-broken, .dr-verdict.v-key { background: var(--bad-tint); border-color: var(--bad-line); }
 .dr-verdict.v-weak { background: var(--warn-tint); border-color: var(--warn-line); }
 .dr-verdict.v-diagnostic, .dr-verdict.v-strong { background: var(--good-tint); border-color: var(--good-line); }
-.dr-verdict.v-broken .dr-verdict-t { color: var(--bad); }
+.dr-verdict.v-broken .dr-verdict-t, .dr-verdict.v-key .dr-verdict-t { color: var(--bad); }
 .dr-verdict.v-weak .dr-verdict-t { color: var(--warn); }
 .dr-verdict.v-diagnostic .dr-verdict-t, .dr-verdict.v-strong .dr-verdict-t { color: var(--good); }
 

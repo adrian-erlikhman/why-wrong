@@ -5,6 +5,7 @@
 
 import { correctIndex, misById } from './pack.js';
 import { PARAMS, isTested, untested } from './infer.js';
+import { shownFlags } from './itemstats.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
@@ -237,7 +238,9 @@ export function openQuestion(ctx, i) {
     minor: ['Minor issue', 'One option was rarely chosen and may not be adding much information.'],
     weak: ['Worth reviewing', 'Responses suggest this question may need revision.'],
     broken: ['Unexpected pattern', 'Students with higher scores on the rest of the paper were less likely to answer this correctly. Review the wording, options, and answer key.'],
-    insufficient: ['Too little evidence', 'There is not enough response or score variation to estimate how this question relates to performance on the rest of the paper.']
+    insufficient: ['Too little evidence', 'There is not enough response or score variation to estimate how this question relates to performance on the rest of the paper.'],
+    watch: ['Too early to tell', 'Strong and weak students answered this about alike, but with this many students that could be chance. Nothing to rewrite yet; look again after the next class takes it.'],
+    key: ['Check the key', 'Your strongest students mostly chose an answer the key marks wrong, and nothing else on the paper suggests they hold the belief it was written for. The key may be wrong.']
   }[st.quality] || ['—', ''];
 
   const v = el('div', `dr-verdict v-${st.quality}`);
@@ -262,10 +265,11 @@ export function openQuestion(ctx, i) {
     wrap.appendChild(n);
   }
 
-  if (st.flags.length) {
-    wrap.appendChild(el('div', 'dr-h', 'Flags'));
+  const flagsShown = shownFlags(st);
+  if (flagsShown.length) {
+    wrap.appendChild(el('div', 'dr-h', st.quality === 'diagnostic' ? 'Why it looks weak' : 'Flags'));
     const ul = el('ul', 'flags');
-    st.flags.forEach(f => ul.appendChild(el('li', null, f.text)));
+    flagsShown.forEach(f => ul.appendChild(setMath(el('li'), f.text)));
     wrap.appendChild(ul);
   }
 
