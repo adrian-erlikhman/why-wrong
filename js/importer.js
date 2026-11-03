@@ -68,8 +68,17 @@ export function paperLetter(item, optIndex) {
 
 /* ------------------------------------------------------------------ export */
 
+/**
+ * A spreadsheet runs any cell that starts like a formula, and a student name
+ * pasted from a form can start with anything. A leading apostrophe makes it text.
+ * Plain numbers such as -3 are left alone, since they cannot do anything.
+ */
+function neutralise(s) {
+  return /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d[\d.,/]*$/.test(s) ? `'${s}` : s;
+}
+
 export function csvCell(v) {
-  const s = String(v ?? '');
+  const s = neutralise(String(v ?? ''));
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

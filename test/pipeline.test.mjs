@@ -15,7 +15,7 @@ import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from 
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
-import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml } from '../js/importer.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, csvCell, groupsCsv } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint } from '../js/session.js';
 import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
@@ -313,6 +313,23 @@ for (const pack of BUILT_IN) {
   rejects('a blank stem', p => { p.items[0].stem = '   '; });
   rejects('more options than letters', p => { for (let i = 0; i < 6; i++) p.items[0].opts.push({ t: `extra ${i}` }); });
   check('text that is not a test at all is refused', !validatePack([]).ok && !validatePack('x').ok && !validatePack(null).ok);
+}
+
+// -------------------------------------------------------------- spreadsheets out
+// A name typed into a form ends up in a file a teacher opens in a spreadsheet.
+{
+  console.log(`\n${'='.repeat(66)}\nExports\n${'='.repeat(66)}`);
+  ['=HYPERLINK("http://x","y")', '+1+1', '-1+cmd', '@SUM(A1)', '\tx'].forEach(v =>
+    check(`a cell starting like a formula is made text: ${JSON.stringify(v).slice(0, 18)}`, /^"?'/.test(csvCell(v))));
+  check('a plain number stays a number', csvCell('-3') === '-3' && csvCell('+4.5') === '+4.5' && csvCell('1/2') === '1/2');
+  check('quotes and commas still escape', csvCell('a,b') === '"a,b"' && csvCell('say "hi"').includes('""hi""'));
+  const pack = BUILT_IN[0];
+  const c = generateClass(pack, { seed: 3, size: 28 });
+  c.students[0].name = '=1+1';
+  const inf = inferMisconceptions(pack, c.responses);
+  const cl = clusterStudents(inf.posterior, { seed: 42 });
+  const csv = groupsCsv(pack, c, describeClusters(inf.posterior, cl.labels, inf.misIds, cl), Object.fromEntries(pack.misconceptions.map(m => [m.id, m])));
+  check('a group that starts with that name is safe', !csv.split('\n').some(row => row.split(',')[1] === '=1+1'));
 }
 
 // -------------------------------------------------------- messy spreadsheets
