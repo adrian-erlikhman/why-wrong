@@ -788,7 +788,6 @@ function renderStudentFilter() {
   const host = $('#student-filter');
   host.innerHTML = '';
   const { groups, cls } = state;
-  host.hidden = groups.length < 2;
 
   const add = (label, n, key) => {
     const b = el('button', key === null ? 'seg-b is-on' : 'seg-b', `${label} · ${n}`);
@@ -806,6 +805,14 @@ function renderStudentFilter() {
   };
   add('Everyone', cls.students.length, null);
   groups.forEach((g, i) => add(groupLabel(g), g.members.length, i));
+  // Two ways of slicing the class that cut across the groups, offered only
+  // when this class has some: the students getting most questions wrong with
+  // no clear pattern, and the ones with a belief worth one more question.
+  const support = groups.find(g => g.isSecure)?.support?.length ?? 0;
+  if (support) add('Getting most wrong', support, 'support');
+  const check = cls.students.filter((_, s) => state.inf.misIds.some((__, k) => strength(state.inf, s, k).level === 'check')).length;
+  if (check) add('One more question', check, 'check');
+  host.hidden = host.children.length < 3;
 }
 
 function renderStudents() {
@@ -826,11 +833,16 @@ function renderStudents() {
     return { s, st, score, held, check, group };
   });
 
-  // Most to act on first: students with the most confident misconceptions, then
+  // Most to act on first: students with the most confident misconceptions,
+  // then, among those with none, the ones getting most questions wrong, then
   // lowest score. A teacher opening this wants triage, not the register.
-  rows.sort((a, b) => (b.held.length - a.held.length) || (a.score - b.score));
+  const struggling = r => (r.group?.isSecure && r.group.support?.includes(r.s) ? 1 : 0);
+  rows.sort((a, b) => (b.held.length - a.held.length) || (struggling(b) - struggling(a)) || (a.score - b.score));
 
-  const picked = state.studentGroup == null ? rows : rows.filter(r => r.group === groups[state.studentGroup]);
+  const picked = state.studentGroup == null ? rows
+    : state.studentGroup === 'support' ? rows.filter(r => r.group?.isSecure && r.group.support?.includes(r.s))
+    : state.studentGroup === 'check' ? rows.filter(r => r.check.length > 0)
+    : rows.filter(r => r.group === groups[state.studentGroup]);
   const shown = h ? picked.filter(r => normName(r.st.name).includes(h)) : picked;
 
   // Slips print what is on screen, so one group or one student takes no scissors.
@@ -877,7 +889,7 @@ function renderStudents() {
         : el('span', 'chip chip-clear', 'No clear pattern found'));
     }
     // A belief resting on one answer is not a diagnosis; it is a question to ask.
-    if (r.check.length && r.held.length < 3) {
+    if (r.check.length && (r.held.length < 3 || state.studentGroup === 'check')) {
       const c = el('span', 'chip chip-check');
       c.appendChild(setMath(el('span'), `Check: ${byId[r.check[0].mid]?.short || r.check[0].mid}`));
       c.title = 'Only one answer points here. Ask one more question before acting on it.';
