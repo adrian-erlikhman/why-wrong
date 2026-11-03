@@ -298,7 +298,23 @@ export function openPrintable(html) {
 /* ------------------------------------------------------------------ import */
 
 function splitRows(text) {
-  return text.replace(/\r\n?/g, '\n').split('\n').filter(r => r.trim().length);
+  const normalized = text.replace(/\r\n?/g, '\n');
+  const rows = [];
+  let start = 0;
+  let quoted = false;
+  for (let i = 0; i < normalized.length; i++) {
+    if (normalized[i] === '"') {
+      if (quoted && normalized[i + 1] === '"') i++;
+      else quoted = !quoted;
+    } else if (normalized[i] === '\n' && !quoted) {
+      const row = normalized.slice(start, i);
+      if (row.trim()) rows.push(row);
+      start = i + 1;
+    }
+  }
+  const last = normalized.slice(start);
+  if (last.trim()) rows.push(last);
+  return rows;
 }
 
 /** Split one CSV/TSV row, honouring quotes. */
@@ -322,10 +338,16 @@ function splitCells(row, delim) {
 
 function detectDelim(rows) {
   const counts = { ',': 0, '\t': 0, ';': 0 };
-  rows.slice(0, 5).forEach(r => {
-    counts[','] += (r.match(/,/g) || []).length;
-    counts['\t'] += (r.match(/\t/g) || []).length;
-    counts[';'] += (r.match(/;/g) || []).length;
+  rows.slice(0, 5).forEach(row => {
+    let quoted = false;
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] === '"') {
+        if (quoted && row[i + 1] === '"') i++;
+        else quoted = !quoted;
+      } else if (!quoted && Object.hasOwn(counts, row[i])) {
+        counts[row[i]]++;
+      }
+    }
   });
   return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
 }

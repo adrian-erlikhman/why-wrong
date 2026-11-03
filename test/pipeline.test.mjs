@@ -700,6 +700,26 @@ for (const pack of BUILT_IN) {
   const plain = [['Student', ...ids].join(','), ...letters.map((row, s) => [q(c.students[s].name), ...row].join(','))].join('\n');
   check('an Excel BOM is ignored', same(parseResponses(pack, `\uFEFF${plain}`)));
 
+  const multilinePack = {
+    ...pack,
+    items: pack.items.map((it, i) => i === 0 ? { ...it, stem: `${it.stem}\ncontinued on the next line` } : it)
+  };
+  const multilineForms = [
+    ['Timestamp', 'Email Address', 'Score', 'Name', ...multilinePack.items.map(it => q(it.stem))].join(','),
+    ...c.students.map((st, s) => [q('2026/11/03 9:01:00 AM'), `kid${s}@school.org`, '12 / 24', q(st.name), ...texts[s].map(q)].join(','))
+  ].join('\r\n');
+  const multiline = parseResponses(multilinePack, multilineForms);
+  check('quoted newlines in CSV cells do not split student rows',
+    multiline.matchedBy === 'question text' && same(multiline) &&
+    multiline.students[3]?.name === c.students[3].name);
+
+  const commaHeadersTsv = [
+    ['Timestamp', 'Name', ...pack.items.map(it => q(`${it.stem}, additional context, and details`))].join('\t'),
+    ...letters.map((row, s) => ['x', q(c.students[s].name), ...row].join('\t'))
+  ].join('\n');
+  check('delimiter detection ignores commas inside quoted TSV headers',
+    same(parseResponses(pack, commaHeadersTsv)));
+
   const keyed = parseResponses(pack, `${plain}\nAnswer Key,${pack.items.map(it => paperLetter(it, it.opts.findIndex(o => o.c))).join(',')}`);
   check('a row called Key is not a student', same(keyed) && keyed.warnings.some(w => /row called Key/.test(w)));
 
