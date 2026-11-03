@@ -217,7 +217,7 @@ function renderSummary() {
   const thin = groups.find(g => g.isThin);
   const biggest = real[0];
   const prev = prevalence(inf.posterior, inf.misIds)[0];
-  const bad = problemItems(stats);
+  const bad = cls.students.length < TOO_FEW ? [] : problemItems(stats);
   // Out of what was answered, so blanks do not drag the average down twice:
   // once here and once by being read as missing evidence everywhere else.
   const scores = totalScores(pack, cls.responses);
@@ -227,7 +227,7 @@ function renderSummary() {
   const byId = misById(pack);
 
   const cards = [
-    { v: String(cls.students.length), k: 'students' },
+    { v: String(cls.students.length), k: cls.students.length === 1 ? 'student' : 'students' },
     { v: String(real.length), k: `reteach group${real.length === 1 ? '' : 's'}`, cls: 'ok', go: 'groups' },
     { v: biggest ? String(biggest.size) : '—',
       k: biggest ? `in the biggest group` : 'no groups found', go: 'groups' },
@@ -516,6 +516,12 @@ function renderGroups() {
   const n = state.cls.students.length;
 
   const sub = $('#groups-sub');
+  if (n < TOO_FEW) {
+    sub.textContent = `With ${students(n)}, groups mean very little, so use the Students tab and read each diagnosis on its own.`;
+    state.groups.forEach((g, i) => host.appendChild(groupCard(g, i)));
+    return;
+  }
+
   sub.textContent =
     `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
     `${real.length} group${real.length === 1 ? '' : 's'} here` +
@@ -734,11 +740,23 @@ function renderItems() {
   const host = $('#items');
   host.innerHTML = '';
 
+  const sub = $('#items-sub');
+  $('#item-filter').hidden = cls.students.length < TOO_FEW;
+  if (cls.students.length < TOO_FEW) {
+    sub.textContent = '';
+    $('#alpha-note').textContent = '';
+    const box = el('div', 'empty');
+    box.appendChild(el('h3', null, 'Too few students to judge the questions.'));
+    box.appendChild(el('p', null,
+      `These checks compare students with each other, and ${students(cls.students.length)} is not enough. Each student's own diagnosis still works.`));
+    host.appendChild(box);
+    return;
+  }
+
   const bad = problemItems(stats);
   const diag = diagnosticItems(stats);
   const strong = stats.filter(s => s.quality === 'strong').length;
 
-  const sub = $('#items-sub');
   sub.textContent =
     `The same answers score your questions too. ${strong} of ${pack.items.length} are doing real work; ` +
     `${bad.length} ${bad.length === 1 ? 'has' : 'have'} a problem worth a look. Click any question to see how the class answered it.` +
@@ -885,9 +903,9 @@ function renderProgress() {
   host.appendChild(list);
 
   const missing = [
-    match.onlyBefore.length && `Only in the first sitting: ${match.onlyBefore.join(', ')}.`,
-    match.onlyAfter.length && `Only in the retest: ${match.onlyAfter.join(', ')}.`,
-    match.ambiguous.length && `Same name twice, so left out: ${match.ambiguous.join(', ')}.`
+    match.onlyBefore.length && sentence(`Only in the first sitting: ${match.onlyBefore.join(', ')}`),
+    match.onlyAfter.length && sentence(`Only in the retest: ${match.onlyAfter.join(', ')}`),
+    match.ambiguous.length && sentence(`Same name twice, so left out: ${match.ambiguous.join(', ')}`)
   ].filter(Boolean);
   if (missing.length) host.appendChild(el('p', 'note', missing.join(' ')));
 
@@ -920,7 +938,7 @@ function progressGroup(g, byId) {
     row.appendChild(el('p', 'prog-group-who', 'Everyone in this group who held it has cleared it.'));
   }
   if (g.absent.length) {
-    row.appendChild(el('p', 'prog-group-who', `Not retested: ${g.absent.join(', ')}.`));
+    row.appendChild(el('p', 'prog-group-who', sentence(`Not retested: ${g.absent.join(', ')}`)));
   }
   return row;
 }
@@ -944,8 +962,7 @@ function progressEmpty() {
 }
 
 function progressVerdict(t) {
-  const plural = n => `${n} student${n === 1 ? '' : 's'}`;
-  const split = `${plural(t.fewer)} ended up holding fewer misunderstandings and ${plural(t.more)} holding more`;
+  const split = `${students(t.fewer)} ended up holding fewer misunderstandings and ${students(t.more)} holding more`;
   const [title, body] = {
     improved: ['The class moved.', `${split}. A split that lopsided is unlikely to be chance.`],
     worse: ['The class went backwards.', `${split}. A split that lopsided is unlikely to be chance.`],
