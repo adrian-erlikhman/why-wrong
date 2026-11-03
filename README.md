@@ -14,8 +14,6 @@ misconception taxonomy and a distractor-mapped item bank for it, which is then
 validated against the same structural contract before a single number is
 computed.
 
-Built for the Prometheus August AI Challenge (August 2026).
-
 **Live:** https://adrian-erlikhman.github.io/why-wrong/
 **Everything runs in the browser.** No server, no account, no data leaves the page.
 
