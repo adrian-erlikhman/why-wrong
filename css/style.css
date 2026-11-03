@@ -577,6 +577,13 @@ body.has-import .import-only { display: inline-flex; }
   transition: padding-left .45s var(--ease), width .45s var(--ease), flex-basis .45s var(--ease), color .3s;
 }
 .matrix.sorted .m-name { width: 194px; flex-basis: 194px; padding-left: 88px; }
+
+/* Names stay put when the map scrolls sideways, or on a phone you lose track of
+   whose row you are reading by the tenth question. The background only covers
+   the name itself, so the group bars show through the padding, and on the sorted
+   map the padding is allowed to scroll away. */
+.m-name { position: sticky; left: 0; z-index: 2; background: var(--surface); background-clip: content-box; }
+.matrix.sorted .m-name { left: -88px; }
 .m-name:hover { color: var(--accent); text-decoration: underline; }
 
 .m-cell {
@@ -1543,7 +1550,7 @@ body.has-import .import-only { display: inline-flex; }
   .steps { grid-template-columns: 1fr; gap: 12px; }
   :root { --cell: 13px; --row: 16px; --gap: 2px; }
   .m-name { width: 84px; flex-basis: 84px; font-size: 12.5px; }
-  .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; }
+  .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; left: -60px; }
   .band-tag { width: 46px; font-size: 11px; }
   .bar-t { width: 124px; flex-basis: 124px; }
   .stu { grid-template-columns: 1fr; gap: 10px; }
