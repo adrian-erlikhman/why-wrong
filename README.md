@@ -107,6 +107,12 @@ one row per student (S01, S02…) and one letter per question.
 
 Keep teachers' tests in `local/`, which git ignores: the repo is public.
 
+A real class has no hidden answers to score against, but it does have a teacher
+who knows it. On a pasted class, **Does it work?** takes the predictions from
+that first page and sets them against the result: how many she expected are
+among the most common, what she did not expect, and what she expected that barely
+appears. It only counts if they were written down first.
+
 ### Every diagnosis opens up
 
 A tool that says *"Milo holds the sign-distribution misconception, 87%"* and

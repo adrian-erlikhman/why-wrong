@@ -35,7 +35,7 @@ export function fingerprint(pack) {
  * Serialise a class. A built-in test is stored by id, because it ships with the
  * page. Any other test only exists in this tab, so it travels inside the file.
  */
-export function classFile({ pack, students, responses, retest = null, builtIn = false, savedAt = new Date() }) {
+export function classFile({ pack, students, responses, retest = null, predictions = [], builtIn = false, savedAt = new Date() }) {
   return JSON.stringify({
     format: CLASS_FORMAT,
     version: CLASS_VERSION,
@@ -49,7 +49,8 @@ export function classFile({ pack, students, responses, retest = null, builtIn = 
     retest: retest ? {
       students: retest.students.map(s => ({ id: s.id, name: s.name })),
       responses: retest.responses
-    } : null
+    } : null,
+    predictions
   }, null, 1);
 }
 
@@ -106,5 +107,9 @@ export function readClassFile(text, findPack) {
   ];
   if (errors.length) return fail(...errors.slice(0, 3));
 
-  return { ok: true, errors: [], pack, embedded, students: file.students, responses: file.responses, retest: file.retest ?? null };
+  // Predictions are optional, and an id the test does not know is simply dropped.
+  const known = new Set(pack.misconceptions.map(m => m.id));
+  const predictions = (Array.isArray(file.predictions) ? file.predictions : []).filter(id => known.has(id));
+
+  return { ok: true, errors: [], pack, embedded, students: file.students, responses: file.responses, retest: file.retest ?? null, predictions };
 }

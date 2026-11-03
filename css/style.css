@@ -988,6 +988,16 @@ body.has-import .import-only { display: inline-flex; }
 
 /* ------------------------------ validation ----------------------------- */
 
+.pred { margin-top: 18px; padding: 20px 24px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+.pred h3 { font-size: 19px; margin-bottom: 8px; }
+.pred p { color: var(--ink-2); font-size: 16px; margin: 0 0 10px; }
+.pred-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 6px 18px; margin: 12px 0; }
+.pred-row { display: flex; gap: 9px; align-items: flex-start; font-size: 15.5px; color: var(--ink); cursor: pointer; }
+.pred-row input { margin-top: 4px; accent-color: var(--accent); }
+.pred-result:empty { display: none; }
+.pred-result { padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.pred-result .pred-sum { color: var(--ink); font-weight: 600; }
+
 .empty-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
 .prog-verdict { padding: 18px 22px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-2); margin-bottom: 18px; }

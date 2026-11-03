@@ -174,6 +174,35 @@ function groupOutcomes(groups, misconceptions, students, match) {
   });
 }
 
+/**
+ * Set what a teacher expected against what the answers showed.
+ *
+ * The label sheet asks for her predictions before she sees a result, because a
+ * tool that only ever agrees with hindsight has not been tested. The honest
+ * comparison is rank against rank: of the k things she expected, how many are in
+ * the class's top k? Anything else is reported by name, since a surprise is
+ * either the tool being wrong or the class telling her something, and both are
+ * worth a look.
+ *
+ * @param expected  misconception ids she ticked
+ * @param rows      prevalence() output, most widespread first
+ * @param size      students in the class
+ */
+export function comparePredictions(expected, rows, size) {
+  const want = new Set(expected);
+  const k = want.size;
+  const common = Math.max(2, Math.ceil(size * 0.1));
+  const top = rows.slice(0, k);
+  return {
+    k,
+    agree: top.filter(r => want.has(r.id)).map(r => r.id),
+    surprises: rows.filter(r => !want.has(r.id) && r.confident >= common)
+      .map(r => ({ id: r.id, students: r.confident })),
+    absent: rows.filter(r => want.has(r.id) && r.confident < common)
+      .map(r => ({ id: r.id, students: r.confident }))
+  };
+}
+
 /** The comparison as a spreadsheet, one row per misunderstanding. */
 export function progressCsv(cmp, misIndex) {
   const head = ['Misunderstanding', 'Before', 'After', 'Reading', 'Cleared', 'Still holding', 'New', 'Not tested'];

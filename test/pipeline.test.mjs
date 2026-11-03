@@ -17,7 +17,7 @@ import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../j
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint } from '../js/session.js';
-import { compareSittings, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
+import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
 import { rewritePlan, setKey } from '../js/llm.js';
 
@@ -474,6 +474,20 @@ for (const pack of BUILT_IN) {
   const blank = compareSittings(pack, c, gone);
   check('a blank retest clears nothing', blank.totals.cleared === 0 && blank.totals.reading === 'none');
   check('a blank retest is reported as not tested', blank.misconceptions.some(x => x.untested.length));
+
+  const rows = [
+    { id: 'A', confident: 9 }, { id: 'B', confident: 7 }, { id: 'C', confident: 5 },
+    { id: 'D', confident: 1 }, { id: 'E', confident: 0 }
+  ];
+  const guess = comparePredictions(['A', 'C', 'E'], rows, 28);
+  check('predictions are scored rank against rank', guess.k === 3 && guess.agree.join() === 'A,C');
+  check('a common misunderstanding she did not expect is a surprise', guess.surprises.map(x => x.id).join() === 'B');
+  check('an expected one that barely appears is named', guess.absent.map(x => x.id).join() === 'E');
+  check('a rare one she did not expect is not a surprise', !guess.surprises.some(x => x.id === 'D'));
+
+  const kept = readClassFile(classFile({ pack, students: c.students, responses: c.responses, predictions: ['M01', 'NOPE'], builtIn: true }),
+    id => BUILT_IN.find(x => x.id === id));
+  check('predictions are saved, and unknown ids dropped', kept.ok && kept.predictions.join() === 'M01');
 
   const csv = progressCsv(compareSittings(pack, c, r), Object.fromEntries(pack.misconceptions.map(x => [x.id, x])));
   check('the spreadsheet has a row per misunderstanding', csv.split('\n').length === pack.misconceptions.length + 1);

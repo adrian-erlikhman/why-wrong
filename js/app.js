@@ -23,7 +23,7 @@ import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
 import { classFile, readClassFile } from './session.js';
-import { compareSittings, progressCsv, READING } from './compare.js';
+import { compareSittings, comparePredictions, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
 import { mathHtml, setMath } from './notation.js';
 import {
@@ -67,6 +67,7 @@ const state = {
   unsaved: false,     // the imported class exists only in this tab
   retest: null,       // { students, responses, simulated? } the same paper, after a reteach
   importFor: 'class', // what the paste box is filling in: 'class' or 'retest'
+  predictions: new Set(), // misconception ids the teacher expected before seeing a result
   filterMis: null,    // highlight one misconception across the matrix
   itemFilter: 'problem'
 };
@@ -1021,6 +1022,7 @@ function renderValidation() {
     box.appendChild(el('p', null,
       'Switch the class back to “Sample class” to see how well the method recovers what it cannot see. Then judge whether you trust it on your own data.'));
     host.appendChild(box);
+    wrap.appendChild(predictionPanel());
     return;
   }
 
@@ -1073,6 +1075,64 @@ function renderValidation() {
     'Change the class variant in the toolbar to re-roll a different sample class. The figures are computed live each time, so a bad run shows a bad number.';
 }
 
+/** The one check a real class does allow: did it match what she expected? */
+function predictionPanel() {
+  const box = el('div', 'pred');
+  box.appendChild(el('h3', null, 'Check it against what you expected'));
+  box.appendChild(el('p', null,
+    'If you ticked the misunderstandings you expected on the label sheet from Materials, tick the same ones here. This is only a fair test if they were written down before you saw any results.'));
+
+  const list = el('div', 'pred-list');
+  state.pack.misconceptions.forEach(m => {
+    const row = el('label', 'pred-row');
+    const tick = el('input');
+    tick.type = 'checkbox';
+    tick.checked = state.predictions.has(m.id);
+    tick.addEventListener('change', () => {
+      if (tick.checked) state.predictions.add(m.id);
+      else state.predictions.delete(m.id);
+      if (state.imported) state.unsaved = true;
+      renderPredictionResult();
+    });
+    row.appendChild(tick);
+    row.appendChild(setMath(el('span'), m.name));
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+
+  const result = el('div', 'pred-result');
+  result.id = 'pred-result';
+  box.appendChild(result);
+  setTimeout(renderPredictionResult, 0);
+  return box;
+}
+
+function renderPredictionResult() {
+  const host = $('#pred-result');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!state.predictions.size) return;
+
+  const byId = misById(state.pack);
+  const name = id => byId[id]?.name ?? id;
+  const rows = prevalence(state.inf.posterior, state.inf.misIds);
+  const r = comparePredictions(state.predictions, rows, state.cls.students.length);
+
+  host.appendChild(el('p', 'pred-sum',
+    `You expected ${r.k}. ${r.agree.length} of them ${r.agree.length === 1 ? 'is' : 'are'} among the ${r.k === 1 ? 'single most common' : `${r.k} most common`} in this class.`));
+
+  const list = (title, note, items) => {
+    if (!items.length) return;
+    const p = el('p', null);
+    p.appendChild(el('b', null, `${title}: `));
+    p.appendChild(document.createTextNode(items.map(x => `${name(x.id)} (${x.students})`).join('; ')));
+    p.appendChild(document.createTextNode(`. ${note}`));
+    host.appendChild(p);
+  };
+  list('Not what you expected', 'Open a student and check the evidence: either the tool is wrong here or the class is telling you something.', r.surprises);
+  list('Expected, but barely there', 'The questions may not be catching it, or the class may have moved on.', r.absent);
+}
+
 function renderMethod() {
   $('#formula').textContent =
     'logit P(holds m | answers) = logit P(m) + Σ log [ P(answer | m) / P(answer | not m) ]';
@@ -1088,6 +1148,7 @@ function renderMethod() {
 function dropClass() {
   state.imported = null;
   state.retest = null;
+  state.predictions = new Set();
   state.unsaved = false;
   $('#source').value = 'sample';
   document.body.classList.remove('has-import');
@@ -1279,9 +1340,10 @@ function useRetest({ students, responses }) {
 }
 
 /** Make a class the one on screen. Typed answers exist only here until saved. */
-function useClass({ students, responses, retest = null }, { saved = false } = {}) {
+function useClass({ students, responses, retest = null, predictions = [] }, { saved = false } = {}) {
   state.imported = { students, responses };
   state.retest = retest;
+  state.predictions = new Set(predictions);
   state.unsaved = !saved;
   document.body.classList.add('has-import');
   $('#source').value = 'import';
@@ -1294,7 +1356,7 @@ function saveClass() {
   const { pack, imported } = state;
   const day = new Date().toISOString().slice(0, 10);
   download(`${pack.id}-class-${day}.json`,
-    classFile({ pack, ...imported, retest: state.retest, builtIn: isBuiltIn(pack) }), 'application/json');
+    classFile({ pack, ...imported, retest: state.retest, predictions: [...state.predictions], builtIn: isBuiltIn(pack) }), 'application/json');
   state.unsaved = false;
   flashSaved();
 }
