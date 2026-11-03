@@ -444,6 +444,11 @@ for (const pack of BUILT_IN) {
     })].join(','))].join('\n'));
   check('the words beat the letter when a form labels its answers', same(labelled));
 
+  const totals = parseResponses(pack, `${plain}\nClass average,${letters[0].map(() => '55%').join(',')}\nTotal,${letters[0].map(() => '').join(',')}`);
+  check('a totals row is not a student', same(totals) && totals.warnings.some(w => /Class average, Total/.test(w)));
+  const max = parseResponses(pack, `${plain}\nMax,${letters[0].join(',')}`);
+  check('a student called Max is still a student', max.students.at(-1).name === 'Max');
+
   const nonsense = parseResponses(pack, [['Student', ...ids].join(','), ...letters.map((row, s) => [`Kid ${s}`, ...row.map(() => 'Z')].join(','))].join('\n'));
   check('a paste with no readable answer is refused', !nonsense.ok && /could be read/.test(nonsense.errors[0]));
 

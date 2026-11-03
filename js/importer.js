@@ -348,6 +348,7 @@ const META_COL = /^(time\s*stamp|date|e-?mail(\s+address)?|user\s*name|score|tot
 const EMAIL_COL = /^e-?mail(\s+address)?$|^user\s*name$/i;
 const NAME_COL = /^(student|student\s+name|name|full\s+name|your\s+name|pupil|learner)$/i;
 const KEY_ROW = /^(answer\s*)?key$/i;
+const SUMMARY_ROW = /^(class\s+)?(average|avg|mean|median|total|totals|max(imum)?|min(imum)?|count|(%|percent(age)?)\s*correct)$/i;
 
 const textKey = s => String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 const withoutNumber = s => String(s).replace(/^\s*(q(uestion)?\s*)?\d+\s*[.):-]?\s*/i, '');
@@ -555,6 +556,7 @@ export function parseResponses(pack, text, otherPacks = []) {
   const bad = [];
 
   let keyRow = false;
+  const summaries = [];
 
   for (let r = 0; r < rowsIn.length; r++) {
     const row = rowsIn[r];
@@ -566,6 +568,7 @@ export function parseResponses(pack, text, otherPacks = []) {
     const name = (nameCol === emailCol ? given.replace(/@.*$/, '') : given) || `Student ${responses.length + 1}`;
     if (KEY_ROW.test(name)) { keyRow = true; continue; }     // the answers, not a student
     const out = [];
+    const [badBefore, omittedBefore] = [bad.length, omitted];
 
     pack.items.forEach((it, i) => {
       const cell = row[cols[i]];
@@ -579,11 +582,21 @@ export function parseResponses(pack, text, otherPacks = []) {
       }
     });
 
+    // A gradebook often ends in an Average row. Max may be a student, though, so
+    // only a row without real answers counts as one of these.
+    if (SUMMARY_ROW.test(name) && out.filter(v => v >= 0).length < out.length / 2) {
+      bad.length = badBefore;
+      omitted = omittedBefore;
+      summaries.push(name);
+      continue;
+    }
+
     students.push({ id: `S${String(responses.length + 1).padStart(2, '0')}`, name });
     responses.push(out);
   }
 
   if (keyRow) warnings.push('Left out the row called Key, since it is the answers rather than a student.');
+  if (summaries.length) warnings.push(`Left out ${summaries.join(', ')}, since ${summaries.length === 1 ? 'that row looks' : 'those rows look'} like a total rather than a student.`);
 
   const seen = new Map();
   students.forEach(s => {

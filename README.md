@@ -41,7 +41,7 @@ The loop closes in both directions, on paper.
    the answer text all work. A Google Forms export works as it comes: timestamp,
    email and score columns are stepped over, and questions are matched by their
    text. With no name column, the part of the email before the @ becomes the
-   name. A row called Key is left out, and a repeated name is flagged. Blanks are
+   name. A row called Key is left out, so is a totals row like Average, and a repeated name is flagged. Blanks are
    read as unanswered rather than wrong. Letters and numbers mean what is printed on
    the paper: each question's options are shuffled, seeded by its id, so the
    key is not "A" every time and the printout, the answer key and the paste-back
