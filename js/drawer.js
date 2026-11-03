@@ -129,8 +129,9 @@ export function openStudent(ctx, s) {
     wrap.appendChild(el('p', 'dr-note dr-warn',
       `This student answered ${answered} of ${total} questions. Blanks count as no evidence, so ${acted.length ? 'anything else they believe has not been tested' : 'this is not a clean result, just an empty one'}.`));
   } else if (!acted.length) {
-    wrap.appendChild(el('p', 'dr-note',
-      'This student’s wrong answers do not repeat and do not point anywhere in particular. That is a slip profile: they need practice and attention rather than a reteach.'));
+    wrap.appendChild(el('p', 'dr-note', score === answered
+      ? 'Everything this student answered was right.'
+      : 'This student’s wrong answers do not repeat and do not point anywhere in particular. That is a slip profile: they need practice and attention rather than a reteach.'));
   }
 
   // A misunderstanding with its questions left blank has not been ruled out, even

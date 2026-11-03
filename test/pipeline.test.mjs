@@ -9,7 +9,7 @@
  */
 
 import { BUILT_IN, addPack } from '../js/packs/index.js';
-import { validatePack, itemsProbing, misIds, MIN_PROBES } from '../js/pack.js';
+import { validatePack, itemsProbing, misIds, MIN_PROBES, correctIndex } from '../js/pack.js';
 import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
 import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from '../js/infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
@@ -314,6 +314,9 @@ for (const pack of BUILT_IN) {
   check('every slip says it is not a grade', slips.every(s => s.includes('not a grade')));
   check('a slip carries no percentages', !slips.some(s => /\d+%/.test(s)));
   check('a blank paper gets a slip about finishing it', slips[0].includes('left a lot of this blank'));
+  const allRight = { ...c, responses: c.responses.map(() => pack.items.map(correctIndex)) };
+  const rightSlips = slipsHtml(pack, allRight, inferMisconceptions(pack, allRight.responses), coverage(pack, allRight.responses));
+  check('a perfect paper is not told to slow down', rightSlips.includes('nothing to fix') && !rightSlips.includes('Your mistakes'));
   const heldBy = inf.posterior.findIndex((row, s) => s > 1 && row.some(p => p >= 0.5));
   const top = inf.misIds[inf.posterior[heldBy].indexOf(Math.max(...inf.posterior[heldBy]))];
   check('a slip names what the student most likely holds', slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));

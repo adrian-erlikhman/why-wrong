@@ -272,9 +272,13 @@ function renderSummary() {
   const blanks = thin
     ? ` ${thin.size} student${thin.size === 1 ? '' : 's'} left too much blank to diagnose.`
     : '';
-  $('#strip-note').textContent = (real.length
+  // With no groups, the note has to fit a class with no mistakes in it, or no answers.
+  const noGroups = !answered ? ''
+    : correct === answered ? 'Every answer was right, so there is nothing to reteach.'
+    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.';
+  $('#strip-note').textContent = ((real.length
     ? `Start with the biggest group. ${topName ? `The single most widespread problem is “${topName}”.` : ''}`
-    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.') + blanks;
+    : noGroups) + blanks).trim();
 }
 
 /* ======================================================================== */
@@ -410,7 +414,9 @@ function moveInMatrix(e) {
 
 function setMatrixNote(sorted) {
   const real = reteachGroups(state.groups).length;
-  $('#matrix-note').textContent = sorted
+  $('#matrix-note').textContent = !real
+    ? 'This class does not split into groups, so sorting it will not bring out a pattern.'
+    : sorted
     ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes are the questions where a whole group made the same mistake for the same reason.`
     : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
 }
@@ -563,15 +569,20 @@ function renderGroups() {
     return;
   }
 
-  sub.textContent =
-    `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
-    `${real.length} group${real.length === 1 ? '' : 's'} here` +
-    (secure ? `, plus ${secure.size} who need no reteach` : '') +
-    (thin ? `, and ${thin.size} with too few answers to say` : '') +
-    `. One lesson can serve a whole group, because they are wrong for the same reason.` +
-    (real.length && state.cl.silhouette < ROUGH_GROUPS
-      ? ' These groups overlap a lot, so treat them as a sketch and check the individual students.'
-      : '');
+  const others = [
+    secure && `${secure.size} who need${secure.size === 1 ? 's' : ''} no reteach`,
+    thin && `${thin.size} with too few answers to say`
+  ].filter(Boolean);
+
+  sub.textContent = !real.length
+    ? `No reteach groups in this class, just ${others.join(' and ')}.`
+    : `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
+      `${real.length} group${real.length === 1 ? '' : 's'} here` +
+      (others.length ? `, plus ${others.join(', and ')}` : '') +
+      `. One lesson can serve a whole group, because they are wrong for the same reason.` +
+      (state.cl.silhouette < ROUGH_GROUPS
+        ? ' These groups overlap a lot, so treat them as a sketch and check the individual students.'
+        : '');
   sub.appendChild(el('span', 'x-anchor', ' '));
   sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
@@ -606,8 +617,10 @@ function groupCard(g, idx) {
     top.appendChild(el('h3', null, 'No stable misunderstanding'));
     card.appendChild(top);
     const body = el('div', 'group-body');
-    body.appendChild(el('p', 'belief',
-      'These students make mistakes, but the mistakes do not repeat and do not point anywhere. That is carelessness rather than a misunderstanding: they need practice and attention, not a reteach.'));
+    const scores = totalScores(state.pack, state.cls.responses);
+    body.appendChild(el('p', 'belief', g.members.every(s => scores[s] === state.cov[s].answered)
+      ? 'Everything these students answered was right, so there is nothing to reteach.'
+      : 'Any mistakes these students made do not repeat and do not point anywhere. That is carelessness rather than a misunderstanding: they need practice and attention, not a reteach.'));
     body.appendChild(roster(g));
     card.appendChild(body);
     return card;

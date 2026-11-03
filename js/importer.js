@@ -23,6 +23,7 @@
 import { makeRng, shuffled } from './rng.js';
 import { PARAMS } from './infer.js';
 import { mathHtml } from './notation.js';
+import { correctIndex } from './pack.js';
 
 const LETTERS = 'ABCDEFGH';
 
@@ -238,6 +239,8 @@ ${tryThese ? `<p class="try">Try these:</p><ol>${tryThese}</ol>` : ''}`;
       }).join('');
     } else if (cov[s].thin) {
       body = `<p class="lead">You left a lot of this blank, so there is not enough here to go on yet. Talk to your teacher about finishing it.</p>`;
+    } else if (cls.responses[s].every((c, i) => c < 0 || c === correctIndex(pack.items[i]))) {
+      body = `<p class="lead">Everything you answered was right, so there is nothing to fix here. Good work.</p>`;
     } else {
       body = `<p class="lead">Your mistakes do not follow one pattern, which usually means slips rather than a misunderstanding. Slow down, check your work, and keep practising.</p>`;
     }
