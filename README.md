@@ -50,6 +50,18 @@ The loop closes in both directions, on paper.
 Nothing is uploaded. There is no account, no server, and the class data never
 leaves the tab.
 
+### Keeping a class
+
+A pasted class exists only in the tab, so **Save class** writes it to a file on
+your computer, and **Paste my class → Open a saved class** brings it back. The
+page warns before a reload would lose an unsaved class. Files were chosen over
+browser storage because school computers are shared and student names should not
+stay behind for the next person. A saved file holds names, so keep it where you
+would keep a gradebook.
+
+Each file carries a fingerprint of its test. If the test has changed since, the
+file is refused rather than read as different answers.
+
 ### A teacher's own test
 
 A test that already exists on paper can be used as it is. Write it as a pack
@@ -271,6 +283,7 @@ js/itemstats.js        item analysis + leave-one-out model agreement
 js/validate.js         recovery scoring against planted truth
 js/drawer.js           per-student evidence trail, per-question breakdown
 js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
+js/session.js          save and reopen a class as a local file
 js/explain.js          inline glossary written for teachers
 js/llm.js              optional reteach adaptation, plain-language API errors
 js/tour.js             first-visit intro and guided tour

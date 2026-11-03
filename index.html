@@ -147,6 +147,7 @@
             <label for="seed">Variant</label>
             <input id="seed" type="number" value="7" min="1" max="9999">
           </div>
+          <button id="save-class" class="btn btn-quiet import-only" type="button">Save class</button>
         </div>
 
         <div class="tool-group tool-end">
@@ -477,6 +478,8 @@
     <div class="import-tools">
       <button id="dl-template" class="btn btn-tiny">Download blank sheet</button>
       <button id="paste-demo" class="btn btn-tiny">Fill with an example</button>
+      <button id="class-open" class="btn btn-tiny">Open a saved class…</button>
+      <input id="class-file" type="file" accept=".json,application/json" hidden>
     </div>
 
     <textarea id="import-text" spellcheck="false" placeholder="Student,Q01,Q02,Q03&#10;Ada L.,A,C,B&#10;Ben O.,A,,D"></textarea>

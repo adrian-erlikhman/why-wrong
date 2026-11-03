@@ -23,6 +23,15 @@ export function getPack(id) {
   return registry.get(id) || BUILT_IN[0];
 }
 
+/** Exact lookup, for callers that must not fall back to the default pack. */
+export function findPack(id) {
+  return registry.get(id);
+}
+
+export function isBuiltIn(pack) {
+  return BUILT_IN.some(p => p.id === pack.id);
+}
+
 export function addPack(pack) {
   // A pack built from a teacher's own test keeps her option order on every
   // item, or her "A" and ours would differ and every diagnosis would be wrong.

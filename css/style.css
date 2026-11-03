@@ -427,6 +427,8 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .strip-note { margin-top: 16px; font-size: 16.5px; color: var(--ink-2); }
 
 body.has-import .sample-only { display: none; }
+.import-only { display: none; }
+body.has-import .import-only { display: inline-flex; }
 
 /* --------------------------------- tabs -------------------------------- */
 
@@ -1131,7 +1133,7 @@ body.has-import .sample-only { display: none; }
 .modal-err { color: var(--bad); font-size: 15px; min-height: 20px; margin-bottom: 6px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 
-.import-tools { display: flex; gap: 8px; margin-bottom: 12px; }
+.import-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 
 #import-text {
   width: 100%;

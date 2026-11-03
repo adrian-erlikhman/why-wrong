@@ -16,6 +16,7 @@ import { clusterStudents, describeClusters, separateThin, reteachGroups } from '
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
 import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml } from '../js/importer.js';
+import { classFile, readClassFile, fingerprint } from '../js/session.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -230,6 +231,46 @@ for (const pack of BUILT_IN) {
 
   const none = separateThin(raw, coverage(pack, c.responses.map(r => r.map(() => 0))));
   check('with no blanks the groups come back unchanged', none === raw);
+}
+
+// -------------------------------------------------------------- saved class
+// A saved class has to come back exactly, and a file that no longer lines up
+// with its test has to be refused rather than misread.
+{
+  console.log(`\n${'='.repeat(66)}\nSaved class\n${'='.repeat(66)}`);
+  const pack = BUILT_IN[0];
+  const find = id => BUILT_IN.find(p => p.id === id);
+  const c = generateClass(pack, { seed: 11, size: 28 });
+  c.responses[3][4] = -1;
+
+  const text = classFile({ pack, students: c.students, responses: c.responses, builtIn: true });
+  const back = readClassFile(text, find);
+  check('a saved class reads back exactly', back.ok &&
+    JSON.stringify(back.responses) === JSON.stringify(c.responses) &&
+    back.students.every((s, i) => s.name === c.students[i].name));
+  check('a blank survives the round trip', back.responses[3][4] === -1);
+  check('a built-in test is stored by id, not copied', JSON.parse(text).pack === null);
+
+  const own = structuredClone(BUILT_IN[1]);
+  own.id = 'her-test';
+  const ownClass = generateClass(own, { seed: 2, size: 14 });
+  const ownBack = readClassFile(classFile({ pack: own, students: ownClass.students, responses: ownClass.responses }), () => undefined);
+  check('a test from this tab travels inside the file', ownBack.ok && ownBack.embedded && ownBack.pack.id === 'her-test');
+
+  const edit = fn => { const f = JSON.parse(text); fn(f); return JSON.stringify(f); };
+  check('other JSON is refused', !readClassFile('{"hello":1}', find).ok);
+  check('text that is not JSON is refused', !readClassFile('Student,Q01', find).ok);
+  check('a missing test is refused', !readClassFile(text, () => undefined).ok);
+  check('an answer past the last option is refused',
+    !readClassFile(edit(f => { f.responses[0][0] = 99; }), find).ok);
+  check('a short row is refused', !readClassFile(edit(f => { f.responses[0].pop(); }), find).ok);
+  check('a nameless student is refused', !readClassFile(edit(f => { f.students[0].name = ' '; }), find).ok);
+
+  const changed = structuredClone(pack);
+  changed.items[0].opts.reverse();
+  check('reordering a test changes its fingerprint', fingerprint(changed) !== fingerprint(pack));
+  check('a class saved on an older version of a test is refused',
+    !readClassFile(text, id => (id === pack.id ? changed : undefined)).ok);
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);

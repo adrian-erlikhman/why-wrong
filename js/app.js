@@ -10,7 +10,7 @@
  * Nothing here knows what subject is loaded.
  */
 
-import { allPacks, getPack, addPack, defaultPack } from './packs/index.js';
+import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, coverage, PARAMS } from './infer.js';
@@ -22,6 +22,7 @@ import { generatePack } from './generate.js';
 import { infoButton, wireExplainers } from './explain.js';
 import { openStudent, openQuestion, closeDrawer } from './drawer.js';
 import { initTour } from './tour.js';
+import { classFile, readClassFile } from './session.js';
 import { mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, download, openPrintable,
@@ -55,6 +56,7 @@ const state = {
   pack: null, cls: null, inf: null, cl: null, groups: null, stats: null, cov: null,
   sorted: false, rows: [], apiKey: null,
   imported: null,     // { students, responses } when the class is the teacher's own
+  unsaved: false,     // the imported class exists only in this tab
   filterMis: null,    // highlight one misconception across the matrix
   itemFilter: 'problem'
 };
@@ -799,6 +801,14 @@ function renderMethod() {
 /*  Packs                                                                   */
 /* ======================================================================== */
 
+/** Back to the sample class. */
+function dropClass() {
+  state.imported = null;
+  state.unsaved = false;
+  $('#source').value = 'sample';
+  document.body.classList.remove('has-import');
+}
+
 function renderPackOptions(selectedId) {
   const sel = $('#pack');
   sel.innerHTML = '';
@@ -820,9 +830,7 @@ function switchPack(id) {
     const keep = window.confirm(
       `Your imported class was entered against “${state.pack.name}”. Switching subject will drop it and return to the sample class. Continue?`);
     if (!keep) { renderPackOptions(state.pack.id); return; }
-    state.imported = null;
-    $('#source').value = 'sample';
-    document.body.classList.remove('has-import');
+    dropClass();
   }
   state.pack = next;
   renderPackOptions(state.pack.id);
@@ -873,9 +881,7 @@ async function openPackFile(file) {
   pack.name = pack.name || file.name;
   pack.source = 'file';
   addPack(pack);
-  state.imported = null;
-  $('#source').value = 'sample';
-  document.body.classList.remove('has-import');
+  dropClass();
   closeM('#modal');
   state.pack = pack;
   renderPackOptions(pack.id);
@@ -916,9 +922,7 @@ async function doGenerate() {
     progressStep(`Ready — ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions, ${attempts} pass${attempts === 1 ? '' : 'es'}.`, 'done');
 
     addPack(pack);
-    state.imported = null;
-    $('#source').value = 'sample';
-    document.body.classList.remove('has-import');
+    dropClass();
     setTimeout(() => { closeM('#modal'); state.pack = pack; renderPackOptions(pack.id); run(); }, 700);
   } catch (e) {
     err.textContent = e.message;
@@ -958,11 +962,49 @@ function doImport() {
   const res = parseResponses(state.pack, $('#import-text').value);
   if (!reportImport(res)) return;
 
-  state.imported = { students: res.students, responses: res.responses };
+  useClass(res);
+  closeM('#import');
+  showView('groups');
+}
+
+/** Make a class the one on screen. Typed answers exist only here until saved. */
+function useClass({ students, responses }, { saved = false } = {}) {
+  state.imported = { students, responses };
+  state.unsaved = !saved;
   document.body.classList.add('has-import');
   $('#source').value = 'import';
-  closeM('#import');
   run();
+}
+
+/* ---- save and reopen a class ---- */
+
+function saveClass() {
+  const { pack, imported } = state;
+  const day = new Date().toISOString().slice(0, 10);
+  download(`${pack.id}-class-${day}.json`,
+    classFile({ pack, ...imported, builtIn: isBuiltIn(pack) }), 'application/json');
+  state.unsaved = false;
+  flashSaved();
+}
+
+function flashSaved() {
+  const b = $('#save-class');
+  b.textContent = 'Saved to your computer';
+  setTimeout(() => { b.textContent = 'Save class'; }, 2600);
+}
+
+async function openClassFile(file) {
+  const res = readClassFile(await file.text(), findPack);
+  if (!res.ok) {
+    reportImport({ ok: false, errors: res.errors, warnings: [], responses: [] });
+    return;
+  }
+  // A test that lived only in the tab it was saved from comes back with its class.
+  if (res.embedded) addPack(res.pack);
+  state.pack = res.pack;
+  renderPackOptions(res.pack.id);
+  useClass(res, { saved: true });
+  closeM('#import');
   showView('groups');
 }
 
@@ -1104,8 +1146,11 @@ $('#mats-close').addEventListener('click', () => closeM('#mats'));
 $('#source').addEventListener('change', e => {
   if (e.target.value === 'import') { openImport(); e.target.value = state.imported ? 'import' : 'sample'; }
   else if (state.imported) {
-    state.imported = null;
-    document.body.classList.remove('has-import');
+    if (state.unsaved && !window.confirm('This class has not been saved. Switch back to the sample class and lose it?')) {
+      e.target.value = 'import';
+      return;
+    }
+    dropClass();
     run();
   }
 });
@@ -1125,6 +1170,18 @@ $('#import-cancel').addEventListener('click', () => closeM('#import'));
 $('#import-go').addEventListener('click', doImport);
 $('#dl-template').addEventListener('click', () => download(`${state.pack.id}-answer-sheet.csv`, templateCsv(state.pack)));
 $('#paste-demo').addEventListener('click', demoPaste);
+$('#class-open').addEventListener('click', () => $('#class-file').click());
+$('#class-file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) openClassFile(f);
+});
+$('#save-class').addEventListener('click', saveClass);
+
+// Thirty typed answer sheets are not worth losing to a stray reload.
+window.addEventListener('beforeunload', e => {
+  if (state.imported && state.unsaved) { e.preventDefault(); e.returnValue = ''; }
+});
 
 $('#print-plan').addEventListener('click', printPlan);
 $('#export-plan').addEventListener('click', exportPlan);
