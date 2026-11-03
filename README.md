@@ -278,7 +278,9 @@ but the teacher should still review the question and its response patterns.
 For questions without mapped distractors, comparisons with random guessing use
 exact binomial probabilities rather than a normal approximation. Results that
 are unusually below chance are called out separately from results that are
-simply inconclusive.
+simply inconclusive. Discrimination is left unavailable when too few students
+answered or their scores on the other questions do not vary enough to calculate
+a meaningful correlation.
 
 Similarly, Cronbach's alpha may be low here. Alpha assumes a single underlying
 trait, while this instrument targets several distinct misconceptions. A low

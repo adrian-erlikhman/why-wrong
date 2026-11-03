@@ -65,7 +65,8 @@ const ROUGH_GROUPS = 0.2;
 
 const VERDICTS = {
   strong: 'Working well', ok: 'Acceptable', diagnostic: 'Diagnosing, not ranking',
-  minor: 'Minor issue', weak: 'Worth reviewing', broken: 'Unexpected pattern'
+  minor: 'Minor issue', weak: 'Worth reviewing', broken: 'Unexpected pattern',
+  insufficient: 'Too little evidence'
 };
 
 let colourOf = Object.create(null);

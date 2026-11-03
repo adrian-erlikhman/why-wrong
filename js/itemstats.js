@@ -25,6 +25,8 @@ import { posteriorWithout, PARAMS, MIN_PROBES_ANSWERED } from './infer.js';
 const isAnswered = c => c != null && c >= 0;
 
 function pearson(x, y) {
+  if (x.length < 3) return null;
+
   const n = x.length;
   const mx = x.reduce((a, b) => a + b, 0) / n;
   const my = y.reduce((a, b) => a + b, 0) / n;
@@ -34,7 +36,7 @@ function pearson(x, y) {
     num += a * b; dx += a * a; dy += b * b;
   }
   const den = Math.sqrt(dx * dy);
-  return den === 0 ? 0 : num / den;
+  return den === 0 ? null : num / den;
 }
 
 function binomialUpperTail(successes, trials, probability) {
@@ -178,13 +180,16 @@ export function analyseItems(pack, responses, inference = null) {
       ? binomialUpperTail(answered - correct, answered, 1 - chance)
       : null;
     const belowChance = chanceLowerTail !== null && chanceLowerTail <= 0.05;
+    if (r === null) {
+      flags.push({ kind: 'insufficient-discrimination-data', text: 'Too few students or too little score variation on the other questions to estimate discrimination.' });
+    }
     if (belowChance) {
       flags.push({ kind: 'below-chance', text: `Only ${Math.round(p * 100)}% answered correctly, unusually low for guessing among ${item.opts.length} choices. Check the answer key and wording.` });
-    } else if (answered > 0 && p <= chance + 0.06 && r < 0.15) {
+    } else if (answered > 0 && r !== null && p <= chance + 0.06 && r < 0.15) {
       flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% answered correctly, compared with ${Math.round(chance * 100)}% expected from guessing. Scores on the other questions were not strongly related to this answer.` });
     }
-    if (r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Students with higher scores on the other questions were less likely to answer this one correctly (discrimination ${r.toFixed(2)}).` });
-    else if (r < weakBar) flags.push({ kind: 'no-discrimination', text: `Scores on the other questions were not strongly related to this answer (discrimination ${r.toFixed(2)}).` });
+    if (r !== null && r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Students with higher scores on the other questions were less likely to answer this one correctly (discrimination ${r.toFixed(2)}).` });
+    else if (r !== null && r < weakBar) flags.push({ kind: 'no-discrimination', text: `Scores on the other questions were not strongly related to this answer (discrimination ${r.toFixed(2)}).` });
 
     // An item whose wrong answers are mapped to nothing, and on which the class
     // is performing at chance, produces neither a ranking nor a diagnosis. That
@@ -194,9 +199,9 @@ export function analyseItems(pack, responses, inference = null) {
     // Check both exact binomial tails: neither a high nor a low result should be
     // described as chance-like when it is unlikely under random guessing.
     const indistinguishableFromGuessing = chanceUpperTail !== null &&
-      chanceUpperTail > 0.05 && chanceLowerTail > 0.05;
+      chanceLowerTail > 0.05 && chanceUpperTail > 0.05;
 
-    if (answered > 0 && diagnosticShare === 0 && indistinguishableFromGuessing && r < 0.30) {
+    if (answered > 0 && diagnosticShare === 0 && indistinguishableFromGuessing && r !== null && r < 0.30) {
       flags.push({ kind: 'uninformative', text: `None of this question's wrong answers are linked to a known misunderstanding, and ${Math.round(p * 100)}% correct is close to the ${Math.round(chance * 100)}% expected from guessing. Review the item and its answer choices.` });
     }
 
@@ -217,7 +222,7 @@ export function analyseItems(pack, responses, inference = null) {
     // considered before the correlation verdict. These signals can help
     // prioritize review, but cannot establish that an item is valid or broken.
     const concentrated = modelAgreement !== null && modelAgreement >= 0.6;
-    const lowDiscrim = r < weakBar;
+    const lowDiscrim = r !== null && r < weakBar;
 
     // Severity also matters. A rarely chosen distractor may be a minor issue;
     // report it separately from patterns that warrant a closer review.
@@ -225,6 +230,7 @@ export function analyseItems(pack, responses, inference = null) {
 
     let quality;
     if (p >= 0.93) quality = 'weak';                       // little variation in this class
+    else if (r === null) quality = 'insufficient';
     else if (concentrated && lowDiscrim) quality = 'diagnostic';
     else if (r < backwardBar) quality = 'broken';
     else if (serious.length) quality = 'weak';
@@ -264,6 +270,7 @@ export function analyseItems(pack, responses, inference = null) {
  * not defects.
  */
 const FLAG_SEVERITY = {
+  'insufficient-discrimination-data': 2,
   'no-information': 3,      // offers little variation in this class
   'uninformative': 3,       // no ranking and no diagnosis
   'below-chance': 3,        // substantially worse than random guessing
@@ -281,8 +288,14 @@ export function severityOf(item) {
 
 export function problemItems(stats) {
   return stats
-    .filter(s => s.flags.length && (s.quality === 'broken' || s.quality === 'weak'))
-    .sort((a, b) => (severityOf(b) - severityOf(a)) || (a.discrimination - b.discrimination));
+    .filter(s => s.flags.length && ['broken', 'weak', 'insufficient'].includes(s.quality))
+    .sort((a, b) => {
+      const bySeverity = severityOf(b) - severityOf(a);
+      if (bySeverity) return bySeverity;
+      if (a.discrimination === null) return b.discrimination === null ? 0 : 1;
+      if (b.discrimination === null) return -1;
+      return a.discrimination - b.discrimination;
+    });
 }
 
 /** Items that look weak on the usual statistics but are actually diagnostic. */

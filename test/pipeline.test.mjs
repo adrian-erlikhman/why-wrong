@@ -259,7 +259,7 @@ for (const pack of BUILT_IN) {
   const stats = analyseItems(pack, cls.responses, inf);
   const bad = problemItems(stats);
   const diag = diagnosticItems(stats);
-  console.log(`  flagged ${bad.length}: ${bad.slice(0, 6).map(b => `${b.id}(r=${b.discrimination.toFixed(2)},p=${b.difficulty.toFixed(2)})`).join(' ')}`);
+  console.log(`  flagged ${bad.length}: ${bad.slice(0, 6).map(b => `${b.id}(r=${b.discrimination?.toFixed(2) ?? '—'},p=${b.difficulty.toFixed(2)})`).join(' ')}`);
   console.log(`  defended as diagnostic: ${diag.length}`);
   console.log(`  Cronbach alpha ${cronbachAlpha(pack, cls.responses).toFixed(3)}`);
 
@@ -510,25 +510,40 @@ for (const pack of BUILT_IN) {
 
   const chancePack = {
     misconceptions: [],
-    items: [{ id: 'Chance', stem: 'Chance check', opts: [
-      { t: 'Correct', c: true }, { t: 'Distractor 1' }, { t: 'Distractor 2' }
-    ] }]
+    items: [
+      { id: 'Chance', stem: 'Chance check', opts: [
+        { t: 'Correct', c: true }, { t: 'Distractor 1' }, { t: 'Distractor 2' }
+      ] },
+      ...[1, 2].map(n => ({
+        id: `Rest${n}`, stem: `Rest question ${n}`,
+        opts: [{ t: 'Correct', c: true }, { t: 'Other' }]
+      }))
+    ]
   };
-  const sixOfTen = analyseItems(chancePack,
-    [[0], [0], [0], [0], [0], [0], [1], [1], [2], [2]])[0];
-  const sevenOfTen = analyseItems(chancePack,
-    [[0], [0], [0], [0], [0], [0], [0], [1], [2], [2]])[0];
-  const zeroOfTen = analyseItems(chancePack, Array(10).fill([1]))[0];
-  const allBlank = analyseItems(chancePack, Array(10).fill([-1]))[0];
+  const withRestResponses = primary => primary.map((choice, i) => [
+    choice,
+    [1, 1, 1, 0, 0, 0, 1, 1, 0, 0][i],
+    [1, 1, 0, 1, 0, 1, 0, 0, 1, 1][i]
+  ]);
+  const sixOfTen = analyseItems(chancePack, withRestResponses([0, 0, 0, 0, 0, 0, 1, 1, 2, 2]))[0];
+  const sevenOfTen = analyseItems(chancePack, withRestResponses([0, 0, 0, 0, 0, 0, 0, 1, 2, 2]))[0];
+  const zeroOfTen = analyseItems(chancePack, withRestResponses(Array(10).fill(1)))[0];
+  const allBlank = analyseItems(chancePack, Array(10).fill([-1, -1, -1]))[0];
   check('small-class chance flags use exact binomial evidence',
     sixOfTen.flags.some(f => f.kind === 'uninformative') &&
-    !sevenOfTen.flags.some(f => f.kind === 'uninformative'));
+    !sevenOfTen.flags.some(f => f.kind === 'uninformative') &&
+    sixOfTen.discrimination !== null && sevenOfTen.discrimination !== null);
   check('unexpectedly low scores are not described as close to chance',
     zeroOfTen.flags.some(f => f.kind === 'below-chance') &&
     !zeroOfTen.flags.some(f => f.kind === 'uninformative' || f.kind === 'at-chance'));
   check('an unanswered item is not treated as a chance-level result',
     allBlank.flags.some(f => f.kind === 'skipped') &&
     !allBlank.flags.some(f => f.kind === 'uninformative' || f.kind === 'at-chance'));
+  const oneItemPack = { ...chancePack, items: chancePack.items.slice(0, 1) };
+  const unestimable = analyseItems(oneItemPack, [[0], [0], [0], [0], [0], [1], [1], [1], [1], [1]])[0];
+  check('discrimination is unavailable without an independent score variation',
+    unestimable.discrimination === null && unestimable.quality === 'insufficient' &&
+    unestimable.flags.some(f => f.kind === 'insufficient-discrimination-data'));
 }
 
 // -------------------------------------------------------------- row order

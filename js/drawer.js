@@ -236,7 +236,8 @@ export function openQuestion(ctx, i) {
     diagnostic: ['Specific pattern', 'This question has a weak relationship with overall scores, while answers to other questions tend to support the same pattern.'],
     minor: ['Minor issue', 'One option was rarely chosen and may not be adding much information.'],
     weak: ['Worth reviewing', 'Responses suggest this question may need revision.'],
-    broken: ['Unexpected pattern', 'Students with higher scores on the rest of the paper were less likely to answer this correctly. Review the wording, options, and answer key.']
+    broken: ['Unexpected pattern', 'Students with higher scores on the rest of the paper were less likely to answer this correctly. Review the wording, options, and answer key.'],
+    insufficient: ['Too little evidence', 'There is not enough response or score variation to estimate how this question relates to performance on the rest of the paper.']
   }[st.quality] || ['—', ''];
 
   const v = el('div', `dr-verdict v-${st.quality}`);
@@ -247,7 +248,7 @@ export function openQuestion(ctx, i) {
   const facts = el('div', 'dr-facts');
   const d1 = fact(st.difficulty.toFixed(2), 'difficulty');
   d1.querySelector('.dr-fact-k').appendChild(infoButton('difficulty'));
-  const d2 = fact(st.discrimination.toFixed(2), 'discrimination');
+  const d2 = fact(st.discrimination === null ? '—' : st.discrimination.toFixed(2), 'discrimination');
   d2.querySelector('.dr-fact-k').appendChild(infoButton('discrimination'));
   facts.appendChild(d1);
   facts.appendChild(d2);
