@@ -36,7 +36,7 @@ function ensureHost() {
   if (host) return host;
   host = el('div', 'drawer');
   host.hidden = true;
-  host.innerHTML = '<div class="drawer-scrim"></div><aside class="drawer-panel" role="dialog" aria-modal="true"></aside>';
+  host.innerHTML = '<div class="drawer-scrim"></div><div class="drawer-panel" role="dialog" aria-modal="true"></div>';
   document.body.appendChild(host);
   host.querySelector('.drawer-scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => {
@@ -56,11 +56,12 @@ export function closeDrawer() {
   if (onCloseCb) { const cb = onCloseCb; onCloseCb = null; cb(); }
 }
 
-function openWith(node, onClose) {
+function openWith(node, onClose, label) {
   ensureHost();
   openedFrom = document.activeElement;
   onCloseCb = onClose || null;
   const panel = host.querySelector('.drawer-panel');
+  panel.setAttribute('aria-label', label);
   panel.innerHTML = '';
 
   const bar = el('div', 'drawer-bar');
@@ -162,7 +163,7 @@ export function openStudent(ctx, s) {
     }
   }
 
-  openWith(wrap, ctx.onClose);
+  openWith(wrap, ctx.onClose, `Student: ${student.name}`);
 }
 
 function fact(v, k) {
@@ -321,5 +322,5 @@ export function openQuestion(ctx, i) {
     wrap.appendChild(row);
   });
 
-  openWith(wrap, ctx.onClose);
+  openWith(wrap, ctx.onClose, `Question ${item.id}`);
 }

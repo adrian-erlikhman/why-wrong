@@ -111,7 +111,7 @@ export function quizHtml(pack, { withKey = false } = {}) {
     return `<li class="q"><div class="stem"><span class="qn">${n + 1}.</span> ${escapeHtml(it.stem)}</div><ul class="opts">${opts}</ul></li>`;
   }).join('');
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
@@ -130,10 +130,12 @@ export function quizHtml(pack, { withKey = false } = {}) {
   button{font:inherit;padding:6px 13px;cursor:pointer}
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
+<main>
 <h1>${escapeHtml(pack.name)}${withKey ? ' — answer key' : ''}</h1>
 <div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 ${withKey ? '' : '<div class="name">Name: ______________________________  Class: ____________  Date: ____________</div>'}
 <ol class="qs">${items}</ol>
+</main>
 </body></html>`;
 }
 
@@ -161,7 +163,7 @@ export function reviewHtml(pack) {
     return `<li class="q"><div class="stem"><span class="qn">${n + 1}.</span> ${escapeHtml(it.stem)}</div><ul class="opts">${opts}</ul></li>`;
   }).join('');
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>${escapeHtml(pack.name)} — labels to check</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
@@ -190,6 +192,7 @@ export function reviewHtml(pack) {
   button{font:inherit;padding:6px 13px;cursor:pointer}
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
+<main>
 <h1>${escapeHtml(pack.name)} — labels to check</h1>
 <div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misunderstandings`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 
@@ -202,6 +205,7 @@ export function reviewHtml(pack) {
 <h2 class="brk">2 · The labels</h2>
 <p>Each wrong answer is labelled with the misunderstanding that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
 <ol class="qs">${items}</ol>
+</main>
 </body></html>`;
 }
 
@@ -243,10 +247,11 @@ ${body}
 </article>`;
   }).join('');
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <title>${escapeHtml(pack.name)} — student slips</title>
 <style>
   body{font:14px/1.5 Georgia,'Times New Roman',serif;max-width:44em;margin:36px auto;padding:0 24px;color:#111}
+  h1{font-size:20px;margin:0 0 16px}
   .slip{border:1px dashed #888;padding:16px 20px;margin-bottom:20px;page-break-inside:avoid;break-inside:avoid}
   h2{font-size:18px;margin:0}
   h3{font-size:15px;margin:12px 0 2px}
@@ -261,7 +266,10 @@ ${body}
   button{font:inherit;padding:6px 13px;cursor:pointer}
 </style></head><body>
 <div class="noprint"><button onclick="window.print()">Print</button></div>
+<main>
+<h1 class="noprint">${escapeHtml(pack.name)} — student slips</h1>
 ${slips}
+</main>
 </body></html>`;
 }
 
