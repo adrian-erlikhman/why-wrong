@@ -15,7 +15,7 @@ export default {
   name: 'Evolution & Inheritance',
   subject: 'Biology',
   level: 'Grade 9-11',
-  blurb: 'Natural selection, fitness, variation and Mendelian inheritance — the corner of biology where intuitive but wrong causal stories are most durable.',
+  blurb: 'Natural selection, fitness, variation and Mendelian inheritance: the corner of biology where intuitive but wrong causal stories are most durable.',
   source: 'built-in',
 
   misconceptions: [
@@ -25,7 +25,7 @@ export default {
       short: 'Organisms adapt, populations do not',
       belief: 'Treats evolution as something that happens to an organism while it lives, rather than to allele frequencies in a population across generations.',
       student: 'You may be thinking an animal changes during its life to adapt. Evolution is a change in a population over generations, not in one animal.',
-      reteach: 'The unit of selection is the population, and the timescale is generations. Take a single beetle and ask what changed about *it* over its life: nothing. Then show the same population across five generations with the proportion of dark beetles rising. Students need to see that no individual changed colour for the idea to land — the population changed composition because different individuals left different numbers of offspring.',
+      reteach: 'The unit of selection is the population, and the timescale is generations. Take a single beetle and ask what changed about *it* over its life: nothing. Then show the same population across five generations with the proportion of dark beetles rising. Students need to see that no individual changed colour for the idea to land. The population changed composition because different individuals left different numbers of offspring.',
       verify: [
         'A moth population becomes darker over 50 years. Did any individual moth get darker? Explain.',
         'What exactly is different between generation 1 and generation 50?',
@@ -36,7 +36,7 @@ export default {
       id: 'B02',
       name: 'Evolution is goal-directed',
       short: 'Species change because they need to',
-      belief: 'Explains adaptation by need or purpose — the species developed the trait in order to survive — rather than by differential survival of variation that already existed.',
+      belief: 'Explains adaptation by need or purpose (the species developed the trait in order to survive) rather than by differential survival of variation that already existed.',
       student: 'You may be thinking species develop a trait because they need it. Traits that already vary in a population get passed on more when they help survival.',
       reteach: 'Teleology is the hardest one to shift because the language of the textbook encourages it. Ban the words "in order to" and "needed to" for a lesson and require every explanation to name (1) the variation that already existed, (2) which variants left more offspring, and (3) why. The constraint does the teaching; students discover the causal story is available without purpose.',
       verify: [
@@ -51,7 +51,7 @@ export default {
       short: 'All mutation is damage',
       belief: 'Treats mutation as uniformly deleterious, which makes the origin of beneficial variation inexplicable and quietly forces a teleological account of adaptation.',
       student: 'You may be thinking mutations are always harmful. Many do nothing and some help, which is where useful new traits come from.',
-      reteach: 'This misconception props up B02, so treat them together. Most mutations are neutral, a minority are harmful, a small minority are beneficial — and "beneficial" is relative to an environment, not absolute. The sickle-cell allele is the standard case precisely because it is harmful and protective in the same body depending on the malaria context.',
+      reteach: 'This misconception props up B02, so treat them together. Most mutations are neutral, a minority are harmful, a small minority are beneficial, and "beneficial" is relative to an environment, not absolute. The sickle-cell allele is the standard case precisely because it is harmful and protective in the same body depending on the malaria context.',
       verify: [
         'Classify: a mutation in non-coding DNA. Harmful, neutral, or beneficial?',
         'Is the sickle-cell allele harmful? State the environment in your answer.',
@@ -64,7 +64,7 @@ export default {
       short: 'Survival of the strongest',
       belief: 'Reads "fittest" as strongest, fastest or biggest rather than as reproductive success in a particular environment.',
       student: 'You may be reading "fittest" as strongest or fastest. In evolution, fitness means leaving more offspring in a particular environment.',
-      reteach: 'Fitness is a count of surviving offspring and nothing else. Give three organisms — a large male that fathers none, a small one that fathers eight, a fast one eaten before breeding — and have students rank fitness. The ranking inverts the intuitive one, which is the point. "Survival of the fittest" is a circular phrase students should learn to distrust.',
+      reteach: 'Fitness is a count of surviving offspring and nothing else. Give three organisms (a large male that fathers none, a small one that fathers eight, a fast one eaten before breeding) and have students rank fitness. The ranking inverts the intuitive one, which is the point. "Survival of the fittest" is a circular phrase students should learn to distrust.',
       verify: [
         'Rank by fitness: an organism with 0 offspring, 3 offspring, 9 offspring.',
         'Can a physically weaker organism have higher fitness? Give an example.',
@@ -77,7 +77,7 @@ export default {
       short: 'We came from chimps',
       belief: 'Reads a phylogeny as a ladder from living species to living species rather than as branching from shared ancestors.',
       student: 'You may be thinking humans came from the chimpanzees alive today. Humans and chimpanzees share an ancestor, and both lines branched from it.',
-      reteach: 'A tree diagram read left-to-right invites this error. Draw the branch point explicitly and label the common ancestor as a third, extinct species. Ask which living species is "more evolved" — the answer, that the question is malformed because both lineages have been evolving for exactly the same time, is the concept.',
+      reteach: 'A tree diagram read left-to-right invites this error. Draw the branch point explicitly and label the common ancestor as a third, extinct species. Ask which living species is "more evolved". The answer, that the question is malformed because both lineages have been evolving for exactly the same time, is the concept.',
       verify: [
         'On a tree, where are humans and chimpanzees relative to their common ancestor?',
         'How long has the chimpanzee lineage been evolving compared with the human lineage?',
@@ -90,7 +90,7 @@ export default {
       short: 'Dominant means frequent',
       belief: 'Confuses dominance, which is about how an allele is expressed in a heterozygote, with frequency, which is about how common it is in a population.',
       student: 'You may be thinking dominant traits are the most common. Dominant only describes how an allele shows up, not how often it appears.',
-      reteach: 'Two independent ideas share one word. Polydactyly is dominant and rare; blue eyes are recessive and common in some populations. Give the frequencies first and ask students to predict dominance, then reveal it — the failure of prediction is the lesson. Insist on the definition: dominant describes what happens in a heterozygote, nothing more.',
+      reteach: 'Two independent ideas share one word. Polydactyly is dominant and rare; blue eyes are recessive and common in some populations. Give the frequencies first and ask students to predict dominance, then reveal it. The failure of prediction is the lesson. Insist on the definition: dominant describes what happens in a heterozygote, nothing more.',
       verify: [
         'Polydactyly is dominant and affects about 1 in 1000. Explain how both can be true.',
         'Define dominance without referring to how common an allele is.',
@@ -103,7 +103,7 @@ export default {
       short: 'Aa gives an in-between trait',
       belief: 'Applies blending inheritance to a Mendelian trait, so a heterozygote is expected to show an intermediate form rather than the dominant one.',
       student: 'You may be expecting offspring to show a blend of two forms. With a dominant allele, someone with one copy of each shows the dominant form.',
-      reteach: 'Blending was the pre-Mendelian model and it is intuitive, so it returns whenever attention lapses. Run a monohybrid cross on the board and have students predict the heterozygote phenotype before the reveal. Then distinguish the genuine exceptions — incomplete dominance in snapdragons, codominance in AB blood — so students learn these are named special cases, not the default.',
+      reteach: 'Blending was the pre-Mendelian model and it is intuitive, so it returns whenever attention lapses. Run a monohybrid cross on the board and have students predict the heterozygote phenotype before the reveal. Then distinguish the real exceptions (incomplete dominance in snapdragons, codominance in AB blood) so students learn these are named special cases, not the default.',
       verify: [
         'A cross of RR x rr gives Rr. What phenotype do the offspring show?',
         'How does incomplete dominance differ from complete dominance?',
@@ -135,10 +135,10 @@ export default {
       ] },
     { id: 'B-Q02', topic: 'Natural selection', stem: 'Over 50 years a moth population shifts from pale to dark. Did any individual moth change colour?',
       opts: [
-        { t: 'No — the proportion of dark moths changed', c: true },
-        { t: 'Yes — each moth darkened to match the trees', mis: 'B01' },
-        { t: 'Yes — moths adapted their colour within their lifetime', mis: 'B01' },
-        { t: 'No — the trees changed instead', mis: null }
+        { t: 'No, the proportion of dark moths changed', c: true },
+        { t: 'Yes, each moth darkened to match the trees', mis: 'B01' },
+        { t: 'Yes, moths adapted their colour within their lifetime', mis: 'B01' },
+        { t: 'No, the trees changed instead', mis: null }
       ] },
     { id: 'B-Q03', topic: 'Natural selection', stem: 'Which statement describes evolution most accurately?',
       opts: [
@@ -170,16 +170,16 @@ export default {
       ] },
     { id: 'B-Q07', topic: 'Mutation', stem: 'Is the sickle-cell allele harmful?',
       opts: [
-        { t: 'It depends on the environment — it protects against malaria', c: true },
+        { t: 'It depends on the environment: it protects against malaria', c: true },
         { t: 'Yes, all mutations are harmful by definition', mis: 'B03' },
         { t: 'No, mutations are how species get what they need', mis: 'B02' },
         { t: 'Yes, because it is recessive', mis: 'B06' }
       ] },
     { id: 'B-Q08', topic: 'Mutation', stem: 'A mutation occurs in a non-coding stretch of DNA. Most likely it is:',
       opts: [
-        { t: 'Neutral — no effect on the organism', c: true },
-        { t: 'Harmful — mutations damage the organism', mis: 'B03' },
-        { t: 'Beneficial — the cell mutated where it was useful', mis: 'B08' },
+        { t: 'Neutral: no effect on the organism', c: true },
+        { t: 'Harmful: mutations damage the organism', mis: 'B03' },
+        { t: 'Beneficial: the cell mutated where it was useful', mis: 'B08' },
         { t: 'Fatal', mis: 'B03' }
       ] },
     { id: 'B-Q09', topic: 'Fitness', stem: 'Which organism has the highest evolutionary fitness?',
@@ -199,7 +199,7 @@ export default {
     { id: 'B-Q11', topic: 'Fitness', stem: 'A physically weak organism produces far more surviving offspring than a strong one. Which has greater fitness?',
       opts: [
         { t: 'The weak one', c: true },
-        { t: 'The strong one — fitness means strength', mis: 'B04' },
+        { t: 'The strong one: fitness means strength', mis: 'B04' },
         { t: 'They are equal', mis: null },
         { t: 'Neither, fitness applies only to species', mis: 'B01' }
       ] },
@@ -227,14 +227,14 @@ export default {
     { id: 'B-Q15', topic: 'Inheritance', stem: 'Polydactyly (extra fingers) is caused by a dominant allele but affects about 1 in 1000 people. Why?',
       opts: [
         { t: 'Dominance describes expression, not how common an allele is', c: true },
-        { t: 'This must be an error — dominant alleles are the common ones', mis: 'B06' },
+        { t: 'This must be an error: dominant alleles are the common ones', mis: 'B06' },
         { t: 'The allele is becoming dominant over time', mis: 'B02' },
         { t: 'Most carriers show a partial version of it', mis: 'B07' }
       ] },
     { id: 'B-Q16', topic: 'Inheritance', stem: 'In a population, a recessive allele has a frequency of 0.9. Which is true?',
       opts: [
         { t: 'The recessive phenotype is the common one here', c: true },
-        { t: 'Impossible — recessive alleles are always rarer', mis: 'B06' },
+        { t: 'Impossible: recessive alleles are always rarer', mis: 'B06' },
         { t: 'The dominant phenotype still appears in most people', mis: 'B06' },
         { t: 'Everyone shows a blend of both', mis: 'B07' }
       ] },
@@ -261,8 +261,8 @@ export default {
       ] },
     { id: 'B-Q20', topic: 'Inheritance', stem: 'Blood type AB results from IA and IB together. This is an example of:',
       opts: [
-        { t: 'Codominance — both alleles are fully expressed', c: true },
-        { t: 'Blending — the blood types average out', mis: 'B07' },
+        { t: 'Codominance: both alleles are fully expressed', c: true },
+        { t: 'Blending: the blood types average out', mis: 'B07' },
         { t: 'The more common allele winning', mis: 'B06' },
         { t: 'A harmful mutation', mis: 'B03' }
       ] },
@@ -282,7 +282,7 @@ export default {
       ] },
     { id: 'B-Q23', topic: 'Selection vs creation', stem: 'A population has no variation at all in a particular trait. Natural selection acting on that trait will:',
       opts: [
-        { t: 'Do nothing — there is nothing to select between', c: true },
+        { t: 'Do nothing: there is nothing to select between', c: true },
         { t: 'Generate the variation that is needed', mis: 'B08' },
         { t: 'Cause individuals to change that trait', mis: 'B01' },
         { t: 'Favour the strongest individuals anyway', mis: 'B04' }
