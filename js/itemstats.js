@@ -141,10 +141,11 @@ export function analyseItems(pack, responses, inference = null) {
 
     // A correlation over a dozen students swings by about 0.3 on noise alone, so
     // the bars below move with class size. Above a class of 28, where the rules
-    // of thumb in the header were set, they stay where they are.
+    // of thumb in the header were set, they stay where they are. A hair below zero
+    // is still zero, so backward takes a real gap.
     const noise = Math.max(0, 1 / Math.sqrt(Math.max(1, col.length - 1)) - 1 / Math.sqrt(27));
     const weakBar = 0.15 - noise;
-    const backwardBar = -noise;
+    const backwardBar = -0.1 - noise;
 
     const flags = [];
     if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so the question separates nobody.` });
