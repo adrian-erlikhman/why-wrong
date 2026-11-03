@@ -1161,8 +1161,14 @@ function renderValidation() {
       'Switch the class back to “Sample class” to see how well the method recovers what it cannot see. Then judge whether you trust it on your own data.'));
     host.appendChild(box);
     wrap.appendChild(predictionPanel());
+    ['tabindex', 'role', 'aria-label'].forEach(a => wrap.removeAttribute(a));
     return;
   }
+
+  // The table can be wider than a phone, so the keyboard has to be able to scroll it.
+  wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'region');
+  wrap.setAttribute('aria-label', 'Groups found against the planted profiles');
 
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   const cq = scoreClustering(cl.labels, cls.truth);
@@ -1188,8 +1194,10 @@ function renderValidation() {
 
   const { table, plantedIds } = confusion(cl.labels, cls.truth);
   const t = el('table');
-  t.appendChild(el('caption', null,
+  const caption = el('caption');
+  caption.appendChild(el('span', 'cap-in',
     'Groups the tool found, against the profiles the simulation planted. One clear winner per row means it rediscovered structure it was never shown.'));
+  t.appendChild(caption);
 
   const thead = el('thead');
   const hr = el('tr');

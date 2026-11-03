@@ -1110,7 +1110,9 @@ html.key-above .legend { padding-bottom: 20px; }
 .confusion tbody tr:last-child > * { border-bottom: none; }
 .confusion th { color: var(--muted); font-weight: 600; font-size: 14px; background: var(--bg-2); }
 .confusion td.hot { background: var(--accent-tint); color: var(--accent); font-weight: 700; }
-.confusion caption { text-align: left; color: var(--muted); font-size: 15.5px; margin-bottom: 12px; max-width: 80ch; caption-side: top; }
+.confusion caption { text-align: left; color: var(--muted); font-size: 15.5px; margin-bottom: 12px; caption-side: top; }
+/* The table can be wider than a phone and scroll. Its caption should not. */
+.cap-in { display: block; position: sticky; left: 0; max-width: min(80ch, calc(100vw - 40px)); }
 
 /* -------------------------------- method ------------------------------- */
 
