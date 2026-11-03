@@ -111,5 +111,5 @@ export function readClassFile(text, findPack) {
   const known = new Set(pack.misconceptions.map(m => m.id));
   const predictions = (Array.isArray(file.predictions) ? file.predictions : []).filter(id => known.has(id));
 
-  return { ok: true, errors: [], pack, embedded, students: file.students, responses: file.responses, retest: file.retest ?? null, predictions };
+  return { ok: true, errors: [], pack, embedded, students: file.students, responses: file.responses, retest: file.retest ?? null, predictions, savedAt: file.savedAt ?? null };
 }

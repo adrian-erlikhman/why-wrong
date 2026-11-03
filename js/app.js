@@ -140,13 +140,20 @@ function run() {
   $('#clear-filter').hidden = true;
 }
 
+/** So two saved classes of one test can be told apart once they are open. */
+function savedOn(when) {
+  const d = new Date(when);
+  if (!when || Number.isNaN(d.getTime())) return '';
+  return `, saved ${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+}
+
 function renderPackLine() {
   const { pack, cls } = state;
   const line = $('#pack-line');
   line.textContent =
     [pack.name, pack.subject, pack.level].filter(Boolean).join(' · ') + ' — ' +
     `${pack.misconceptions.length} misunderstandings tracked · ${pack.items.length} questions · ` +
-    (cls.meta.imported ? `${cls.students.length} students imported` : `sample class, variant ${cls.meta.seed}`);
+    (cls.meta.imported ? `${students(cls.students.length)}${savedOn(state.imported.savedAt)}` : `sample class, variant ${cls.meta.seed}`);
   if (pack.source === 'generated') line.appendChild(el('span', 'gen-flag', 'built this session'));
 }
 
@@ -1395,8 +1402,8 @@ function useRetest({ students, responses }) {
 }
 
 /** Make a class the one on screen. Typed answers exist only here until saved. */
-function useClass({ students, responses, retest = null, predictions = [] }, { saved = false } = {}) {
-  state.imported = { students, responses };
+function useClass({ students, responses, retest = null, predictions = [], savedAt = null }, { saved = false } = {}) {
+  state.imported = { students, responses, savedAt };
   state.retest = retest;
   state.predictions = new Set(predictions);
   markUnsaved(!saved);
@@ -1409,10 +1416,13 @@ function useClass({ students, responses, retest = null, predictions = [] }, { sa
 
 function saveClass() {
   const { pack, imported } = state;
-  const day = new Date().toISOString().slice(0, 10);
+  const savedAt = new Date();
+  const day = savedAt.toISOString().slice(0, 10);
   download(`${pack.id}-class-${day}.json`,
-    classFile({ pack, ...imported, retest: state.retest, predictions: [...state.predictions], builtIn: isBuiltIn(pack) }), 'application/json');
+    classFile({ pack, ...imported, savedAt, retest: state.retest, predictions: [...state.predictions], builtIn: isBuiltIn(pack) }), 'application/json');
+  imported.savedAt = savedAt.toISOString();
   markUnsaved(false);
+  renderPackLine();
   flashSaved();
 }
 

@@ -439,6 +439,7 @@ for (const pack of BUILT_IN) {
     back.students.every((s, i) => s.name === c.students[i].name));
   check('a blank survives the round trip', back.responses[3][4] === -1);
   check('a built-in test is stored by id, not copied', JSON.parse(text).pack === null);
+  check('a saved class says when', !Number.isNaN(new Date(back.savedAt).getTime()));
 
   const own = structuredClone(BUILT_IN[1]);
   own.id = 'her-test';
