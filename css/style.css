@@ -435,6 +435,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 .sum-go:hover .sum-k { color: var(--accent); }
 
 .strip-note { margin-top: 16px; font-size: 16.5px; color: var(--ink-2); }
+.save-nudge { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 12px; padding: 10px 14px; background: var(--warn-tint); border: 1px solid var(--warn-line); border-radius: var(--r-s); color: var(--warn); font-size: 15.5px; }
 
 body.has-import .sample-only { display: none; }
 .import-only { display: none; }

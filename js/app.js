@@ -1037,7 +1037,7 @@ function simulateReteach() {
 }
 
 function clearRetest() {
-  if (state.imported) state.unsaved = true;
+  if (state.imported) markUnsaved(true);
   state.retest = null;
   renderProgress();
 }
@@ -1146,7 +1146,7 @@ function predictionPanel() {
     tick.addEventListener('change', () => {
       if (tick.checked) state.predictions.add(m.id);
       else state.predictions.delete(m.id);
-      if (state.imported) state.unsaved = true;
+      if (state.imported) markUnsaved(true);
       renderPredictionResult();
     });
     row.appendChild(tick);
@@ -1204,7 +1204,7 @@ function dropClass() {
   state.imported = null;
   state.retest = null;
   state.predictions = new Set();
-  state.unsaved = false;
+  markUnsaved(false);
   $('#source').value = 'sample';
   document.body.classList.remove('has-import');
 }
@@ -1389,7 +1389,7 @@ function doImport() {
 
 function useRetest({ students, responses }) {
   state.retest = { students, responses };
-  if (state.imported) state.unsaved = true;
+  if (state.imported) markUnsaved(true);
   renderProgress();
   showView('progress');
 }
@@ -1399,7 +1399,7 @@ function useClass({ students, responses, retest = null, predictions = [] }, { sa
   state.imported = { students, responses };
   state.retest = retest;
   state.predictions = new Set(predictions);
-  state.unsaved = !saved;
+  markUnsaved(!saved);
   document.body.classList.add('has-import');
   $('#source').value = 'import';
   run();
@@ -1412,8 +1412,14 @@ function saveClass() {
   const day = new Date().toISOString().slice(0, 10);
   download(`${pack.id}-class-${day}.json`,
     classFile({ pack, ...imported, retest: state.retest, predictions: [...state.predictions], builtIn: isBuiltIn(pack) }), 'application/json');
-  state.unsaved = false;
+  markUnsaved(false);
   flashSaved();
+}
+
+/** Typed answers exist only in this tab until saved, so the page keeps saying so. */
+function markUnsaved(on) {
+  state.unsaved = on;
+  $('#save-nudge').hidden = !on;
 }
 
 function flashSaved() {
@@ -1660,6 +1666,7 @@ $('#class-file').addEventListener('change', e => {
   if (f) openClassFile(f);
 });
 $('#save-class').addEventListener('click', saveClass);
+$('#save-nudge-go').addEventListener('click', saveClass);
 $('#export-progress').addEventListener('click', exportProgress);
 $('#print-progress').addEventListener('click', printProgress);
 $('#clear-retest').addEventListener('click', clearRetest);
