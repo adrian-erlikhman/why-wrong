@@ -14,7 +14,7 @@ import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
 import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS, strength } from './infer.js';
-import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
+import { clusterStudents, describeClusters, separateThin, reteachGroups, SUPPORT_BELOW } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf, shownFlags } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
 import { setKey, rewritePlan } from './llm.js';
@@ -128,7 +128,7 @@ function run() {
   const reportPosterior = posteriorForReporting(inf);
   const cl = clusterStudents(reportPosterior, { seed: 42 });
   const cov = coverage(pack, cls.responses);
-  const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl), cov);
+  const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl, { ability: inf.ability }), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
   Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
@@ -262,7 +262,10 @@ function renderSummary() {
     { v: answered ? `${Math.round((correct / answered) * 100)}%` : '—', k: hasBlanks ? 'correct of those answered' : 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
       cls: bad.length ? 'warn' : 'ok', go: 'items' },
-    { v: secure ? String(secure.size) : '0', k: 'with no clear pattern found', go: 'groups' }
+    // A student with no clear pattern who still gets most things wrong is the
+    // easiest one to miss on this page, so they are counted on their own line.
+    { v: secure ? String(secure.size) : '0', k: 'with no clear pattern found', go: 'groups',
+      sub: secure?.support?.length ? `${secure.support.length} getting most wrong` : null }
   ];
 
   cards.forEach(c => {
@@ -271,6 +274,7 @@ function renderSummary() {
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
+    if (c.sub) n.appendChild(el('div', 'sum-sub', c.sub));
     if (c.go) n.addEventListener('click', () => { showView(c.go); scrollToView(); });
     host.appendChild(n);
   });
@@ -583,7 +587,7 @@ function renderGroups() {
   }
 
   const others = [
-    secure && `${secure.size} with no clear shared pattern`,
+    secure && `${secure.size} with no clear shared pattern${secure.support?.length ? ` (${secure.support.length} of them getting most questions wrong)` : ''}`,
     thin && `${thin.size} with too few answers for an estimate`
   ].filter(Boolean);
 
@@ -631,10 +635,28 @@ function groupCard(g, idx) {
     card.appendChild(top);
     const body = el('div', 'group-body');
     const scores = totalScores(state.pack, state.cls.responses);
-    body.appendChild(el('p', 'belief', g.members.every(s => scores[s] === state.cov[s].answered)
-      ? 'All recorded answers were correct. This test has not identified a reteach need for these students.'
-      : 'Their wrong answers did not form a clear pattern on this test. The results cannot tell you why; review the evidence or check in with the students before deciding what support they need.'));
-    body.appendChild(roster(g));
+    const support = g.support || [];
+    const onTrack = g.onTrack || g.members;
+    // Split by how often they are right where no belief is in play: the same
+    // scattered errors are carelessness from a strong student and a gap from
+    // a weak one, and the weak ones are the easiest students to miss here.
+    if (support.length) {
+      const box = el('div', 'sub-group');
+      box.appendChild(el('div', 'lab warn', `Getting most questions wrong · ${support.length}`));
+      box.appendChild(el('p', 'plan',
+        `Right on fewer than ${Math.round(SUPPORT_BELOW * 100)}% of the questions their errors do not explain. That points to a gap or guessing rather than one misunderstanding: work through a few problems with them and see where it breaks down.`));
+      box.appendChild(roster({ ...g, members: support }));
+      body.appendChild(box);
+    }
+    if (onTrack.length) {
+      const box = el('div', 'sub-group');
+      if (support.length) box.appendChild(el('div', 'lab', `The rest · ${onTrack.length}`));
+      box.appendChild(el('p', 'belief', onTrack.every(s => scores[s] === state.cov[s].answered)
+        ? 'All recorded answers were correct. This test has not identified a reteach need for these students.'
+        : 'Their wrong answers did not form a clear pattern on this test. The results cannot tell you why; review the evidence or check in with the students before deciding what support they need.'));
+      box.appendChild(roster({ ...g, members: onTrack }));
+      body.appendChild(box);
+    }
     card.appendChild(body);
     return card;
   }
@@ -805,7 +827,7 @@ function renderStudents() {
 
     const l = el('div', 'stu-l');
     l.appendChild(el('div', 'stu-name', r.st.name));
-    const placed = r.group ? groupLabel(r.group) : '';
+    const placed = !r.group ? '' : r.group.isSecure && r.group.support?.includes(r.s) ? 'Getting most wrong' : groupLabel(r.group);
     const blank = cov[r.s].total - cov[r.s].answered;
     l.appendChild(el('div', 'stu-meta', blank ? `${placed} · ${blank} left blank` : placed));
     card.appendChild(l);
@@ -824,7 +846,9 @@ function renderStudents() {
     } else if (r.group?.isThin) {
       mid.appendChild(el('span', 'chip chip-thin', 'Not enough answers for an estimate'));
     } else if (!r.check.length) {
-      mid.appendChild(el('span', 'chip chip-clear', 'No clear pattern found'));
+      mid.appendChild(r.group?.support?.includes(r.s)
+        ? el('span', 'chip chip-check', 'Scattered errors: needs practice')
+        : el('span', 'chip chip-clear', 'No clear pattern found'));
     }
     // A belief resting on one answer is not a diagnosis; it is a question to ask.
     if (r.check.length && r.held.length < 3) {

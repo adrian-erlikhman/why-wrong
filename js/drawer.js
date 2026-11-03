@@ -5,6 +5,7 @@
 
 import { correctIndex, misById } from './pack.js';
 import { untested, strength } from './infer.js';
+import { SUPPORT_BELOW } from './cluster.js';
 import { shownFlags } from './itemstats.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
@@ -96,7 +97,7 @@ export function openStudent(ctx, s) {
   }
   facts.appendChild(fact(
     !group || group.isThin || group.isSecure ? '—' : `Group ${groups.indexOf(group) + 1}`,
-    group?.isThin ? 'too few answers' : group?.isSecure ? 'no clear pattern' : 'reteach group'
+    group?.isThin ? 'too few answers' : group?.isSecure ? (group.support?.includes(s) ? 'getting most wrong' : 'no clear pattern') : 'reteach group'
   ));
   wrap.appendChild(facts);
 
@@ -120,9 +121,12 @@ export function openStudent(ctx, s) {
     wrap.appendChild(el('p', 'dr-note dr-warn',
       `This student answered ${answered} of ${total} questions. Blank answers add no evidence, so other misunderstandings may not be visible in this result.`));
   } else if (!acted.length) {
+    const right = inf.ability?.[s];
     wrap.appendChild(el('p', 'dr-note', score === answered
       ? 'All recorded answers were correct; this test has not indicated a reteach need.'
-      : 'The wrong answers did not form a clear pattern on this test. Review the student’s work or check in with them before deciding what support would help.'));
+      : right != null && right < SUPPORT_BELOW
+        ? `The wrong answers did not form a clear pattern, but this student was right on only about ${Math.round(right * 100)}% of the questions their errors do not explain. That points to a gap or guessing rather than one misunderstanding: work through a few problems with them and see where it breaks down.`
+        : 'The wrong answers did not form a clear pattern on this test. Review the student’s work or check in with them before deciding what support would help.'));
   }
 
   // A misunderstanding with its questions left blank has not been ruled out, even

@@ -427,6 +427,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .sum-v.ok { color: var(--accent); }
 .sum-v.warn { color: var(--warn); }
+.sum-sub { font-size: 14px; font-weight: 600; color: var(--warn); margin-top: 4px; }
 .sum-k {
   font-size: 15px;
   line-height: 1.3;
@@ -808,6 +809,9 @@ html.key-above .legend { padding-bottom: 20px; }
 .group-more-p { font-family: var(--mono); font-size: 14px; font-weight: 400; color: var(--muted); }
 
 .lab.accent { color: var(--accent); }
+.lab.warn { color: var(--warn); }
+.sub-group + .sub-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.sub-group .plan { margin-bottom: 10px; }
 
 .plan { font-size: 16px; color: var(--ink); margin-bottom: 20px; }
 

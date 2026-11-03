@@ -242,10 +242,21 @@ export function clusterStudents(posterior, {
 }
 
 /**
+ * Below this share right where no belief is in play, a student with no clear
+ * pattern is not simply fine. Their errors are scattered rather than shared,
+ * which points to a gap or guessing: they need practice and a check-in, which
+ * a reteach aimed at one belief would not give them.
+ */
+export const SUPPORT_BELOW = 0.6;
+
+/**
  * Describe each cluster: size, members, and the misconceptions that define it
  * (highest mean posterior within the cluster, relative to the rest of class).
+ *
+ * With `ability` (inference.ability), the students with no clear pattern are
+ * split into `support` (getting most questions wrong) and `onTrack`.
  */
-export function describeClusters(posterior, labels, misIds, { k, secureLabel }) {
+export function describeClusters(posterior, labels, misIds, { k, secureLabel }, { ability = null } = {}) {
   const clusters = [];
 
   const build = (c, isSecure) => {
@@ -265,13 +276,16 @@ export function describeClusters(posterior, labels, misIds, { k, secureLabel }) 
       .filter(p => p.inMean >= 0.5)
       .sort((a, b) => b.lift - a.lift);
 
+    const support = isSecure && ability ? members.filter(i => ability[i] < SUPPORT_BELOW) : [];
     return {
       index: c,
       members,
       size: members.length,
       profile,
       signature: isSecure ? [] : (signature.length ? signature : profile.slice().sort((a, b) => b.inMean - a.inMean).slice(0, 1)),
-      isSecure: !!isSecure
+      isSecure: !!isSecure,
+      support,
+      onTrack: isSecure ? members.filter(i => !support.includes(i)) : []
     };
   };
 
@@ -309,7 +323,13 @@ export function separateThin(groups, cov) {
 
   const kept = secure.members.filter(s => !cov[s].thin);
   const out = groups.filter(g => g !== secure);
-  if (kept.length) out.push({ ...secure, members: kept, size: kept.length });
+  if (kept.length) {
+    out.push({
+      ...secure, members: kept, size: kept.length,
+      support: (secure.support || []).filter(s => kept.includes(s)),
+      onTrack: (secure.onTrack || kept).filter(s => kept.includes(s))
+    });
+  }
   out.push({ index: -1, members: thin, size: thin.length, profile: [], signature: [], isSecure: false, isThin: true });
   return out;
 }
