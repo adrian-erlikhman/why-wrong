@@ -1616,7 +1616,7 @@ body.has-import .import-only { display: inline-flex; }
 @media print {
   :root { --bg: #fff; --surface: #fff; --bg-2: #fff; --bg-3: #f4f5f7; --line: #bbb; --line-soft: #ddd; --line-hi: #999; }
   .bar, .tabs, .hero, .how, .app-intro, .foot, .drawer, .modal, .coach,
-  .head-actions, .view-head .btn, .hint, .legend, .legend-head { display: none !important; }
+  .head-actions, .view-head .btn, .hint, .legend, .legend-head, .info { display: none !important; }
   .tour-lit { box-shadow: none !important; }
   .view { display: none !important; }
   .view#view-groups { display: block !important; }
@@ -1624,7 +1624,6 @@ body.has-import .import-only { display: inline-flex; }
   body.print-progress .view#view-progress { display: block !important; }
   .prog, .prog-group, .prog-verdict, .metric { break-inside: avoid; page-break-inside: avoid; background: #fff; box-shadow: none; }
   .prog-who summary, .group-more summary { display: none; }
-  .group { break-inside: auto; page-break-inside: auto; }
   .progs { display: block; }
   .metrics { grid-template-columns: repeat(4, 1fr); }
   .prog { margin-bottom: 8pt; }
@@ -1632,9 +1631,11 @@ body.has-import .import-only { display: inline-flex; }
   .main { padding: 0; }
   body { font-size: 11pt; background: #fff; color: #111; }
   .groups { display: block; }
+  /* A big class has groups taller than a page, and asking the browser to keep one
+     whole leaves a blank sheet before it. The pieces stay whole instead. */
+  .group-top, .group-more h4, .checks, .roster { break-inside: avoid; page-break-inside: avoid; }
+  .group-top, .group .lab, .group-more h4 { break-after: avoid; page-break-after: avoid; }
   .group {
-    break-inside: avoid;
-    page-break-inside: avoid;
     margin-bottom: 14pt;
     border: 1px solid #999;
     background: #fff;
