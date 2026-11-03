@@ -284,7 +284,7 @@ sup { font-size: .68em; line-height: 0; }
 .sec-head h2 { font-size: clamp(27px, 3vw, 36px); margin-bottom: 10px; }
 .sec-head p { color: var(--ink-2); font-size: 18px; }
 
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .how-step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 26px 26px 28px; box-shadow: var(--shadow-1); }
 .how-n {
   display: grid; place-items: center;

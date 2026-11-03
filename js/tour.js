@@ -4,8 +4,8 @@
  * Someone opening this link cold has no reason to know what a class map is or
  * why sorting it matters. So the first visit in a tab opens a short intro, and
  * the tour walks the real page -- not screenshots -- through the things worth
- * seeing: the map, the sort, a reteach group, the audit of the test, and the
- * recovery numbers. Every sentence is filled in from the analysis on screen,
+ * seeing: the map, the sort, a reteach group, the audit of the test, the
+ * retest, and the recovery numbers. Every sentence is filled in from the analysis on screen,
  * so it stays true for any subject, class size or variant.
  *
  * The intro never opens over a deep link (?view=, ?sorted=, ?static=), which
@@ -43,6 +43,11 @@ const STEPS = [
     text: f => f.bad
       ? `${f.bad} of ${f.items} questions have a problem worth a look. ${f.worstId} is flagged “${f.worstVerdict}”. Questions aimed at one misunderstanding are kept even when the usual statistics say they are weak.`
       : `All ${f.items} questions are pulling their weight on this class. Click any question to see how the class answered it.`
+  },
+  {
+    title: 'Then check it landed',
+    view: 'progress', target: '#view-progress',
+    text: () => 'After you reteach, give the same paper again. This tab compares every student with themselves, shows who still needs it, and says when a change could just be chance.'
   },
   {
     title: 'Does it actually work?',
