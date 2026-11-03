@@ -543,7 +543,10 @@ export function parseResponses(pack, text, otherPacks = []) {
     const row = rowsIn[r];
     if (!row.some(c => c.trim())) continue;
 
-    const name = nameCol >= 0 && row[nameCol]?.trim() ? row[nameCol].trim() : `Student ${responses.length + 1}`;
+    // A Forms export that collected emails has no name column, and a whole school
+    // address is too long for a map row, a name list or the top of a student's slip.
+    const given = nameCol >= 0 ? (row[nameCol] ?? '').trim() : '';
+    const name = (nameCol === emailCol ? given.replace(/@.*$/, '') : given) || `Student ${responses.length + 1}`;
     if (KEY_ROW.test(name)) { keyRow = true; continue; }     // the answers, not a student
     const out = [];
 

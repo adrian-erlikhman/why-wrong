@@ -395,7 +395,7 @@ for (const pack of BUILT_IN) {
     ...letters.map((row, s) => [`t${s}`, `kid${s}@school.org`, ...row].join(','))
   ].join('\n');
   const n = parseResponses(pack, noName);
-  check('with no name column, the email is used', same(n) && n.students[2].name === 'kid2@school.org');
+  check('with no name column, the email before the @ is used', same(n) && n.students[2].name === 'kid2');
 
   const untitled = ['Timestamp', 'Name', ...ids.map((_, i) => `Column ${i + 1}`)].join(',');
   const u = parseResponses(pack, [untitled, ...letters.map((row, s) => [`t${s}`, q(c.students[s].name), ...row].join(','))].join('\n'));
@@ -417,6 +417,10 @@ for (const pack of BUILT_IN) {
 
   const wrong = parseResponses(BUILT_IN[0], plain, BUILT_IN);
   check('answers for another test name that test', !wrong.ok && wrong.errors[0].includes(pack.name));
+
+  const both = parseResponses(pack, [['Email Address', 'Name', ...ids].join(','),
+    ...letters.map((row, s) => [`kid.${s}@students.example.org`, `Kid ${s}`, ...row].join(','))].join('\n'));
+  check('a name column beats an email column', both.ok && both.students[3].name === 'Kid 3');
 
   const twice = parseResponses(pack, `${plain}\n${q(c.students[0].name.toUpperCase())},${letters[1].join(',')}`);
   check('a repeated name is flagged at paste', twice.ok && twice.warnings.some(w => /more than once/.test(w)));
