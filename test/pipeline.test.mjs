@@ -306,6 +306,9 @@ for (const pack of BUILT_IN) {
   c.students[1].name = '<b>Bo</b> & Co';
   const inf = inferMisconceptions(pack, c.responses);
   const html = slipsHtml(pack, c, inf, coverage(pack, c.responses));
+  const two = slipsHtml(pack, c, inf, coverage(pack, c.responses), [3, 5]);
+  check('slips can be printed for some of the class', (two.match(/class="slip"/g) || []).length === 2 &&
+    two.includes(c.students[3].name) && !two.includes(`<h2>${c.students[0].name}</h2>`));
   const slips = html.split('<article class="slip">').slice(1);
   check('every student gets one slip', slips.length === 28);
   check('every slip says it is not a grade', slips.every(s => s.includes('not a grade')));

@@ -758,6 +758,15 @@ function renderStudents() {
 
   const picked = state.studentGroup == null ? rows : rows.filter(r => r.group === groups[state.studentGroup]);
   const shown = q ? picked.filter(r => normName(r.st.name).includes(q)) : picked;
+
+  // Slips print what is on screen, so one group or one student takes no scissors.
+  const everyone = shown.length === rows.length;
+  state.slipsFor = everyone ? null : shown.map(r => r.s);
+  const slipsButton = $('#print-slips');
+  slipsButton.disabled = !shown.length;
+  slipsButton.textContent = everyone || !shown.length ? 'Print student slips'
+    : shown.length === 1 ? 'Print this slip'
+    : `Print these ${shown.length} slips`;
   $('#student-count').textContent = shown.length === rows.length ? '' : `${shown.length} of ${students(rows.length)}`;
 
   if (!shown.length) {
@@ -1750,7 +1759,7 @@ $('#export-plan').addEventListener('click', exportPlan);
 $('#regen').addEventListener('click', adaptPlans);
 $('#student-search').addEventListener('input', renderStudents);
 $('#print-slips').addEventListener('click', () => {
-  if (!openPrintable(slipsHtml(state.pack, state.cls, state.inf, state.cov))) alert('Allow pop-ups to print the slips.');
+  if (!openPrintable(slipsHtml(state.pack, state.cls, state.inf, state.cov, state.slipsFor))) alert('Allow pop-ups to print the slips.');
 });
 
 $('#key-cancel').addEventListener('click', () => closeM('#keymodal'));

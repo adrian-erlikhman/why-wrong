@@ -40,7 +40,8 @@ The loop closes in both directions, on paper.
 4. **Class → Paste my class** and paste the sheet back in. Letters, numbers, or
    the answer text all work. A Google Forms export works as it comes: timestamp,
    email and score columns are stepped over, and questions are matched by their
-   text. A row called Key is left out, and a repeated name is flagged. Blanks are
+   text. With no name column, the part of the email before the @ becomes the
+   name. A row called Key is left out, and a repeated name is flagged. Blanks are
    read as unanswered rather than wrong. Letters and numbers mean what is printed on
    the paper: each question's options are shuffled, seeded by its id, so the
    key is not "A" every time and the printout, the answer key and the paste-back
@@ -57,7 +58,8 @@ with the paper: what their answers suggest they might be thinking, and the check
 questions for it. Slips carry no percentages or group numbers, and each one says
 it is a best guess and not a grade. Each misunderstanding has a `student` line
 written for this, so a slip says "you may be adding the tops and the bottoms"
-rather than "adds fractions componentwise".
+rather than "adds fractions componentwise". Pick a group or search a name first,
+and it prints only those slips.
 
 ### Keeping a class
 

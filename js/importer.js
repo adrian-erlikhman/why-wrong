@@ -215,10 +215,12 @@ export function reviewHtml(pack) {
  * plainly that it is a guess: a sixteen-year-old should be able to read it and
  * tell the teacher it is wrong.
  */
-export function slipsHtml(pack, cls, inf, cov) {
+export function slipsHtml(pack, cls, inf, cov, only = null) {
   const byId = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
+  const wanted = only ?? cls.students.map((_, s) => s);
 
-  const slips = cls.students.map((st, s) => {
+  const slips = wanted.map(s => {
+    const st = cls.students[s];
     const held = inf.misIds
       .map((id, k) => ({ m: byId[id], p: inf.posterior[s][k] }))
       .filter(x => x.m && x.p >= PARAMS.decisionThreshold)
