@@ -8,11 +8,10 @@
  *                     student can read, used on the printed slips
  *   items[]           every wrong option mapped to a misconception, or to null
  *                     for an undiagnostic slip
- *   archetypes[]      which misconceptions travel together in a real class
+ *   archetypes[]      response profiles used to generate the sample class
  *
  * Everything downstream is written against this contract and nothing else, so
- * algebra, biology and a pack a language model wrote a moment ago all run
- * through identical code.
+ * algebra, biology and a generated pack all run through identical code.
  *
  * `validatePack` matters more than it looks. Built-in packs are hand-checked,
  * but a generated pack arrives as untrusted JSON, and a malformed one would
@@ -125,11 +124,36 @@ export function validatePack(pack) {
   if (!Array.isArray(pack.archetypes) || !pack.archetypes.length) {
     warnings.push('Pack has no archetypes; a fallback grouping will be used to simulate a class.');
   } else {
-    pack.archetypes.forEach(a => {
+    const archetypeIds = new Set();
+    let totalWeight = 0;
+    pack.archetypes.forEach((a, i) => {
+      if (!a || typeof a !== 'object' || Array.isArray(a)) {
+        errors.push(`Archetype ${i + 1} is not an object.`);
+        return;
+      }
+      if (typeof a.id !== 'string' || !a.id.trim()) {
+        errors.push(`Archetype ${i + 1} has no id.`);
+      } else if (archetypeIds.has(a.id)) {
+        errors.push(`Duplicate archetype id ${a.id}.`);
+      } else {
+        archetypeIds.add(a.id);
+      }
+      if (a.core != null && !Array.isArray(a.core)) {
+        errors.push(`Archetype ${a.id || a.label || i + 1} has an invalid misconception list.`);
+        return;
+      }
+      if (!Number.isFinite(a.weight) || a.weight < 0) {
+        errors.push(`Archetype ${a.id || a.label || i + 1} needs a non-negative numeric weight.`);
+      } else {
+        totalWeight += a.weight;
+      }
       (a.core || []).forEach(mid => {
         if (!ids.has(mid)) errors.push(`Archetype ${a.id || a.label} references unknown misconception ${mid}.`);
       });
     });
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+      errors.push('Archetype weights must have a positive finite total.');
+    }
   }
 
   return { ok: errors.length === 0, errors, warnings };
@@ -155,7 +179,7 @@ export function fallbackArchetypes(pack, groups = 3) {
       weight: 0.82 / groups
     });
   }
-  out.push({ id: 'Z', label: 'Broadly secure', blurb: 'No stable misconception; errors are slips.', core: [], weight: 0.18 });
+  out.push({ id: 'Z', label: 'Broadly secure',   blurb: 'No stable misconception pattern in the sample class.', core: [], weight: 0.18 });
   return out;
 }
 

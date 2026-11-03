@@ -9,9 +9,9 @@
  * answers are then *generated from that profile*. The planted profile is kept
  * and never shown to the inference layer.
  *
- * That gives the whole system something a hackathon project almost never has:
- * a ground truth to be scored against. The analysis pipeline has to recover
- * what was planted, and validate.js reports how much of it came back.
+ * The simulation provides ground truth for testing: the analysis pipeline can
+ * be compared with the profiles used to generate its responses. This measures
+ * performance against the simulation, not against real classroom data.
  *
  * Response model, per student s and item i:
  *   1. Find the options on item i whose mapped misconception s actually holds.
@@ -30,7 +30,7 @@ import { makeRng, normal } from './rng.js';
 const P_HOLD_CORE = 0.82;   // probability a student holds a misconception from their own archetype
 const P_LEAK = 0.05;        // probability of picking up an unrelated misconception
 const P_EXPRESS = 0.76;     // probability a held misconception fires on a given probing item
-const P_SLIP = 0.09;        // baseline careless-error rate for otherwise-correct work
+const P_SLIP = 0.09;        // baseline chance of an unlinked wrong answer
 
 export const SIM_PARAMS = { P_HOLD_CORE, P_LEAK, P_EXPRESS, P_SLIP };
 

@@ -1,91 +1,83 @@
 /**
- * explain.js -- inline glossary.
- * ---------------------------------------------------------------------------
- * The analysis leans on real psychometric and statistical terms, and a teacher
- * has no reason to know any of them. Two bad options are usually taken here:
- * drop the terms (and with them any way to check the work), or keep them and
- * let most readers bounce off.
- *
- * So: plain language in the sentence, the real term available on demand. Every
- * statistic on screen carries a small marker that opens a short explanation
- * written for someone who teaches for a living -- what it means, and what a
- * teacher should actually do about the number in front of them.
+ * Plain-language explanations for statistical terms in the interface.
+ * Keep the technical term available, then explain what it means and how a
+ * teacher might use it.
  */
 
 export const TERMS = {
   confidence: {
     term: 'Confidence',
     also: 'posterior probability',
-    body: 'How sure the analysis is that this student holds this particular misunderstanding, given every answer they gave. It is not a percentage of questions they got wrong — it is the weight of the evidence.',
-    use: 'Above roughly 80% is worth acting on directly. Between 50% and 80%, check the evidence list before you plan around it.'
+    body: 'The estimated likelihood that this student has this misunderstanding, based on their answers. It is not the percentage of questions they got wrong.',
+    use: 'Treat this as a signal, not certainty. Check the evidence list before planning around a result, especially when it is close to the reporting threshold.'
   },
   failureMode: {
     term: 'Reteach group',
     also: 'cluster',
-    body: 'A group of students whose wrong answers point at the same underlying misunderstanding. They are grouped by what they believe, not by their scores — two students with very different grades can sit in the same group.',
-    use: 'This is your reteach group. One lesson can serve the whole group because they are wrong in the same way.'
+    body: 'A group of students whose answer patterns suggest a shared misunderstanding. The groups are based on those patterns, not on scores.',
+    use: 'Use a group as a starting point for planning. Check each student’s evidence before deciding whether one lesson fits everyone.'
   },
   separation: {
     term: 'Separation',
     also: 'silhouette score',
-    body: 'How cleanly the groups come apart. Near 1.0 the groups are sharply distinct; near 0 the students blur into each other and the grouping is arbitrary.',
-    use: 'Above about 0.35, trust the groups. Below about 0.20, treat them as a rough sketch and lean on the individual diagnoses instead.'
+    body: 'How clearly separated the groups are. Higher values generally mean clearer separation; values near 0 mean students overlap across groups.',
+    use: 'Use this as a guide, not a guarantee. When separation is low, rely more on the individual evidence.'
   },
   difficulty: {
     term: 'Difficulty',
     also: 'p-value / facility index',
-    body: 'The proportion of the class that answered correctly. Confusingly, a HIGH number means an EASY question.',
-    use: 'Around 0.5–0.8 is the useful range. Above 0.93 the question separates nobody and is costing you time on the paper.'
+    body: 'The share of students who answered correctly. A higher value means an easier question.',
+    use: 'As a rough guide, values around 0.5–0.8 often leave room to distinguish responses. A very high value may mean the question offers little information for this class.'
   },
   discrimination: {
     term: 'Discrimination',
     also: 'corrected point-biserial correlation',
-    body: 'Whether students who did well on the rest of the test also got this question right. High means the question sorts strong from weak. Well below zero means it sorted them backwards — your best students got it wrong.',
-    use: 'Below 0.15 usually means the wording is unclear. But see "diagnosing, not ranking" — on a diagnostic test a low number is not automatically a fault.'
+    body: 'How closely correct answers to this question track scores on the rest of the test. A negative value means students with higher scores on the other questions were less likely to get this one right.',
+    use: 'A low value can flag a question for review, but it does not prove the wording is unclear. A diagnostic question may reveal a specific misunderstanding without tracking overall score.'
   },
   diagnosing: {
     term: 'Diagnosing, not ranking',
-    body: 'A question aimed at one specific misunderstanding is missed by exactly the students who hold it — whatever their ability elsewhere. So it can look statistically weak while being the most informative question on the page.',
-    use: 'Keep these. The tool checks whether the rest of the test agrees with the question before it calls anything broken.'
+    body: 'A question designed to reveal one misunderstanding may be missed by students with that misunderstanding, even if they do well elsewhere. That can lower its relationship with the overall score without making it unhelpful.',
+    use: 'Check whether answers to the other questions support the same pattern before deciding whether to keep or revise the item.'
   },
   consistency: {
     term: 'Internal consistency',
     also: "Cronbach's alpha",
-    body: 'Whether all the questions behave as though they measure one single thing. A test built to detect several unrelated misunderstandings should NOT score highly here.',
-    use: 'A low number on this tool is expected and healthy. It means your questions are picking up genuinely different misunderstandings.'
+    body: 'Whether the questions behave as if they measure one underlying skill. This test covers several different misunderstandings, so a low value is not automatically a sign of poor quality.',
+    use: 'Read this alongside the item-level results. A single consistency score cannot tell you whether each question is useful.'
   },
   slip: {
     term: 'Slip',
-    body: 'A wrong answer that does not match any known misunderstanding — arithmetic noise, a misread, a rushed guess. Everyone produces them.',
-    use: 'Slips are not reteachable. If a student is mostly slips, they need practice and attention, not a reteach.'
+    body: 'A wrong answer that is not linked to one of the misunderstandings in the test. It could be a guess, a misread, or an arithmetic error; the answer alone cannot tell us why.',
+    use: 'If no repeated pattern appears, review the student’s work or check in with them before deciding what support would help.'
   },
   recall: {
     term: 'Misunderstandings found',
     also: 'recall',
-    body: 'In the simulated class, every student was given a hidden set of misunderstandings before any answers existed. This is the share of those the analysis managed to find using only the answer sheet.',
-    use: 'This is how you know the method works at all, rather than merely producing confident-looking output.'
+    body: 'In the simulated class, each student has a hidden set of misunderstandings. This is the share the analysis identified from the answers.',
+    use: 'This measures performance on simulated data. It is useful for checking the method, but it does not guarantee results in a real class.'
   },
   precision: {
     term: 'Diagnoses correct',
     also: 'precision',
-    body: 'Of every misunderstanding the analysis attributed to a student, the share that was genuinely there. The remainder are false accusations.',
-    use: 'High precision matters more than high recall here: telling a teacher a student is confused when they are not wastes a lesson.'
+    body: 'Of the misunderstandings the analysis attributed to simulated students, the share that appeared in their hidden profiles.',
+    use: 'This is a simulation measure, not a confirmed diagnosis of a real student.'
   },
   f1: {
     term: 'F1',
-    body: 'One number combining the two above, so that a method cannot look good by being reckless in one direction.',
+    body: 'A single score that balances the share of hidden patterns found with the share of diagnoses that were correct.',
     use: 'Useful for comparing runs. Nothing to act on directly.'
   },
   ari: {
     term: 'Group recovery',
     also: 'adjusted Rand index',
-    body: 'Whether the groups the tool discovered match the groups the simulation actually planted. 1.00 is exact agreement, 0.00 is what random guessing would score.',
-    use: 'Evidence that the grouping reflects something real rather than shapes found in noise.'
+    body: 'How closely the groups found by the analysis match the groups used to generate the sample class. 1.00 means exact agreement; 0.00 is the expected score from random grouping.',
+    use: 'This describes the simulation only; it does not establish that real students fit the same groups.'
   },
   evidence: {
     term: 'Evidence',
-    body: 'The specific questions that led to a diagnosis. Each one either supports the conclusion or argues against it, and the weights add up to the confidence figure.',
-    use: 'Read this before you act on any diagnosis you find surprising. It is the whole audit trail.'
+    body: 'The questions that raised or lowered the estimated likelihood of a misunderstanding. Together, their contributions produce the result.',
+    use: 'Review this evidence before acting on a result, especially when it is unexpected.'
   }
 };
 
@@ -136,8 +128,7 @@ function show(anchor, key) {
 
   document.body.appendChild(pop);
 
-  // Position under the anchor, nudged back inside the viewport if it would
-  // hang off the right edge.
+  // Keep the popup within the viewport when the anchor is near an edge.
   const r = anchor.getBoundingClientRect();
   const w = pop.offsetWidth;
   let left = r.left + window.scrollX;

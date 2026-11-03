@@ -1,16 +1,7 @@
 /**
- * tour.js -- what a first-time visitor sees.
- * ---------------------------------------------------------------------------
- * Someone opening this link cold has no reason to know what a class map is or
- * why sorting it matters. So the first visit in a tab opens a short intro, and
- * the tour walks the real page -- not screenshots -- through the things worth
- * seeing: the map, the sort, a reteach group, the audit of the test, the
- * retest, and the recovery numbers. Every sentence is filled in from the analysis on screen,
- * so it stays true for any subject, class size or variant.
- *
- * The intro never opens over a deep link (?view=, ?sorted=, ?static=), which
- * someone sent on purpose. ?demo=1 forces it, ?demo=0 suppresses it, and the
- * Demo button replays it at any time.
+ * First-visit intro and guided tour. Tour examples use the current analysis.
+ * Deep links skip the intro; ?demo=1 forces it, ?demo=0 suppresses it, and the
+ * tour button can replay it.
  */
 
 const SEEN = 'whywrong.intro';
@@ -21,45 +12,45 @@ const STEPS = [
   {
     title: 'The class map',
     view: 'matrix', sorted: false, target: '.board',
-    text: f => `Each row is one of ${f.students} students, each column a question. A coloured square is a wrong answer, coloured by the misunderstanding it points to; grey means wrong at random. The rows are in register order, so the pattern is still hidden.`
+    text: f => `Each row is one of ${f.students} students, and each column is a question. A coloured cell marks a wrong answer linked to a possible misunderstanding; grey means the answer did not match a known pattern. Rows start in register order.`
   },
   {
-    title: 'Sorted by belief, not by score',
+    title: 'Group similar answer patterns',
     view: 'matrix', sorted: true, target: '.board',
     text: f => f.groups
-      ? `Same answers, rows regrouped by what each student believes. ${plural(f.groups, 'group')} appear, and the vertical stripes are questions a whole group missed for the same reason.`
-      : 'Same answers, rows regrouped by what each student believes. This class shows no shared pattern: the mistakes are scattered, which calls for practice rather than a reteach.'
+      ? `The same answers, regrouped by pattern rather than score. ${plural(f.groups, 'group')} appear, with columns showing questions where students in a group answered similarly.`
+      : 'The same answers, regrouped by pattern rather than score. No clear shared pattern emerged, so review individual answers before planning a group reteach.'
   },
   {
-    title: 'One lesson per group',
+    title: 'Plan for each group',
     view: 'groups', target: '#groups .group',
     text: f => f.topName
-      ? `${plural(f.topSize, 'student')} share “${f.topName}”. Each group gets a reteach aimed at that exact belief, and three quick questions to check it landed.`
-      : 'No group shares a stable misunderstanding here, so nobody needs a reteach, only practice.'
+      ? `${plural(f.topSize, 'student')} show a similar pattern around “${f.topName}”. Each group gets a reteach suggestion and three questions to check understanding.`
+      : 'No clear shared misunderstanding emerged in this class. Review the individual evidence before deciding what support students need.'
   },
   {
-    title: 'It audits the test too',
+    title: 'Review the questions too',
     view: 'items', target: '#items .item',
     text: f => f.bad
-      ? `${f.bad} of ${f.items} questions have a problem worth a look. ${f.worstId} is flagged “${f.worstVerdict}”. Questions aimed at one misunderstanding are kept even when the usual statistics say they are weak.`
-      : `All ${f.items} questions are pulling their weight on this class. Click any question to see how the class answered it.`
+      ? `${f.bad} of ${f.items} questions are flagged for review. ${f.worstId} is marked “${f.worstVerdict}”. Some questions that target one misunderstanding can look weak by overall score but still carry useful information.`
+      : `No questions were flagged for review in this class. Click any question to see how students answered it.`
   },
   {
-    title: 'Then check it landed',
+    title: 'Compare a retest',
     view: 'progress', target: '#view-progress',
-    text: () => 'After you reteach, give the same paper again. This tab compares every student with themselves, shows who still needs it, and says when a change could just be chance.'
+    text: () => 'After a reteach, give the same paper again. This tab compares each student’s results and shows which patterns changed. Treat the result as evidence, not proof: students have seen the questions before.'
   },
   {
-    title: 'Does it actually work?',
+    title: 'Check the method on a sample',
     view: 'validation', target: '#metrics',
     text: f => f.recall
-      ? `The sample class was simulated with hidden misunderstandings the analysis never sees. It found ${f.recall} of them from the answers alone, and ${f.precision} of its diagnoses were right.`
-      : 'Your own class has no hidden answer key, so there is nothing to score it against here. Switch Class back to Sample class to see how much the method recovers.'
+      ? `The sample class has simulated misunderstandings that the analysis does not see. It recovered ${f.recall} from the answers, and ${f.precision} of its diagnoses matched the hidden profiles. This check does not guarantee the same results for a real class.`
+      : 'A real class has no hidden answer key to compare with. Switch Class to Sample class to see how well the method recovers simulated patterns.'
   },
   {
-    title: 'Now try your own class',
+    title: 'Try it with your class',
     view: 'matrix', target: '#toolbar', final: true,
-    text: () => 'Pick a subject, or build one for any topic with New subject. Print the questions from Materials, give them to a class, then paste the answers back under Class to analyse your real students.'
+    text: () => 'Choose a subject, or use New subject to draft questions for another topic. Review those questions first. Print them from Materials, give them to a class, then paste the answers back under Class.'
   }
 ];
 
@@ -71,7 +62,7 @@ export function initTour(app) {
   let at = -1;
   let lit = null;
 
-  /* ------------------------------------------------------------- intro */
+  /* Intro dialog */
 
   function openIntro() {
     stop();
@@ -88,16 +79,16 @@ export function initTour(app) {
     if (demo === '0') return;
     if (demo !== '1') {
       if (q.has('view') || q.has('sorted') || q.has('static')) return;
-      try { if (sessionStorage.getItem(SEEN)) return; } catch { /* storage blocked: show it */ }
+      try { if (sessionStorage.getItem(SEEN)) return; } catch { /* Storage is unavailable; show the intro. */ }
     }
-    try { sessionStorage.setItem(SEEN, '1'); } catch { /* fine */ }
+    try { sessionStorage.setItem(SEEN, '1'); } catch { /* The intro can still open without session storage. */ }
     openIntro();
   }
 
   $('#intro-go').addEventListener('click', () => { closeIntro(); start(); });
   $('#intro-skip').addEventListener('click', closeIntro);
 
-  /* -------------------------------------------------------------- tour */
+  /* Guided tour */
 
   function build() {
     coach = document.createElement('div');

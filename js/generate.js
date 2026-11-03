@@ -4,15 +4,9 @@
  * This is where the language model earns its place, and it is worth being
  * precise about the division of labour.
  *
- * Authoring a misconception inventory is the genuinely hard, genuinely
- * knowledge-intensive part of this whole exercise. It takes a subject expert
- * who knows not just the content but the *characteristic ways students get it
- * wrong*, and then the patience to write distractors that each correspond to
- * exactly one of those wrong mental models. Real concept inventories take years
- * and multiple rounds of student interviews.
- *
- * That is a task a language model is actually good at, because it is recall and
- * composition over pedagogical content. So the model writes the instrument.
+ * Authoring a misconception inventory requires subject knowledge and careful
+ * testing with students. A language model can draft an inventory and item bank,
+ * but its output is only a starting point for teacher review.
  *
  * What the model does NOT do is any of the analysis. It never sees a student
  * response, never decides who holds which misconception, never groups the
@@ -21,9 +15,8 @@
  * pipeline does the measuring.
  *
  * Everything it returns is untrusted until `validatePack` says otherwise. A
- * malformed pack would not throw, it would silently produce confident nonsense,
- * so generation is a loop: generate, validate, and feed the specific structural
- * errors back for repair.
+ * malformed pack could produce misleading results, so generation checks the
+ * structure and asks for repairs before the pack is accepted.
  */
 
 import { validatePack, itemsProbing, MIN_PROBES } from './pack.js';
@@ -49,13 +42,13 @@ Produce exactly ${misconceptionCount} misconceptions and exactly ${itemCount} it
 
 Rules that are not negotiable:
 
-1. Misconceptions must be REAL and DOCUMENTED errors that students of this subject actually make — the kind that survive instruction and reappear later. Not random wrong facts. If the topic is too narrow to support ${misconceptionCount} genuine misconceptions, broaden slightly within the same subject rather than inventing filler.
+1. Prefer well-described errors that students in this subject may make; do not invent implausible misconceptions to fill the list. If the topic is too narrow to support ${misconceptionCount} useful entries, broaden slightly within the same subject. This is a draft: do not claim that any misconception or mapping is verified.
 2. Every misconception must be probed by AT LEAST ${probesPer} different items. This is a hard requirement: the analysis holds items out one at a time, and with fewer probes it cannot function.
-3. Each item has 4 options, exactly one correct. Wrong options are either tagged with the misconception id that produces them, or tagged null when they are just an undirected slip. Aim for 2 tagged distractors and 1 null per item.
-4. A distractor tagged with a misconception must be genuinely what that misconception produces. Do not tag loosely.
+3. Each item has 4 options, exactly one correct. Link a wrong option to a possible misconception only when the mapping is plausible; otherwise leave it unlinked with "mis": null. Aim for 2 linked distractors and 1 unlinked option per item.
+4. Tag a distractor only when the answer is a plausible result of the named misconception. These mappings are hypotheses for a teacher to review, not verified diagnoses.
 5. Option text must be short and must be distinct within an item.
 6. Include EXACTLY ONE deliberately weak item at the end, with "weak": "trivial" — something so easy that essentially every student answers correctly, so it separates nobody. This is a control: the item analysis must be able to find it unaided. Do not mark it in any other way.
-7. Archetypes describe which misconceptions tend to co-occur in one student. Give 3 groups of related misconceptions, plus a final "broadly secure" group with an empty core.
+7. Archetypes are illustrative profiles used only to generate the sample class, not claims about real-world prevalence. Give 3 groups of related misconceptions, plus a final "broadly secure" profile with an empty core.
 8. The reteach must be a real instructional move a teacher could run — what to do, not a restatement of the misconception. 2-4 sentences.
 
 Respond with JSON only. No prose, no code fence, no commentary.
@@ -93,7 +86,7 @@ Respond with JSON only. No prose, no code fence, no commentary.
     {"id": "A", "label": "<name of this profile>", "blurb": "<one sentence>", "core": ["M01","M02"], "weight": 0.28},
     {"id": "B", "label": "<name>", "blurb": "<one sentence>", "core": ["M03","M04"], "weight": 0.28},
     {"id": "C", "label": "<name>", "blurb": "<one sentence>", "core": ["M05","M06"], "weight": 0.26},
-    {"id": "D", "label": "Broadly secure", "blurb": "No stable misconception; errors are slips.", "core": [], "weight": 0.18}
+    {"id": "D", "label": "Broadly secure", "blurb": "No stable misconception pattern in the sample class.", "core": [], "weight": 0.18}
   ]
 }`;
 }

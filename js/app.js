@@ -13,7 +13,7 @@
 import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
-import { inferMisconceptions, diagnose, prevalence, coverage, PARAMS } from './infer.js';
+import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS } from './infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
@@ -25,7 +25,7 @@ import { initTour } from './tour.js';
 import { classFile, readClassFile, testFile } from './session.js';
 import { compareSittings, comparePredictions, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
-import { mathHtml, setMath } from './notation.js';
+import { escapeHtml, mathHtml, setMath } from './notation.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter, normName
@@ -64,15 +64,15 @@ const sentence = s => (s.endsWith('.') ? s : `${s}.`);
 const ROUGH_GROUPS = 0.2;
 
 const VERDICTS = {
-  strong: 'Working well', ok: 'Fine', diagnostic: 'Diagnosing, not ranking',
-  minor: 'Minor issue', weak: 'Worth rewriting', broken: 'Measuring backwards'
+  strong: 'Working well', ok: 'Acceptable', diagnostic: 'Diagnosing, not ranking',
+  minor: 'Minor issue', weak: 'Worth reviewing', broken: 'Unexpected pattern'
 };
 
-let colourOf = {};
-let letterOf = {};
+let colourOf = Object.create(null);
+let letterOf = Object.create(null);
 function assignColours(pack) {
-  colourOf = {};
-  letterOf = {};
+  colourOf = Object.create(null);
+  letterOf = Object.create(null);
   pack.misconceptions.forEach((m, i) => {
     colourOf[m.id] = `var(--m${(i % 12) + 1})`;
     letterOf[m.id] = i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
@@ -124,9 +124,10 @@ function run() {
   }
 
   const inf = inferMisconceptions(pack, cls.responses);
-  const cl = clusterStudents(inf.posterior, { seed: 42 });
+  const reportPosterior = posteriorForReporting(inf);
+  const cl = clusterStudents(reportPosterior, { seed: 42 });
   const cov = coverage(pack, cls.responses);
-  const groups = separateThin(describeClusters(inf.posterior, cl.labels, inf.misIds, cl), cov);
+  const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
   Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
@@ -182,7 +183,7 @@ function renderExample() {
   const byId = misById(pack);
   const count = (i, o) => cls.responses.reduce((n, row) => n + (row[i] === o ? 1 : 0), 0);
 
-  const top = prevalence(inf.posterior, inf.misIds)[0];
+  const top = prevalence(posteriorForReporting(inf), inf.misIds)[0];
   let at = 0, best = -1;
   pack.items.forEach((item, i) => {
     item.opts.forEach((o, k) => {
@@ -201,7 +202,7 @@ function renderExample() {
       ? 'Correct'
       : o.mis
         ? `<span class="sw" style="background:${colourOf[o.mis]}"></span>${mathHtml(byId[o.mis]?.name ?? o.mis)}`
-        : 'Wrong, with no misunderstanding behind it';
+        : 'Wrong; no known pattern';
     return `<li class="ex-opt ${kind}">
       <span class="ex-l">${paperLetter(item, k)}</span>
       <span class="ex-t">${mathHtml(o.t)}</span>
@@ -213,15 +214,15 @@ function renderExample() {
 
   host.innerHTML = `
     <div class="ex-head">
-      <span><b>Question ${item.id}</b>${item.topic ? ' · ' + mathHtml(item.topic) : ''}</span>
+      <span><b>Question ${escapeHtml(item.id)}</b>${item.topic ? ' · ' + mathHtml(item.topic) : ''}</span>
       <span>How ${cls.meta.imported ? 'your' : 'the sample'} class of ${n} answered</span>
     </div>
     <p class="ex-q">${mathHtml(item.stem)}</p>
     <ol class="ex-opts${wordyOptions(item) ? ' ex-long' : ''}">${rows}</ol>
     <figcaption class="ex-foot">
-      Every wrong option is written to catch one misunderstanding. One answer proves nothing, so
-      Why Wrong adds up each student&rsquo;s answers across every question that tests the same idea
-      before it names one.
+      Some wrong options are linked to a possible misunderstanding; others are not linked to a
+      known pattern. One answer is not enough to establish why it was chosen, so Why Wrong
+      combines evidence across questions that test the same idea.
     </figcaption>`;
 }
 
@@ -238,7 +239,7 @@ function renderSummary() {
   const secure = groups.find(g => g.isSecure);
   const thin = groups.find(g => g.isThin);
   const biggest = real[0];
-  const prev = prevalence(inf.posterior, inf.misIds)[0];
+  const prev = prevalence(posteriorForReporting(inf), inf.misIds)[0];
   const bad = cls.students.length < TOO_FEW ? [] : problemItems(stats);
   // Out of what was answered, so blanks do not drag the average down twice:
   // once here and once by being read as missing evidence everywhere else.
@@ -256,11 +257,11 @@ function renderSummary() {
     // The short labels are often notation ("x^a . x^b to x^(ab)"), which reads
     // badly inside a sentence. The name goes in the note below the strip instead.
     { v: prev ? String(Math.round(prev.expected)) : '—',
-      k: 'share the top misunderstanding', go: 'matrix' },
+      k: 'estimated students with the top pattern', go: 'matrix' },
     { v: answered ? `${Math.round((correct / answered) * 100)}%` : '—', k: hasBlanks ? 'correct of those answered' : 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
       cls: bad.length ? 'warn' : 'ok', go: 'items' },
-    { v: secure ? String(secure.size) : '0', k: 'need no reteach', go: 'groups' }
+    { v: secure ? String(secure.size) : '0', k: 'with no clear pattern found', go: 'groups' }
   ];
 
   cards.forEach(c => {
@@ -275,14 +276,14 @@ function renderSummary() {
 
   const topName = prev ? (byId[prev.id]?.name ?? prev.id) : null;
   const blanks = thin
-    ? ` ${thin.size} student${thin.size === 1 ? '' : 's'} left too much blank to diagnose.`
+    ? ` ${thin.size} student${thin.size === 1 ? '' : 's'} left too many questions blank for a reliable estimate.`
     : '';
   // With no groups, the note has to fit a class with no mistakes in it, or no answers.
   const noGroups = !answered ? ''
-    : correct === answered ? 'Every answer was right, so there is nothing to reteach.'
-    : 'No shared pattern in this class — the mistakes are scattered, which usually means practice rather than reteaching.';
+    : correct === answered ? 'All recorded answers are correct; this test has not identified a reteach need.'
+    : 'No clear shared pattern emerged. Review individual evidence; scattered answers alone do not show why a student missed a question.';
   $('#strip-note').textContent = ((real.length
-    ? `Start with the biggest group. ${topName ? `The single most widespread problem is “${topName}”.` : ''}`
+    ? `Start with the biggest group. ${topName ? `The most widespread pattern is “${topName}”.` : ''}`
     : noGroups) + blanks).trim();
 }
 
@@ -354,7 +355,7 @@ function renderMatrix() {
           c.dataset.letter = letterOf[mis];
           what = byId[mis]?.short ?? mis;
         }
-        else { c.classList.add('slip'); what = 'wrong, no pattern'; }
+        else { c.classList.add('slip'); what = 'wrong, no clear pattern'; }
       }
 
       c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose ${paperLetter(item, choice)} “${item.opts[choice].t}”` : 'left blank'} (${what})`;
@@ -420,9 +421,9 @@ function moveInMatrix(e) {
 function setMatrixNote(sorted) {
   const real = reteachGroups(state.groups).length;
   $('#matrix-note').textContent = !real
-    ? 'This class does not split into groups, so sorting it will not bring out a pattern.'
+    ? 'No clear groups emerged from these answers, so sorting may not reveal a shared pattern.'
     : sorted
-    ? `Same data, rows reordered so students who are wrong in the same way sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes are the questions where a whole group made the same mistake for the same reason.`
+    ? `Same data, rows reordered so students with similar answer patterns sit together. ${state.cls.students.length} students, ${real} group${real === 1 ? '' : 's'} — the vertical stripes show questions where a group gave similar answers.`
     : 'Rows are in register order, which is to say arbitrary. The pattern is already in this picture; it is just not visible yet.';
 }
 
@@ -466,7 +467,7 @@ function sortRows() {
     bar.style.background = colour;
     host.appendChild(bar);
 
-    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no reteach' : `Group ${state.groups.indexOf(b.g) + 1}`);
+    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no clear pattern' : `Group ${state.groups.indexOf(b.g) + 1}`);
     tag.style.top = `${b.start * h - 1}px`;
     host.appendChild(tag);
 
@@ -526,7 +527,7 @@ function renderLegend() {
   host.innerHTML = '';
   const byId = misById(state.pack);
 
-  prevalence(state.inf.posterior, state.inf.misIds).forEach(p => {
+  prevalence(posteriorForReporting(state.inf), state.inf.misIds).forEach(p => {
     const m = byId[p.id];
     if (!m) return;
     const n = el('button', 'leg');
@@ -549,7 +550,7 @@ function renderLegend() {
     host.appendChild(n);
   });
 
-  [['var(--correct)', 'correct'], ['var(--slip)', 'wrong, no pattern'], ['transparent', 'not answered', true]]
+  [['var(--correct)', 'correct'], ['var(--slip)', 'wrong, no clear pattern'], ['transparent', 'not answered', true]]
     .forEach(([bg, label, dashed]) => {
       const n = el('span', 'leg leg-static');
       const sw = el('span', `sw${dashed ? ' sw-omit' : ''}`);
@@ -575,22 +576,22 @@ function renderGroups() {
 
   const sub = $('#groups-sub');
   if (n < TOO_FEW) {
-    sub.textContent = `With ${students(n)}, groups mean very little, so use the Students tab and read each diagnosis on its own.`;
+    sub.textContent = `With ${students(n)}, group patterns are hard to assess. Review each student's evidence in the Students tab.`;
     state.groups.forEach((g, i) => host.appendChild(groupCard(g, i)));
     return;
   }
 
   const others = [
-    secure && `${secure.size} who need${secure.size === 1 ? 's' : ''} no reteach`,
-    thin && `${thin.size} with too few answers to say`
+    secure && `${secure.size} with no clear shared pattern`,
+    thin && `${thin.size} with too few answers for an estimate`
   ].filter(Boolean);
 
   sub.textContent = !real.length
-    ? `No reteach groups in this class, just ${others.join(' and ')}.`
-    : `${n} students, but not ${n} problems. Students who are wrong in the same way are grouped together — ` +
+    ? `No clear reteach groups emerged in this class: ${others.join(' and ')}.`
+    : `${n} students, but not ${n} separate plans. Students with similar answer patterns are grouped together — ` +
       `${real.length} group${real.length === 1 ? '' : 's'} here` +
       (others.length ? `, plus ${others.join(', and ')}` : '') +
-      `. One lesson can serve a whole group, because they are wrong for the same reason.` +
+      `. Treat each group as a starting point and check the students' evidence before planning a lesson.` +
       (state.cl.silhouette < ROUGH_GROUPS
         ? ' These groups overlap a lot, so treat them as a sketch and check the individual students.'
         : '');
@@ -609,29 +610,29 @@ function groupCard(g, idx) {
   if (!g.isSecure && g.signature[0]) card.style.setProperty('--gc', colourOf[g.signature[0].id]);
 
   const nline = el('div', 'group-n');
-  nline.appendChild(el('span', null, g.isThin ? 'Not enough answers' : g.isSecure ? 'No reteach needed' : `Group ${idx + 1}`));
+  nline.appendChild(el('span', null, g.isThin ? 'Not enough answers' : g.isSecure ? 'No clear pattern found' : `Group ${idx + 1}`));
   nline.appendChild(el('span', null, `${g.size} student${g.size === 1 ? '' : 's'} · ${Math.round((g.size / total) * 100)}%`));
   top.appendChild(nline);
 
   if (g.isThin) {
-    top.appendChild(el('h3', null, 'Too few answers to say'));
+    top.appendChild(el('h3', null, 'Not enough answers for an estimate'));
     card.appendChild(top);
     const body = el('div', 'group-body');
     body.appendChild(el('p', 'belief',
-      'These students left at least half the paper blank. That is not the same as being fine: nothing is known about them yet. Get the rest of their answers, or talk to them, before deciding anything.'));
+      'At least half the paper is blank, so there is not enough evidence for a reliable estimate. Collect more answers or check in with these students before drawing conclusions.'));
     body.appendChild(roster(g));
     card.appendChild(body);
     return card;
   }
 
   if (g.isSecure) {
-    top.appendChild(el('h3', null, 'No stable misunderstanding'));
+    top.appendChild(el('h3', null, 'No clear pattern in these answers'));
     card.appendChild(top);
     const body = el('div', 'group-body');
     const scores = totalScores(state.pack, state.cls.responses);
     body.appendChild(el('p', 'belief', g.members.every(s => scores[s] === state.cov[s].answered)
-      ? 'Everything these students answered was right, so there is nothing to reteach.'
-      : 'Any mistakes these students made do not repeat and do not point anywhere. That is carelessness rather than a misunderstanding: they need practice and attention, not a reteach.'));
+      ? 'All recorded answers were correct. This test has not identified a reteach need for these students.'
+      : 'Their wrong answers did not form a clear pattern on this test. The results cannot tell you why; review the evidence or check in with the students before deciding what support they need.'));
     body.appendChild(roster(g));
     card.appendChild(body);
     return card;
@@ -640,11 +641,11 @@ function groupCard(g, idx) {
   const details = g.signature.slice(0, 4).map(s => byId[s.id]).filter(Boolean);
   g.misDetails = details;
 
-  const h = el('h3', null, g.aiPlan?.headline || details[0]?.name || 'Shared misunderstanding');
+  const h = el('h3', null, g.aiPlan?.headline || details[0]?.name || 'Shared response pattern');
   if (g.aiPlan) h.appendChild(el('span', 'pill pill-ai', 'rewritten'));
   top.appendChild(h);
 
-  if (g.signature.length) top.appendChild(el('div', 'chips-lab', 'Held by about this share of the group'));
+  if (g.signature.length) top.appendChild(el('div', 'chips-lab', 'Average estimate in this group'));
   const chips = el('div', 'chips');
   g.signature.slice(0, 4).forEach(s => {
     const c = el('button', 'chip');
@@ -662,7 +663,7 @@ function groupCard(g, idx) {
 
   const body = el('div', 'group-body');
   if (details[0]?.belief) {
-    body.appendChild(el('div', 'lab', 'What they believe'));
+    body.appendChild(el('div', 'lab', 'Pattern suggests'));
     body.appendChild(setMath(el('p', 'belief'), details[0].belief));
   }
 
@@ -676,7 +677,7 @@ function groupCard(g, idx) {
 
   const checks = g.aiPlan?.verify || details[0]?.verify || [];
   if (checks.length) {
-    body.appendChild(el('div', 'lab', 'Check it landed'));
+    body.appendChild(el('div', 'lab', 'Check understanding'));
     const ul = el('ul', 'checks');
     checks.forEach(v => ul.appendChild(setMath(el('li'), v)));
     body.appendChild(ul);
@@ -687,7 +688,7 @@ function groupCard(g, idx) {
   const others = g.aiPlan ? [] : details.slice(1);
   if (others.length) {
     const more = el('details', 'group-more');
-    more.appendChild(el('summary', null, `${others.length} more this group shares`));
+    more.appendChild(el('summary', null, `${others.length} more patterns identified`));
     others.forEach(m => {
       const held = g.signature.find(s => s.id === m.id);
       const h4 = setMath(el('h4'), m.name);
@@ -729,7 +730,7 @@ function roster(g) {
 /** What a group is called wherever students are listed. */
 function groupLabel(g) {
   return g.isThin ? 'Not enough answers'
-    : g.isSecure ? 'No reteach needed'
+    : g.isSecure ? 'No clear pattern'
     : `Group ${state.groups.indexOf(g) + 1}`;
 }
 
@@ -765,13 +766,13 @@ function renderStudents() {
   const { pack, cls, inf, groups, cov } = state;
   const byId = misById(pack);
   const ci = pack.items.map(correctIndex);
-  const q = normName($('#student-search').value || '');
+  const h = normName($('#student-search').value || '');
 
   const rows = cls.students.map((st, s) => {
     const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
     const held = inf.misIds
-      .map((mid, k) => ({ mid, p: inf.posterior[s][k] }))
-      .filter(x => x.p >= PARAMS.decisionThreshold)
+      .map((mid, k) => ({ mid, k, p: inf.posterior[s][k] }))
+      .filter(x => isTested(inf, s, x.k) && x.p >= PARAMS.decisionThreshold)
       .sort((a, b) => b.p - a.p);
     const group = groups.find(g => g.members.includes(s));
     return { s, st, score, held, group };
@@ -782,7 +783,7 @@ function renderStudents() {
   rows.sort((a, b) => (b.held.length - a.held.length) || (a.score - b.score));
 
   const picked = state.studentGroup == null ? rows : rows.filter(r => r.group === groups[state.studentGroup]);
-  const shown = q ? picked.filter(r => normName(r.st.name).includes(q)) : picked;
+  const shown = h ? picked.filter(r => normName(r.st.name).includes(h)) : picked;
 
   // Slips print what is on screen, so one group or one student takes no scissors.
   const everyone = shown.length === rows.length;
@@ -821,9 +822,9 @@ function renderStudents() {
       });
       if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
     } else if (r.group?.isThin) {
-      mid.appendChild(el('span', 'chip chip-thin', 'Too few answers to say'));
+      mid.appendChild(el('span', 'chip chip-thin', 'Not enough answers for an estimate'));
     } else {
-      mid.appendChild(el('span', 'chip chip-clear', 'No stable misunderstanding'));
+      mid.appendChild(el('span', 'chip chip-clear', 'No clear pattern found'));
     }
     card.appendChild(mid);
 
@@ -854,7 +855,7 @@ function renderItems() {
     const box = el('div', 'empty');
     box.appendChild(el('h3', null, 'Too few students to judge the questions.'));
     box.appendChild(el('p', null,
-      `These checks compare students with each other, and ${students(cls.students.length)} is not enough. Each student's own diagnosis still works.`));
+      `These checks compare students with each other, and ${students(cls.students.length)} is not enough for a useful comparison. You can still review each student's estimate and evidence.`));
     host.appendChild(box);
     return;
   }
@@ -864,8 +865,8 @@ function renderItems() {
   const strong = stats.filter(s => s.quality === 'strong').length;
 
   sub.textContent =
-    `The same answers score your questions too. ${strong} of ${pack.items.length} are doing real work; ` +
-    `${bad.length} ${bad.length === 1 ? 'has' : 'have'} a problem worth a look. Click any question to see how the class answered it.` +
+    `The same answers can help review your questions. ${strong} of ${pack.items.length} are rated as working well; ` +
+    `${bad.length} ${bad.length === 1 ? 'is' : 'are'} flagged for review. Click a question to see how the class answered it.` +
     (cls.students.length < SMALL_CLASS
       ? ` With ${cls.students.length} students these figures are rough, so treat a flag as a reason to reread the question, not a verdict.`
       : '');
@@ -877,7 +878,7 @@ function renderItems() {
 
   if (!list.length) {
     host.appendChild(el('p', 'note', state.itemFilter === 'problem'
-      ? 'Nothing to flag — every question on this paper is pulling its weight.'
+      ? 'No questions were flagged for review. Check the results alongside your knowledge of the class.'
       : 'Nothing in this category.'));
   }
 
@@ -885,7 +886,7 @@ function renderItems() {
     const box = el('div', 'defended');
     box.appendChild(el('h3', null, 'These look weak by the usual measure. Keep them.'));
     const p = el('p', null,
-      'The standard check asks whether students who did well overall also got the question right. That assumes the test measures one thing. This one does not: a question aimed at one misunderstanding is missed by exactly the students who hold it, whatever their ability elsewhere. Before calling anything broken, the tool checks whether the rest of the paper agrees with the question.');
+      'The standard check asks whether students who did well overall also got the question right. That assumes the test measures one thing. A diagnostic question may be missed by students with a particular misunderstanding, even if they do well elsewhere. Before flagging it, the tool checks whether answers to the rest of the paper support the same pattern.');
     box.appendChild(p);
     const anchor = el('span', 'x-anchor', ' ');
     anchor.appendChild(infoButton('diagnosing'));
@@ -982,9 +983,9 @@ function renderProgress() {
   const metrics = el('div', 'metrics');
   [
     [t.students, 'students in both sittings', `Each one is compared with themselves.`],
-    [t.cleared, 'misunderstandings cleared', 'Held before the reteach and not after.'],
-    [t.stuck, 'still held', 'Held both times. These are your next reteach.'],
-    [t.emerged, 'new since last time', 'Not held before, held now.']
+    [t.cleared, 'no longer indicated', 'Indicated before the reteach, not after.'],
+    [t.stuck, 'indicated both times', 'The same pattern appeared in both sittings.'],
+    [t.emerged, 'newly indicated', 'Not indicated before, but indicated after.']
   ].forEach(([v, k, x]) => {
     const c = el('div', 'metric');
     c.appendChild(el('div', 'metric-v', String(v)));
@@ -1032,16 +1033,16 @@ function progressGroup(g, byId) {
   const number = state.groups.findIndex(x => x.index === g.index) + 1;
   head.appendChild(el('span', 'prog-group-n', `Group ${number}`));
   head.appendChild(setMath(el('span', 'prog-name'), byId[g.main]?.name ?? g.main));
-  head.appendChild(el('span', 'prog-group-score', `${g.cleared.length} of ${held} cleared`));
+  head.appendChild(el('span', 'prog-group-score', `${g.cleared.length} of ${held} no longer indicated`));
   row.appendChild(head);
 
   if (g.stuck.length) {
     const p = el('p', 'prog-group-who');
-    p.appendChild(el('b', null, 'Reteach again: '));
+    p.appendChild(el('b', null, 'Review with: '));
     p.appendChild(document.createTextNode(g.stuck.join(', ')));
     row.appendChild(p);
   } else {
-    row.appendChild(el('p', 'prog-group-who', 'Everyone in this group who held it has cleared it.'));
+    row.appendChild(el('p', 'prog-group-who', 'This pattern was no longer indicated for everyone in the group who was retested.'));
   }
   if (g.absent.length) {
     row.appendChild(el('p', 'prog-group-who', sentence(`Not retested: ${g.absent.join(', ')}`)));
@@ -1053,7 +1054,7 @@ function progressEmpty() {
   const box = el('div', 'empty');
   box.appendChild(el('h3', null, 'Nothing to compare yet.'));
   box.appendChild(el('p', null,
-    'After you reteach, give the class the same paper and paste the new answers. Students are matched by name, and you will see who moved rather than just whether the average rose.'));
+    'After a reteach, give the class the same paper and paste the new answers. Students are matched by name, and you can review which patterns changed in the analysis.'));
   const row = el('div', 'empty-actions');
   const paste = el('button', 'btn btn-primary', 'Paste the retest');
   paste.addEventListener('click', () => openImport('retest'));
@@ -1068,12 +1069,12 @@ function progressEmpty() {
 }
 
 function progressVerdict(t) {
-  const split = `${students(t.fewer)} ended up holding fewer misunderstandings and ${students(t.more)} holding more`;
+  const split = `${students(t.fewer)} had fewer misunderstandings indicated and ${students(t.more)} had more`;
   const [title, body] = {
-    improved: ['The class moved.', `${split}. A split that lopsided is unlikely to be chance.`],
-    worse: ['The class went backwards.', `${split}. A split that lopsided is unlikely to be chance.`],
-    unclear: ['No clear change yet.', `${split}. That could be chance on a class this size, so look at the misunderstandings one by one.`],
-    none: ['Nobody moved.', 'Every student holds the same misunderstandings as last time.']
+    improved: ['Fewer patterns were indicated.', `${split}. This difference is unlikely to be due to chance alone.`],
+    worse: ['More patterns were indicated.', `${split}. This difference is unlikely to be due to chance alone.`],
+    unclear: ['No clear difference yet.', `${split}. This could be chance, so review each pattern and student separately.`],
+    none: ['No diagnosis changed.', 'The same patterns were indicated in both sittings.']
   }[t.reading];
   const box = el('div', `prog-verdict is-${t.reading}`);
   box.appendChild(el('h3', null, title));
@@ -1107,7 +1108,7 @@ function progressCard(m, byId, n) {
     card.appendChild(row);
   });
 
-  const who = [['Still holding', m.stuck], ['Cleared', m.cleared], ['New', m.emerged], ['Not tested', m.untested]]
+  const who = [['Indicated both times', m.stuck], ['No longer indicated', m.cleared], ['Newly indicated', m.emerged], ['Not tested', m.untested]]
     .filter(([, names]) => names.length);
   if (who.length) {
     const more = el('details', 'prog-who');
@@ -1166,11 +1167,11 @@ function renderValidation() {
   if (!cls.truth) {
     $('#validation-note').textContent = '';
     const box = el('div', 'empty');
-    box.appendChild(el('h3', null, 'Not available for your own class — and that is the point.'));
+    box.appendChild(el('h3', null, 'Real classes have no hidden answer key.'));
     box.appendChild(el('p', null,
-      'These numbers work by comparing the analysis against misunderstandings that were planted before any answers existed. Your real students did not come with an answer key to their own heads, so there is nothing to score against.'));
+      'These measures are calculated by comparing the analysis with misunderstandings planted in the sample class before its answers were generated. For a real class, we do not know each student’s underlying thinking, so there is no ground truth to score against.'));
     box.appendChild(el('p', null,
-      'Switch the class back to “Sample class” to see how well the method recovers what it cannot see. Then judge whether you trust it on your own data.'));
+      'Switch to “Sample class” to see how well the method recovers those simulated patterns. This is a useful check, but it cannot guarantee the same results for a real class.'));
     host.appendChild(box);
     wrap.appendChild(predictionPanel());
     ['tabindex', 'role', 'aria-label'].forEach(a => wrap.removeAttribute(a));
@@ -1180,18 +1181,18 @@ function renderValidation() {
   // The table can be wider than a phone, so the keyboard has to be able to scroll it.
   wrap.tabIndex = 0;
   wrap.setAttribute('role', 'region');
-  wrap.setAttribute('aria-label', 'Groups found against the planted profiles');
+  wrap.setAttribute('aria-label', 'Groups compared with the simulated profiles');
 
-  const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
+  const dq = scoreDiagnosis(diagnose(posteriorForReporting(inf), inf.misIds), cls.truth, inf.misIds);
   const cq = scoreClustering(cl.labels, cls.truth);
 
   [
     { v: fmtPct(dq.recall), k: 'misunderstandings found', key: 'recall',
-      x: `Of every misunderstanding actually planted in a student, ${fmtPct(dq.recall)} were recovered from their answers alone.` },
+      x: `Of the misunderstandings planted in the simulated students, the analysis recovered ${fmtPct(dq.recall)} from their answers.` },
     { v: fmtPct(dq.precision), k: 'diagnoses correct', key: 'precision',
-      x: `Of every misunderstanding the tool attributed to a student, ${fmtPct(dq.precision)} were genuinely there.` },
+      x: `Of the misunderstandings attributed to simulated students, ${fmtPct(dq.precision)} were present in the hidden profiles.` },
     { v: dq.f1.toFixed(2), k: 'combined score', key: 'f1',
-      x: 'The two above in one number, so neither can be gamed by being reckless in one direction.' },
+      x: 'A single score that balances the share of real patterns found with the share of diagnoses that were correct.' },
     { v: cq.ari.toFixed(2), k: 'groups recovered', key: 'ari',
       x: `Against the ${cq.plantedGroups} profiles the simulation planted. 1.00 is exact, 0.00 is chance.` }
   ].forEach(m => {
@@ -1221,7 +1222,7 @@ function renderValidation() {
   const tb = el('tbody');
   table.forEach((row, i) => {
     const tr = el('tr');
-    tr.appendChild(el('th', null, i === cl.secureLabel ? 'no reteach' : `group ${i + 1}`));
+    tr.appendChild(el('th', null, i === cl.secureLabel ? 'no clear pattern' : `group ${i + 1}`));
     const max = Math.max(...row);
     row.forEach(v => tr.appendChild(el('td', v === max && v > 0 ? 'hot' : null, String(v))));
     tb.appendChild(tr);
@@ -1233,7 +1234,7 @@ function renderValidation() {
     'Change the class variant in the toolbar to re-roll a different sample class. The figures are computed live each time, so a bad run shows a bad number.';
 }
 
-/** The one check a real class does allow: did it match what she expected? */
+/** Compare the teacher's recorded predictions with patterns in the class. */
 function predictionPanel() {
   const box = el('div', 'pred');
   box.appendChild(el('h3', null, 'Check it against what you expected'));
@@ -1273,7 +1274,7 @@ function renderPredictionResult() {
 
   const byId = misById(state.pack);
   const name = id => byId[id]?.name ?? id;
-  const rows = prevalence(state.inf.posterior, state.inf.misIds);
+  const rows = prevalence(posteriorForReporting(state.inf), state.inf.misIds);
   const r = comparePredictions(state.predictions, rows, state.cls.students.length);
 
   host.appendChild(el('p', 'pred-sum',
@@ -1287,8 +1288,8 @@ function renderPredictionResult() {
     p.appendChild(document.createTextNode(`. ${note}`));
     host.appendChild(p);
   };
-  list('Not what you expected', 'Open a student and check the evidence: either the tool is wrong here or the class is telling you something.', r.surprises);
-  list('Expected, but barely there', 'The questions may not be catching it, or the class may have moved on.', r.absent);
+  list('Not what you expected', 'Review the student evidence and question labels; this difference may reflect the class, the test, or the analysis.', r.surprises);
+  list('Expected, but rarely indicated', 'The questions may not be detecting this pattern, or it may be less common than expected.', r.absent);
 }
 
 function renderMethod() {
@@ -1464,13 +1465,13 @@ function openImport(mode = 'class') {
   $('#import-text').focus();
 }
 
-/** Say why a paste failed. One that worked closes this box, so its notes go on the page. */
+/** Explain import errors here; successful imports close the dialog and show notes on the page. */
 function reportImport(res) {
   const box = $('#import-report');
   box.hidden = res.ok;
   box.innerHTML = '';
   if (res.ok) return true;
-  box.appendChild(el('div', 'ir-h', 'Could not read this yet.'));
+  box.appendChild(el('div', 'ir-h', 'We could not read these answers.'));
   res.errors.forEach(e => box.appendChild(el('div', 'ir-e', e)));
   return false;
 }
@@ -1904,7 +1905,7 @@ function tourFacts() {
     precision: null
   };
   if (state.cls.truth) {
-    const dq = scoreDiagnosis(diagnose(state.inf.posterior, state.inf.misIds), state.cls.truth, state.inf.misIds);
+    const dq = scoreDiagnosis(diagnose(posteriorForReporting(state.inf), state.inf.misIds), state.cls.truth, state.inf.misIds);
     f.recall = fmtPct(dq.recall);
     f.precision = fmtPct(dq.precision);
   }
@@ -1934,10 +1935,10 @@ run();
 // Deep links: ?view=groups opens a tab directly, ?sorted=1 starts with the map
 // already sorted. Handy for sharing a view and for the demo.
 {
-  const q = new URLSearchParams(location.search);
-  const v = q.get('view');
+  const h = new URLSearchParams(location.search);
+  const v = h.get('view');
   if (v && $(`#view-${v}`)) showView(v);
-  if (q.get('sorted') === '1' && !state.sorted) toggleSort();
+  if (h.get('sorted') === '1' && !state.sorted) toggleSort();
 }
 
 tour.maybeOpen();

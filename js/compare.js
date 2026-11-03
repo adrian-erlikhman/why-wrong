@@ -1,25 +1,11 @@
 /**
- * compare.js -- did the reteach work?
- * ---------------------------------------------------------------------------
- * The whole tool promises a loop: find the misunderstanding, reteach it, check
- * it. This closes the last step. The class sits the paper again, the two
- * sittings are inferred independently, and each student is compared with
- * themselves.
- *
- * The honest difficulty is noise. Diagnoses near the threshold flip between
- * sittings with no teaching at all, so "the count went from 9 to 7" means
- * nothing on its own. What carries information is the asymmetry: how many
- * students lost a misconception against how many gained it. Random flipping
- * goes both ways, teaching goes one way, and McNemar's exact test asks whether
- * the split is more lopsided than chance. It is the standard test for paired
- * before-and-after counts, and at class sizes the exact form is the right one.
- *
- * Nothing here can tell a teacher why students moved. Sitting the same paper
- * twice teaches the paper, so a good result is evidence, not proof.
+ * Compare two sittings of the same test. Results are estimates, not proof that
+ * a reteach caused a change: students may remember the questions from the
+ * first sitting.
  */
 
 import { misIds } from './pack.js';
-import { inferMisconceptions, PARAMS, MIN_PROBES_ANSWERED } from './infer.js';
+import { inferMisconceptions, isTested, PARAMS } from './infer.js';
 import { csvCell, normName } from './importer.js';
 
 export { normName };
@@ -70,8 +56,8 @@ const ALPHA = 0.05;
 
 /** Plain words for each reading, shared by the page and the spreadsheet. */
 export const READING = {
-  improved: 'Clear improvement',
-  worse: 'Got worse',
+  improved: 'Fewer indicated after',
+  worse: 'More indicated after',
   unclear: 'Could be chance',
   none: 'No change'
 };
@@ -97,14 +83,11 @@ export function compareSittings(pack, before, after, groups = []) {
   const ids = misIds(pack);
   const { decisionThreshold: T } = PARAMS;
 
-  const testedIn = (inf, s, k) =>
-    inf.evidence[s][k].filter(c => !c.omitted).length >= MIN_PROBES_ANSWERED;
-
   const misconceptions = ids.map((id, k) => {
     const out = { id, cleared: [], stuck: [], emerged: [], untested: [] };
     match.pairs.forEach(({ before: b, after: a }) => {
       const name = before.students[b].name;
-      if (!testedIn(infB, b, k) || !testedIn(infA, a, k)) { out.untested.push(name); return; }
+      if (!isTested(infB, b, k) || !isTested(infA, a, k)) { out.untested.push(name); return; }
       const was = infB.posterior[b][k] >= T;
       const is = infA.posterior[a][k] >= T;
       if (was && !is) out.cleared.push(name);
@@ -119,10 +102,8 @@ export function compareSittings(pack, before, after, groups = []) {
     };
   });
 
-  // The class-wide call counts students, not misconceptions. One student's
-  // misconceptions are not independent of each other, so pooling them would
-  // overstate the evidence. Students are independent, and each one either ended
-  // up holding fewer than before, more, or the same number.
+  // Compare each student's net change so one student with several diagnoses
+  // does not count as several independent observations.
   const names = list => new Set(list);
   const sets = misconceptions.map(m => ({ cleared: names(m.cleared), emerged: names(m.emerged) }));
   const net = match.pairs.map(({ before: b }) => {
@@ -150,11 +131,7 @@ export function compareSittings(pack, before, after, groups = []) {
   };
 }
 
-/**
- * What happened to each reteach group: did the lesson aimed at this group's main
- * misunderstanding reach the students it was for? Clearing counts across the
- * whole class hide that, since one group can clear it while another does not.
- */
+/** Summarize changes for each group from the first sitting. */
 function groupOutcomes(groups, misconceptions, students, match) {
   const retested = new Set(match.pairs.map(p => p.before));
   return groups.map(g => {
@@ -175,16 +152,11 @@ function groupOutcomes(groups, misconceptions, students, match) {
 }
 
 /**
- * Set what a teacher expected against what the answers showed.
+ * Compare predictions recorded before the results with the most common
+ * patterns in the class. Unexpected results should be reviewed, not treated as
+ * proof that either the prediction or the analysis is wrong.
  *
- * The label sheet asks for her predictions before she sees a result, because a
- * tool that only ever agrees with hindsight has not been tested. The honest
- * comparison is rank against rank: of the k things she expected, how many are in
- * the class's top k? Anything else is reported by name, since a surprise is
- * either the tool being wrong or the class telling her something, and both are
- * worth a look.
- *
- * @param expected  misconception ids she ticked
+ * @param expected  misconception ids selected before seeing results
  * @param rows      prevalence() output, most widespread first
  * @param size      students in the class
  */
@@ -205,7 +177,7 @@ export function comparePredictions(expected, rows, size) {
 
 /** The comparison as a spreadsheet, one row per misunderstanding. */
 export function progressCsv(cmp, misIndex) {
-  const head = ['Misunderstanding', 'Before', 'After', 'Reading', 'Cleared', 'Still holding', 'New', 'Not tested'];
+  const head = ['Misunderstanding', 'Before', 'After', 'Reading', 'No longer indicated', 'Indicated both times', 'Newly indicated', 'Not tested'];
   const rows = cmp.misconceptions.map(m => [
     `${m.id} ${misIndex[m.id]?.name ?? ''}`.trim(), m.before, m.after, READING[m.reading],
     m.cleared.join('; '), m.stuck.join('; '), m.emerged.join('; '), m.untested.join('; ')

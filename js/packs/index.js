@@ -33,8 +33,8 @@ export function isBuiltIn(pack) {
 }
 
 export function addPack(pack) {
-  // A pack built from a teacher's own test keeps her option order on every
-  // item, or her "A" and ours would differ and every diagnosis would be wrong.
+  // A teacher's pack keeps its printed option order, so its answer letters
+  // continue to match the paper.
   if (pack.keepOrder) pack.items.forEach(it => { it.keepOrder = true; });
   registry.set(pack.id, pack);
   return pack;

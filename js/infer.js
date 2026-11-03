@@ -29,7 +29,7 @@ export const PARAMS = {
   express: 0.76,        // P(choose a diagnostic distractor | holds the misconception)
   recoverCorrect: 0.55, // of the times it does not fire, how often the answer is nonetheless correct
   baseCorrect: 0.62,    // P(correct | does not hold the misconception)
-  decisionThreshold: 0.5
+  decisionThreshold: 0.6
 };
 
 function logit(p) { return Math.log(p / (1 - p)); }
@@ -50,7 +50,10 @@ function likelihoods(item, mid, choice) {
 
   let withMis;
   if (D.includes(choice)) {
-    withMis = express / d;
+    const remainingWrongMass = nOtherWrong > 0
+      ? 0
+      : (1 - express) * (1 - recoverCorrect);
+    withMis = (express + remainingWrongMass) / d;
   } else if (choice === ci) {
     withMis = (1 - express) * recoverCorrect;
   } else {
@@ -70,6 +73,8 @@ function likelihoods(item, mid, choice) {
 
 /**
  * Posterior probability that each student holds each misconception.
+ * Each response row has one option index per item; -1, null, and undefined
+ * represent an unanswered item.
  * @returns {{posterior: number[][], misIds: string[], evidence: object[][]}}
  *   posterior[s][m] in [0,1]; evidence[s][m] lists the per-item contributions,
  *   which is what lets the UI justify a diagnosis item by item.
@@ -78,25 +83,56 @@ export function inferMisconceptions(pack, responses) {
   const misIds = packMisIds(pack);
   const ITEMS = pack.items;
 
+  if (!Array.isArray(responses)) {
+    throw new TypeError('Responses must be an array of answer rows.');
+  }
+  for (let s = 0; s < responses.length; s++) {
+    const row = responses[s];
+    if (!Array.isArray(row) || row.length !== ITEMS.length) {
+      throw new RangeError(`Response row ${s + 1} must contain exactly ${ITEMS.length} answers.`);
+    }
+    row.forEach((choice, i) => {
+      if (choice == null || choice === -1) return;
+      if (!Number.isInteger(choice) || choice < 0 || choice >= ITEMS[i].opts.length) {
+        throw new RangeError(`Response ${i + 1} for student ${s + 1} is not a valid option index or blank.`);
+      }
+    });
+  }
+
   // Precompute which items probe which misconception.
-  const probing = {};
+  const probing = new Map();
   misIds.forEach(mid => {
-    probing[mid] = ITEMS.map((it, i) => ({ it, i }))
-      .filter(({ it }) => it.opts.some(o => o.mis === mid));
+    probing.set(mid, ITEMS.map((it, i) => ({ it, i }))
+      .filter(({ it }) => it.opts.some(o => o.mis === mid))
+      .map(({ it, i }) => {
+        const diagnosticChoices = new Set(distractorsFor(it, mid));
+        return {
+          it,
+          i,
+          correct: correctIndex(it),
+          diagnosticChoices,
+          logOdds: it.opts.map((_, choice) => {
+            const { withMis, withoutMis } = likelihoods(it, mid, choice);
+            return Math.log(withMis / withoutMis);
+          })
+        };
+      }));
   });
 
   const posterior = [];
   const evidence = [];
+  const logits = [];
 
   responses.forEach(row => {
     const pRow = [];
     const eRow = [];
+    const lRow = [];
 
     misIds.forEach(mid => {
       let lo = logit(PARAMS.prior);
       const contributions = [];
 
-      probing[mid].forEach(({ it, i }) => {
+      probing.get(mid).forEach(({ it, i, correct, diagnosticChoices, logOdds }) => {
         const choice = row[i];
 
         // An unanswered question is not a wrong answer. It carries no evidence
@@ -117,32 +153,28 @@ export function inferMisconceptions(pack, responses) {
           return;
         }
 
-        const { withMis, withoutMis } = likelihoods(it, mid, choice);
-        const delta = Math.log(withMis / withoutMis);
+        const delta = logOdds[choice];
         lo += delta;
         contributions.push({
           itemId: it.id,
           choice,
           chose: it.opts[choice].t,
           omitted: false,
-          isDiagnostic: distractorsFor(it, mid).includes(choice),
-          isCorrect: choice === correctIndex(it),
+          isDiagnostic: diagnosticChoices.has(choice),
+          isCorrect: choice === correct,
           logOdds: delta
         });
       });
 
       pRow.push(sigmoid(lo));
       eRow.push(contributions);
+      lRow.push(lo);
     });
 
     posterior.push(pRow);
     evidence.push(eRow);
+    logits.push(lRow);
   });
-
-  // Retain the raw log-odds alongside the probabilities. Item analysis needs
-  // them to ask a leave-one-out question (see `posteriorWithout`), which is not
-  // recoverable from the squashed posterior alone.
-  const logits = posterior.map(row => row.map(p => logit(Math.min(Math.max(p, 1e-9), 1 - 1e-9))));
 
   return { posterior, misIds, evidence, logits };
 }
@@ -188,8 +220,22 @@ export function coverage(pack, responses) {
 
 /** Misconceptions this student gave too few answers to test. */
 export function untested(inference, s) {
-  return inference.misIds.filter((_, k) =>
-    inference.evidence[s][k].filter(c => !c.omitted).length < MIN_PROBES_ANSWERED);
+  return inference.misIds.filter((_, k) => !isTested(inference, s, k));
+}
+
+/** Whether a student answered enough probes to report a misconception estimate. */
+export function isTested(inference, s, mIndex) {
+  return inference.evidence[s][mIndex]
+    .filter(contribution => !contribution.omitted).length >= MIN_PROBES_ANSWERED;
+}
+
+/**
+ * Posterior values safe to use for grouping and diagnosis summaries.
+ * Untested patterns stay at the prior instead of forming an actionable signal.
+ */
+export function posteriorForReporting(inference) {
+  return inference.posterior.map((row, s) =>
+    row.map((p, k) => isTested(inference, s, k) ? p : PARAMS.prior));
 }
 
 /** Thresholded diagnosis: the set of misconceptions attributed to each student. */

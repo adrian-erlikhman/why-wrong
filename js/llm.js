@@ -1,22 +1,17 @@
 /**
  * llm.js -- optional language-model layer.
  * ---------------------------------------------------------------------------
- * Everything the tool concludes is computed without this file. The inference,
- * the clustering, the item analysis and the validation are all deterministic
- * numeric code, and the reteach plans shipped in curriculum.js are written by
- * hand. So the page works fully with no key, no network, and no account, which
- * is the only sane default for something a teacher might open once.
+ * The inference, clustering, item analysis and validation are deterministic.
+ * Reteach plans in the built-in packs are written by hand, so the page works
+ * without an API key or account.
  *
- * What a model adds is adaptation: rewriting a generic reteach plan for the
- * specific combination of misconceptions *this* cluster actually holds, and for
- * its size. That is a genuine improvement and a genuinely appropriate use of a
- * language model -- generating prose conditioned on structured input -- rather
- * than asking it to do the diagnosis, which it would do less reliably than
- * arithmetic does.
+ * A model can adapt a reteach plan to the patterns attributed to a group. The
+ * request includes group size and misconception details, but no student names
+ * or individual answers. Generated plans are suggestions for a teacher to
+ * review.
  *
  * The key lives in a module-scoped variable for the lifetime of the tab. It is
- * never written to localStorage, never logged, and never sent anywhere except
- * api.anthropic.com.
+ * never written to localStorage, never logged, and sent only to api.anthropic.com.
  */
 
 const ENDPOINT = 'https://api.anthropic.com/v1/messages';
@@ -73,18 +68,18 @@ export async function rewritePlan(cluster, classSize, subject = '') {
 
   const prompt = `You are helping a teacher${subject ? ` of ${subject}` : ''} plan a reteach for one group within their class.
 
-The class has ${classSize} students. This group contains ${cluster.size} of them. A diagnostic analysis found that these students share the following misconceptions:
+The class has ${classSize} students. This group contains ${cluster.size} of them. The analysis found the following possible response patterns. Treat them as planning hypotheses, not confirmed beliefs, and do not assume every student in the group shares every pattern:
 
 ${profile}
 
 Write a single focused reteach plan for this group specifically. Requirements:
-- Address the combination above as one coherent session, not as a list of separate fixes. Where two of these misconceptions share a root cause, say so and teach the root cause.
+- Address the patterns above in one coherent session, without claiming that every student holds every pattern. Only name a shared root cause when the information supports it; otherwise focus on a concrete way to check students' understanding.
 - 10-15 minutes of class time. Be concrete about what the teacher does and says.
 - No preamble, no restating the task, no headings.
-- Then give exactly 3 short verification questions that would show whether it worked.
+- Then give exactly 3 short questions to check what students understand afterward.
 
 Respond as JSON only, with this exact shape:
-{"headline": "<6 words or fewer naming the root cause>", "plan": "<2-4 sentences>", "verify": ["<q1>", "<q2>", "<q3>"]}`;
+{"headline": "<6 words or fewer naming the teaching focus>", "plan": "<2-4 sentences>", "verify": ["<q1>", "<q2>", "<q3>"]}`;
 
   let res;
   try {

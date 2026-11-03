@@ -103,11 +103,10 @@ function unit(v) {
  *
  * Two design decisions here matter more than the choice of algorithm.
  *
- * 1. Students with no confident misconception are separated out *before*
- *    clustering rather than being forced into a group. They are not a failure
- *    mode -- they are the students who are fine, and their errors are slips.
- *    Leaving them in drags centroids toward the origin and blurs every real
- *    group.
+ * 1. Students with no confidently indicated misconception are separated out
+ *    *before* clustering rather than being forced into a group. This avoids
+ *    forming a group from students whose answer patterns do not show a clear
+ *    signal; it does not establish that they have no misunderstandings.
  *
  * 2. The remaining students are compared by *direction*, not magnitude: the
  *    posterior vectors are L2-normalised so that k-means is effectively
@@ -267,7 +266,7 @@ export function describeClusters(posterior, labels, misIds, { k, secureLabel }) 
   return clusters;
 }
 
-/** The groups a teacher reteaches: not the fine, and not the unknown. */
+/** Groups with an indicated pattern, excluding secure and low-coverage groups. */
 export function reteachGroups(groups) {
   return groups.filter(g => !g.isSecure && !g.isThin);
 }

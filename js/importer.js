@@ -1,14 +1,9 @@
 /**
  * importer.js -- get a real class in, and get usable paper out.
  * ---------------------------------------------------------------------------
- * Everything else in this project analyses a simulated class. That is the right
- * default (it is the only way to measure whether the method works), but a
- * teacher does not have a simulated class -- they have thirty answer sheets on
- * a desk.
- *
- * So the loop has to close in both directions: print the instrument, give it,
- * type the answers back in, get the analysis. This module does the boring,
- * load-bearing half of that.
+ * The sample class makes it possible to measure recovery against known answers.
+ * Teachers can also import a real class, then print or export the materials
+ * needed to use the analysis.
  *
  * Parsing is deliberately forgiving. Teachers will paste from Excel, from
  * Google Sheets, from a Form export; they will use A/B/C/D, or 1/2/3/4, or the
@@ -21,8 +16,8 @@
  */
 
 import { makeRng, shuffled } from './rng.js';
-import { PARAMS } from './infer.js';
-import { mathHtml } from './notation.js';
+import { isTested, PARAMS } from './infer.js';
+import { escapeHtml, mathHtml } from './notation.js';
 import { correctIndex } from './pack.js';
 
 const LETTERS = 'ABCDEFGH';
@@ -49,8 +44,8 @@ function idSeed(id) {
 
 /**
  * Stored option index printed at each position: order[k] is letter k's option.
- * An item marked keepOrder is a teacher's own question, already on paper in
- * her order, so its letters are the stored order and nothing is shuffled.
+ * An item marked keepOrder is a teacher's question whose printed option order
+ * must stay unchanged.
  */
 export function paperOrder(item) {
   let order = orderCache.get(item);
@@ -141,11 +136,9 @@ ${withKey ? '' : '<div class="name">Name: ______________________________  Class:
 }
 
 /**
- * The labels, on paper, for the teacher to check before any answers are read:
- * every wrong option with the misconception it is tagged with, and a line to
- * agree or fix it. Her predictions go on the first page, written before she
- * sees a result, so the comparison afterwards is against what she expected
- * rather than what the tool said.
+ * A printable sheet for checking labels before reviewing class results.
+ * Teachers can record predictions on the first page before seeing the
+ * analysis, then compare those predictions with the results.
  */
 export function reviewHtml(pack) {
   const mis = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
@@ -157,7 +150,7 @@ export function reviewHtml(pack) {
       const o = it.opts[oi];
       const label = o.c ? '<span class="key">correct answer</span>'
         : o.mis ? `<span class="tag">${escapeHtml(mis[o.mis]?.name ?? o.mis)}</span>`
-        : '<span class="tag none">no label: a careless slip</span>';
+        : '<span class="tag none">not linked to a known pattern</span>';
       const check = o.c ? '' : '<div class="chk"><span class="box"></span>agree &nbsp; <span class="box"></span>fix: ______________________________</div>';
       return `<li><span class="l">${LETTERS[k]}.</span> ${escapeHtml(o.t)}<div class="lab">&rarr; ${label}</div>${check}</li>`;
     }).join('');
@@ -198,13 +191,13 @@ export function reviewHtml(pack) {
 <div class="meta">${[pack.subject, pack.level, `${pack.items.length} questions`, `${pack.misconceptions.length} misunderstandings`].filter(Boolean).map(escapeHtml).join(' · ')}</div>
 
 <h2>1 · Before you see any results</h2>
-<p>Tick the 2 or 3 misunderstandings you expect to be most common in this class. If yours isn't listed, write it below.</p>
+<p>Tick the two or three misunderstandings you expect to be most common in this class. If yours is not listed, write it below.</p>
 <ul class="pred">${predict}</ul>
 <p>Other: </p><div class="lines"></div>
 <p>Class / period: ______________ &nbsp; Date: ______________</p>
 
 <h2 class="brk">2 · The labels</h2>
-<p>Each wrong answer is labelled with the misunderstanding that most likely leads a student to pick it. Tick <b>agree</b>, or write the fix. "A careless slip" means the answer says nothing about what the student believes.</p>
+<p>Each labelled answer is linked to a possible misunderstanding. Tick <b>agree</b> or write a correction. An answer marked "not linked to a known pattern" does not point to a specific misunderstanding.</p>
 <ol class="qs">${items}</ol>
 </main>
 </body></html>`;
@@ -212,9 +205,8 @@ export function reviewHtml(pack) {
 
 /**
  * One slip per student, to hand back with the paper. It is written to the
- * student, so it carries no percentages, group numbers or rankings, and it says
- * plainly that it is a guess: a sixteen-year-old should be able to read it and
- * tell the teacher it is wrong.
+ * student, so it omits percentages and rankings. It also says the result is an
+ * estimate that students should review with their teacher.
  */
 export function slipsHtml(pack, cls, inf, cov, only = null) {
   const byId = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
@@ -222,18 +214,18 @@ export function slipsHtml(pack, cls, inf, cov, only = null) {
 
   const slips = wanted.map(s => {
     const st = cls.students[s];
+    const hasUntested = inf.misIds.some((_, k) => !isTested(inf, s, k));
     const held = inf.misIds
       .map((id, k) => ({ m: byId[id], p: inf.posterior[s][k] }))
-      .filter(x => x.m && x.p >= PARAMS.decisionThreshold)
+      .filter((x, k) => x.m && isTested(inf, s, k) && x.p >= PARAMS.decisionThreshold)
       .sort((a, b) => b.p - a.p)
       .slice(0, 2);
 
     let body;
     if (held.length) {
-      body = `<p class="lead">Your answers point to this mix-up:</p>` + held.map(({ m }) => {
+      body = `<p class="lead">Your answers may point to this mix-up:</p>` + held.map(({ m }) => {
         const tryThese = (m.verify || []).map(v => `<li>${mathHtml(v)}</li>`).join('');
-        // The belief is written about the student, for the teacher, so it never
-        // goes on a slip. A test with no student line just leaves this out.
+        // Use the student-facing wording on slips, not the teacher-facing belief.
         return `<h3>${mathHtml(m.name)}</h3>
 ${m.student ? `<p>${mathHtml(m.student)}</p>` : ''}
 ${tryThese ? `<p class="try">Try these:</p><ol>${tryThese}</ol>` : ''}`;
@@ -241,16 +233,17 @@ ${tryThese ? `<p class="try">Try these:</p><ol>${tryThese}</ol>` : ''}`;
     } else if (cov[s].thin) {
       body = `<p class="lead">You left a lot of this blank, so there is not enough here to go on yet. Talk to your teacher about finishing it.</p>`;
     } else if (cls.responses[s].every((c, i) => c < 0 || c === correctIndex(pack.items[i]))) {
-      body = `<p class="lead">Everything you answered was right, so there is nothing to fix here. Good work.</p>`;
+      body = `<p class="lead">Every question you answered was correct. This test did not flag a pattern, but it does not measure everything. Ask your teacher if anything still feels unclear.</p>`;
     } else {
-      body = `<p class="lead">Your mistakes do not follow one pattern, which usually means slips rather than a misunderstanding. Slow down, check your work, and keep practising.</p>`;
+      body = `<p class="lead">Your answers did not show a clear, repeated pattern. This test cannot tell why those answers were wrong; review them with your teacher before deciding what to practise next.</p>`;
     }
 
     return `<article class="slip">
 <h2>${escapeHtml(st.name)}</h2>
 <div class="meta">${escapeHtml(pack.name)}</div>
 ${body}
-<p class="foot">This is not a grade. It is a best guess from the pattern in your answers, so tell your teacher if it looks wrong.</p>
+${hasUntested && !cov[s].thin ? '<p class="note">Some patterns could not be checked because too few of their questions were answered.</p>' : ''}
+<p class="foot">This is not a grade. It is an estimate based on your answer pattern. Review it with your teacher, especially if it does not seem right.</p>
 </article>`;
   }).join('');
 
@@ -278,10 +271,6 @@ ${body}
 ${slips}
 </main>
 </body></html>`;
-}
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
 /** Trigger a download of `text` without leaving the page. */
@@ -643,10 +632,10 @@ export function groupsCsv(pack, cls, groups, misIndex) {
   const rows = groups.map((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
     if (g.isThin) {
-      return ['Not enough answers', names, g.size, '—', 'Left at least half the paper blank. Get the rest of their answers before deciding anything.', '', '', ''];
+      return ['Not enough answers', names, g.size, '—', 'At least half the paper is blank. Collect more answers or check in with these students before drawing conclusions.', '', '', ''];
     }
     if (g.isSecure) {
-      return [`Secure`, names, g.size, '—', 'No reteach needed. Practice and attention rather than a lesson.', '', '', ''];
+      return ['No clear pattern', names, g.size, '—', 'The answers did not show a clear pattern on this test. Review the evidence before deciding what support would help.', '', '', ''];
     }
     const top = misIndex[g.signature[0]?.id];
     return [

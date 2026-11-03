@@ -2,16 +2,15 @@
  * Pipeline sanity + recovery test.
  * Run: node test/pipeline.test.mjs
  *
- * Validates every built-in pack against the pack contract, then runs the full
- * pipeline over many seeds per pack and reports how well the planted ground
- * truth is recovered. A pack is only as good as its recovery numbers, so the
- * same thresholds apply to all of them.
+ * Validates every built-in pack against the pack contract, then runs the
+ * pipeline over many simulated classes to measure recovery against their
+ * planted profiles. These checks cover the simulation, not real-class accuracy.
  */
 
 import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES, correctIndex } from '../js/pack.js';
 import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
-import { inferMisconceptions, diagnose, coverage, untested, MIN_ANSWERED } from '../js/infer.js';
+import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, isTested, posteriorForReporting, MIN_ANSWERED, PARAMS } from '../js/infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
@@ -20,6 +19,7 @@ import { classFile, readClassFile, fingerprint, testFile } from '../js/session.j
 import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
 import { rewritePlan, setKey } from '../js/llm.js';
+import { escapeHtml, mathHtml } from '../js/notation.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -29,6 +29,163 @@ function check(name, cond, detail = '') {
 
 const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
 const min = a => Math.min(...a);
+
+check('the default diagnosis cutoff excludes weaker posterior estimates',
+  PARAMS.decisionThreshold === 0.6 &&
+  !diagnose([[0.59, 0.6]], ['below', 'at'])[0].has('below') &&
+  diagnose([[0.59, 0.6]], ['below', 'at'])[0].has('at'));
+
+const allDiagnosticPack = {
+  misconceptions: [{ id: 'M', name: 'Test misconception' }],
+  items: [{
+    id: 'Q',
+    opts: [
+      { t: 'Correct', c: true },
+      { t: 'Wrong A', mis: 'M' },
+      { t: 'Wrong B', mis: 'M' },
+      { t: 'Wrong C', mis: 'M' }
+    ]
+  }]
+};
+const allDiagnosticPosterior = inferMisconceptions(allDiagnosticPack, [[1]]).posterior[0][0];
+const withMisLikelihood =
+  (PARAMS.express + (1 - PARAMS.express) * (1 - PARAMS.recoverCorrect)) / 3;
+const withoutMisLikelihood = (1 - PARAMS.baseCorrect) / 3;
+const expectedAllDiagnosticPosterior =
+  PARAMS.prior * withMisLikelihood /
+  (PARAMS.prior * withMisLikelihood + (1 - PARAMS.prior) * withoutMisLikelihood);
+check('all-diagnostic items preserve the full likelihood probability mass',
+  Math.abs(allDiagnosticPosterior - expectedAllDiagnosticPosterior) < 1e-12,
+  `${allDiagnosticPosterior} vs ${expectedAllDiagnosticPosterior}`);
+
+const saturationCount = 30;
+const saturationItems = Array.from({ length: saturationCount }, (_, i) => ({
+  id: `Q${i}`,
+  opts: [
+    { t: 'Correct', c: true },
+    { t: 'Diagnostic', mis: 'M' },
+    { t: 'Other A' },
+    { t: 'Other B' }
+  ]
+}));
+const saturationPack = { misconceptions: allDiagnosticPack.misconceptions, items: saturationItems };
+const saturationInference = inferMisconceptions(saturationPack, [saturationItems.map(() => 1)]);
+const diagnosticLogOdds = Math.log(PARAMS.express / ((1 - PARAMS.baseCorrect) / 3));
+const expectedSaturatedLogit =
+  Math.log(PARAMS.prior / (1 - PARAMS.prior)) + saturationCount * diagnosticLogOdds;
+check('raw log-odds survive posterior saturation for leave-one-out analysis',
+  saturationInference.posterior[0][0] === 1 &&
+  Math.abs(saturationInference.logits[0][0] - expectedSaturatedLogit) < 1e-12 &&
+  Math.abs(posteriorWithout(saturationInference, 0, 0, 'Q0') - 1 / (1 + Math.exp(-(expectedSaturatedLogit - diagnosticLogOdds)))) < 1e-12);
+
+let normalizedLikelihoods = true;
+let likelihoodChecks = 0;
+BUILT_IN.forEach(pack => pack.items.forEach((item, itemIndex) => {
+  const mappedMisconceptions = [...new Set(item.opts.map(option => option.mis).filter(Boolean))];
+  mappedMisconceptions.forEach(mid => {
+    let withMisTotal = 0;
+    let withoutMisTotal = 0;
+    item.opts.forEach((_, choice) => {
+      const row = Array(pack.items.length).fill(-1);
+      row[itemIndex] = choice;
+      const posterior = inferMisconceptions(pack, [row]).posterior[0][pack.misconceptions.findIndex(m => m.id === mid)];
+      const oddsRatio = (posterior / (1 - posterior)) / (PARAMS.prior / (1 - PARAMS.prior));
+      const withoutMis = choice === correctIndex(item)
+        ? PARAMS.baseCorrect
+        : (1 - PARAMS.baseCorrect) / (item.opts.length - 1);
+      withMisTotal += oddsRatio * withoutMis;
+      withoutMisTotal += withoutMis;
+    });
+    likelihoodChecks += 1;
+    if (Math.abs(withMisTotal - 1) > 1e-10 || Math.abs(withoutMisTotal - 1) > 1e-10) {
+      normalizedLikelihoods = false;
+    }
+  });
+}));
+check(`response likelihoods normalize for all ${likelihoodChecks} built-in item-misconception pairs`,
+  normalizedLikelihoods);
+
+const throwsAs = (fn, ErrorType) => {
+  try { fn(); } catch (error) { return error instanceof ErrorType; }
+  return false;
+};
+check('inference rejects a response row with the wrong number of answers',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, [[]]), RangeError));
+check('inference rejects a response matrix that is not an array',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, null), TypeError));
+check('inference rejects a response row that is not an array',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, [1]), RangeError));
+check('inference rejects a missing student row',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, Array(1)), RangeError));
+check('inference rejects a negative answer other than the blank sentinel',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, [[-2]]), RangeError));
+check('inference rejects a non-integer answer index',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, [[0.5]]), RangeError));
+check('inference rejects an answer index outside the option list',
+  throwsAs(() => inferMisconceptions(allDiagnosticPack, [[4]]), RangeError));
+check('inference accepts null as a blank and leaves the prior unchanged',
+  inferMisconceptions(allDiagnosticPack, [[null]]).posterior[0][0] === PARAMS.prior);
+check('inference accepts undefined and sparse answer cells as blanks',
+  inferMisconceptions(allDiagnosticPack, [[undefined]]).posterior[0][0] === PARAMS.prior &&
+  inferMisconceptions(allDiagnosticPack, [Array(1)]).posterior[0][0] === PARAMS.prior);
+const specialIdPack = {
+  misconceptions: [{ id: '__proto__', name: 'Special identifier' }],
+  items: [{
+    id: 'Q',
+    opts: [{ t: 'Correct', c: true }, { t: 'Diagnostic', mis: '__proto__' }]
+  }]
+};
+check('inference handles misconception ids that are object prototype names',
+  inferMisconceptions(specialIdPack, [[1]]).evidence[0][0][0].isDiagnostic);
+const singleDiagnosticPack = {
+  misconceptions: allDiagnosticPack.misconceptions,
+  items: [{
+    id: 'Q',
+    opts: [
+      { t: 'Correct', c: true },
+      { t: 'Diagnostic', mis: 'M' },
+      { t: 'Unmapped A' },
+      { t: 'Unmapped B' }
+    ]
+  }]
+};
+const oneProbeInference = inferMisconceptions(singleDiagnosticPack, [[1]]);
+check('one strong answer can raise the raw estimate but is not reportable before two probes',
+  oneProbeInference.posterior[0][0] >= PARAMS.decisionThreshold &&
+  !isTested(oneProbeInference, 0, 0) &&
+  posteriorForReporting(oneProbeInference)[0][0] === PARAMS.prior);
+const oneProbeClusters = clusterStudents(posteriorForReporting(oneProbeInference));
+check('one answered probe cannot pull a student into a reteach cluster',
+  oneProbeClusters.secure.includes(0) && oneProbeClusters.labels[0] === oneProbeClusters.secureLabel);
+const oneProbeSlip = slipsHtml(singleDiagnosticPack,
+  { students: [{ name: 'Student' }], responses: [[1]] },
+  oneProbeInference, coverage(singleDiagnosticPack, [[1]]));
+check('student slips do not turn an untested misconception into a diagnosis',
+  !oneProbeSlip.includes('Your answers may point to this mix-up'));
+check('student slips disclose patterns that could not be checked',
+  oneProbeSlip.includes('Some patterns could not be checked'));
+const twoProbePack = {
+  misconceptions: allDiagnosticPack.misconceptions,
+  items: [1, 2].map(n => ({
+    id: `Q${n}`,
+    opts: [
+      { t: 'Correct', c: true },
+      { t: 'Diagnostic', mis: 'M' },
+      { t: 'Unmapped A' },
+      { t: 'Unmapped B' }
+    ]
+  }))
+};
+const twoProbeInference = inferMisconceptions(twoProbePack, [[1, 1]]);
+check('two answered probes make the estimate reportable',
+  isTested(twoProbeInference, 0, 0) &&
+  posteriorForReporting(twoProbeInference)[0][0] === twoProbeInference.posterior[0][0] &&
+  untested(twoProbeInference, 0).length === 0 &&
+  diagnose(posteriorForReporting(twoProbeInference), twoProbeInference.misIds)[0].has('M'));
+
+console.log(`\n${'='.repeat(66)}\nNotation rendering\n${'='.repeat(66)}`);
+check('HTML text is escaped before it is rendered', escapeHtml('<img src="x">') === '&lt;img src=&quot;x&quot;&gt;');
+check('math notation stays readable after escaping', mathHtml('x^2 < 4') === 'x<sup>2</sup> &lt; 4');
 
 for (const pack of BUILT_IN) {
   console.log(`\n${'='.repeat(66)}\n${pack.name} (${pack.subject}) — ${pack.misconceptions.length} misconceptions, ${pack.items.length} items\n${'='.repeat(66)}`);
@@ -69,6 +226,8 @@ for (const pack of BUILT_IN) {
     inf.posterior.length === 28 && inf.posterior[0].length === pack.misconceptions.length);
   check('posteriors are probabilities',
     inf.posterior.every(r => r.every(p => p >= 0 && p <= 1 && Number.isFinite(p))));
+  check('fully answered classes retain their posterior estimates for reporting',
+    JSON.stringify(posteriorForReporting(inf)) === JSON.stringify(inf.posterior));
 
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   console.log(`  diagnosis  precision ${(dq.precision * 100).toFixed(1)}%  recall ${(dq.recall * 100).toFixed(1)}%  F1 ${(dq.f1 * 100).toFixed(1)}%`);
@@ -132,29 +291,39 @@ for (const pack of BUILT_IN) {
 
   // -------------------------------------------------------- recovery sweep
   console.log('\n-- recovery across 40 seeds --');
-  const agg = { p: [], r: [], f1: [], ari: [], k: [] };
+  const agg = { p: [], r: [], f1: [], ari: [], k: [], tp: 0, fp: 0, fn: 0 };
+  const baseline = { tp: 0, fp: 0, fn: 0 };
   const plantedHits = Object.fromEntries(planted.map(id => [id, 0]));
 
   for (let seed = 1; seed <= 40; seed++) {
     const c = generateClass(pack, { seed, size: 28 });
     const i2 = inferMisconceptions(pack, c.responses);
-    const d = scoreDiagnosis(diagnose(i2.posterior, i2.misIds), c.truth, i2.misIds);
+    const reportPosterior = posteriorForReporting(i2);
+    const d = scoreDiagnosis(diagnose(reportPosterior, i2.misIds), c.truth, i2.misIds);
+    const reference = scoreDiagnosis(diagnose(reportPosterior, i2.misIds, 0.5), c.truth, i2.misIds);
     const k = clusterStudents(i2.posterior, { seed: 42 });
     const s = scoreClustering(k.labels, c.truth);
     const flagged = new Set(problemItems(analyseItems(pack, c.responses, i2)).map(x => x.id));
     planted.forEach(id => { if (flagged.has(id)) plantedHits[id]++; });
     agg.p.push(d.precision); agg.r.push(d.recall); agg.f1.push(d.f1);
     agg.ari.push(s.ari); agg.k.push(k.k);
+    agg.tp += d.truePositives; agg.fp += d.falsePositives; agg.fn += d.falseNegatives;
+    baseline.tp += reference.truePositives; baseline.fp += reference.falsePositives; baseline.fn += reference.falseNegatives;
   }
 
   console.log(`  precision  mean ${(mean(agg.p) * 100).toFixed(1)}%  min ${(min(agg.p) * 100).toFixed(1)}%`);
   console.log(`  recall     mean ${(mean(agg.r) * 100).toFixed(1)}%  min ${(min(agg.r) * 100).toFixed(1)}%`);
   console.log(`  F1         mean ${(mean(agg.f1) * 100).toFixed(1)}%  min ${(min(agg.f1) * 100).toFixed(1)}%`);
+  console.log(`  decision   false calls ${agg.fp}/${baseline.fp} at 0.6/0.5; recall ${(agg.tp / (agg.tp + agg.fn) * 100).toFixed(1)}%/${(baseline.tp / (baseline.tp + baseline.fn) * 100).toFixed(1)}%`);
   console.log(`  ARI        mean ${mean(agg.ari).toFixed(3)}  min ${min(agg.ari).toFixed(3)}`);
   console.log(`  chosen k   ${JSON.stringify(agg.k.reduce((m, v) => (m[v] = (m[v] || 0) + 1, m), {}))}`);
   if (planted.length) console.log(`  planted-defect detection  ${planted.map(id => `${id} ${plantedHits[id]}/40`).join('  ')}`);
 
   check('mean F1 above 0.70', mean(agg.f1) > 0.70, mean(agg.f1).toFixed(3));
+  check('the 0.6 cutoff reduces false calls by at least 10% with at most 5% relative recall loss',
+    agg.fp <= baseline.fp * 0.9 &&
+    agg.tp / (agg.tp + agg.fn) >= (baseline.tp / (baseline.tp + baseline.fn)) * 0.95,
+    `${agg.fp}/${baseline.fp} false calls; recall ${(agg.tp / (agg.tp + agg.fn)).toFixed(3)}/${(baseline.tp / (baseline.tp + baseline.fn)).toFixed(3)}`);
   check('mean ARI above 0.40', mean(agg.ari) > 0.40, mean(agg.ari).toFixed(3));
   planted.forEach(id =>
     check(`${id} caught in >=85% of seeds`, plantedHits[id] >= 34, `${plantedHits[id]}/40`));
@@ -171,7 +340,7 @@ for (const pack of BUILT_IN) {
 
 // --------------------------------------------------- a teacher's own test
 // A test that is already on paper keeps its order: her "A" has to be our "A",
-// or every answer she pastes is read as a different option.
+// or every pasted answer is read as a different option.
 {
   console.log(`\n${'='.repeat(66)}\nA teacher's own test (keepOrder)\n${'='.repeat(66)}`);
   const own = structuredClone(BUILT_IN[1]);
@@ -191,11 +360,11 @@ for (const pack of BUILT_IN) {
     ...c.responses.map((row, s) => [`S${String(s + 1).padStart(2, '0')}`,
       ...row.map(ch => (ch >= 0 ? 'ABCDEFGH'[ch] : ''))].join(','))].join('\n');
   const back = parseResponses(own, csv);
-  check('her letters read back as the options she printed', back.ok &&
+  check('printed option letters read back correctly', back.ok &&
     back.responses.every((row, s) => row.every((ch, i) => ch === c.responses[s][i])));
 
-  // Her file carries names and tags only: no reteach plans, no archetypes, a
-  // true/false question, and wrong options left unlabelled as slips.
+  // The imported test uses a compact pack: no reteach plans or archetypes,
+  // one true/false question, and some options with no mapped pattern.
   const bare = {
     id: 'bare-test', name: 'Bare test', keepOrder: true,
     misconceptions: [{ id: 'X1', name: 'Motion needs a force' }, { id: 'X2', name: 'No motion means no force' }],
@@ -218,7 +387,7 @@ for (const pack of BUILT_IN) {
   const sheet = reviewHtml(bare);
   check('the review sheet lists every misconception and question',
     bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
-  check('the review sheet marks unlabelled options as slips', (sheet.match(/careless slip<\/span>/g) || []).length === 4);
+  check('the review sheet marks unmapped options as unlinked', (sheet.match(/not linked to a known pattern<\/span>/g) || []).length === 4);
 }
 
 // ---------------------------------------------------------- blank answers
@@ -325,10 +494,12 @@ for (const pack of BUILT_IN) {
   const noLines = { ...pack, misconceptions: pack.misconceptions.map(({ student, ...m }) => m) };
   check('a test with no student lines keeps teacher wording off the slip',
     !pack.misconceptions.some(m => slipsHtml(noLines, c, inf, coverage(pack, c.responses)).includes(m.belief.split(',')[0])));
-  check('a perfect paper is not told to slow down', rightSlips.includes('nothing to fix') && !rightSlips.includes('Your mistakes'));
+  check('a perfect paper is not told it has nothing left to learn',
+    rightSlips.includes('This test did not flag a pattern') && !rightSlips.includes('nothing to fix'));
   const heldBy = inf.posterior.findIndex((row, s) => s > 1 && row.some(p => p >= 0.5));
   const top = inf.misIds[inf.posterior[heldBy].indexOf(Math.max(...inf.posterior[heldBy]))];
-  check('a slip names what the student most likely holds', slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));
+  check('a slip names the pattern most strongly indicated',
+    slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));
   check('names are escaped', slips[1].includes('&lt;b&gt;Bo&lt;/b&gt; &amp; Co'));
 
   const all = BUILT_IN.flatMap(p => p.misconceptions);
@@ -354,6 +525,13 @@ for (const pack of BUILT_IN) {
   rejects('missing options', p => { delete p.items[0].opts; });
   rejects('an empty question entry', p => { p.items[0] = null; });
   rejects('an empty misconception entry', p => { p.misconceptions[0] = null; });
+  rejects('an empty archetype entry', p => { p.archetypes[0] = null; });
+  rejects('an archetype misconception list that is not an array', p => { p.archetypes[0].core = 'M01'; });
+  rejects('an archetype without an id', p => { delete p.archetypes[0].id; });
+  rejects('duplicate archetype ids', p => { p.archetypes[1].id = p.archetypes[0].id; });
+  rejects('a non-numeric archetype weight', p => { p.archetypes[0].weight = '0.5'; });
+  rejects('a negative archetype weight', p => { p.archetypes[0].weight = -0.5; });
+  rejects('archetype weights with no positive total', p => { p.archetypes.forEach(a => { a.weight = 0; }); });
   rejects('an option that is not an object', p => { p.items[0].opts[1] = 'hi'; });
   rejects('a blank stem', p => { p.items[0].stem = '   '; });
   rejects('more options than letters', p => { for (let i = 0; i < 6; i++) p.items[0].opts.push({ t: `extra ${i}` }); });
@@ -569,9 +747,9 @@ for (const pack of BUILT_IN) {
   ];
   const guess = comparePredictions(['A', 'C', 'E'], rows, 28);
   check('predictions are scored rank against rank', guess.k === 3 && guess.agree.join() === 'A,C');
-  check('a common misunderstanding she did not expect is a surprise', guess.surprises.map(x => x.id).join() === 'B');
+  check('an unpredicted common pattern is reported as a surprise', guess.surprises.map(x => x.id).join() === 'B');
   check('an expected one that barely appears is named', guess.absent.map(x => x.id).join() === 'E');
-  check('a rare one she did not expect is not a surprise', !guess.surprises.some(x => x.id === 'D'));
+  check('a rare unpredicted pattern is not reported as a surprise', !guess.surprises.some(x => x.id === 'D'));
 
   const kept = readClassFile(classFile({ pack, students: c.students, responses: c.responses, predictions: ['M01', 'NOPE'], builtIn: true }),
     id => BUILT_IN.find(x => x.id === id));

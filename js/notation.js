@@ -4,9 +4,12 @@
  * Printed materials keep the typed form, which reads fine on paper.
  */
 
+export function escapeHtml(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
 export function mathHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return escapeHtml(s)
     .replace(/\^\(([^)]*)\)/g, '<sup>$1</sup>')
     .replace(/\^(-?[\w/]+)/g, '<sup>$1</sup>')
     .replace(/\bsqrt\(/g, '√(')

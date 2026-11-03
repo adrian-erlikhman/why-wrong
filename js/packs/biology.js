@@ -1,10 +1,8 @@
 /**
  * packs/biology.js -- Evolution and inheritance.
  *
- * The misconceptions here are among the best-documented in science education:
- * Lamarckian reasoning about individual organisms, teleology ("the species
- * needed to change"), and the conflation of dominance with frequency all
- * survive years of instruction and reappear on university entrance exams.
+ * Examples include explanations based on individual organisms changing,
+ * goal-directed evolution, and confusing dominance with frequency.
  *
  * Included to demonstrate that nothing in the pipeline is arithmetic-specific.
  * The inference, clustering and item analysis never inspect the subject.
@@ -15,7 +13,7 @@ export default {
   name: 'Evolution & Inheritance',
   subject: 'Biology',
   level: 'Grade 9-11',
-  blurb: 'Natural selection, fitness, variation and Mendelian inheritance — the corner of biology where intuitive but wrong causal stories are most durable.',
+  blurb: 'Natural selection, fitness, variation and Mendelian inheritance — topics that can invite intuitive but misleading explanations.',
   source: 'built-in',
 
   misconceptions: [
@@ -38,7 +36,7 @@ export default {
       short: 'Species change because they need to',
       belief: 'Explains adaptation by need or purpose — the species developed the trait in order to survive — rather than by differential survival of variation that already existed.',
       student: 'You may be thinking species develop a trait because they need it. Traits that already vary in a population get passed on more when they help survival.',
-      reteach: 'Teleology is the hardest one to shift because the language of the textbook encourages it. Ban the words "in order to" and "needed to" for a lesson and require every explanation to name (1) the variation that already existed, (2) which variants left more offspring, and (3) why. The constraint does the teaching; students discover the causal story is available without purpose.',
+      reteach: 'Goal-based explanations can be reinforced by everyday language. For one activity, ask students to explain a change without using phrases like "in order to" or "needed to"; have them name (1) the variation that already existed, (2) which variants left more offspring, and (3) why. This helps make the causal sequence explicit without implying that change happened on purpose.',
       verify: [
         'Rewrite "giraffes grew long necks to reach high leaves" without the word "to".',
         'Where did the variation in neck length come from in the first place?',
@@ -103,7 +101,7 @@ export default {
       short: 'Aa gives an in-between trait',
       belief: 'Applies blending inheritance to a Mendelian trait, so a heterozygote is expected to show an intermediate form rather than the dominant one.',
       student: 'You may be expecting offspring to show a blend of two forms. With a dominant allele, someone with one copy of each shows the dominant form.',
-      reteach: 'Blending was the pre-Mendelian model and it is intuitive, so it returns whenever attention lapses. Run a monohybrid cross on the board and have students predict the heterozygote phenotype before the reveal. Then distinguish the genuine exceptions — incomplete dominance in snapdragons, codominance in AB blood — so students learn these are named special cases, not the default.',
+      reteach: 'Blending can seem intuitive, so it is useful to revisit the distinction. Work through a monohybrid cross and ask students to predict the heterozygote phenotype. Then compare complete dominance with examples of incomplete dominance and codominance, such as AB blood type.',
       verify: [
         'A cross of RR x rr gives Rr. What phenotype do the offspring show?',
         'How does incomplete dominance differ from complete dominance?',
@@ -116,7 +114,7 @@ export default {
       short: 'The environment produces the mutation',
       belief: 'Believes the environment induces the useful variation, so exposure to antibiotics causes the resistance mutation rather than selecting among bacteria that already varied.',
       student: 'You may be thinking the environment causes the useful change, like antibiotics making bacteria resistant. Resistant bacteria were already there, and the antibiotic leaves them behind.',
-      reteach: 'Selection sorts; it does not author. The classic demonstration is that resistant bacteria can be isolated from a culture that has never met the antibiotic. Sequence the story explicitly on the board: variation exists first, the selective pressure arrives second, frequencies shift third. Students who can put those three in order stop inventing on-demand mutation.',
+      reteach: 'Selection acts on variation; it does not direct mutations to appear. Use an example of resistant bacteria isolated before antibiotic exposure, then sequence the explanation: variation exists first, the selective pressure arrives second, and frequencies shift third. Ask students to explain why this order matters.',
       verify: [
         'Did antibiotic resistance appear before or after the bacteria met the antibiotic?',
         'Put in order: pressure applied, variation exists, frequency shifts.',
@@ -324,7 +322,7 @@ export default {
     {
       id: 'D',
       label: 'Broadly secure',
-      blurb: 'No stable misconception. Errors are slips, and scattered rather than patterned.',
+      blurb: 'No stable misconception pattern in the sample class.',
       core: [],
       weight: 0.18
     }

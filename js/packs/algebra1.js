@@ -1,14 +1,12 @@
 /**
  * packs/algebra1.js -- Algebra 1: exponents, signs, fractions, linear equations.
  *
- * A subject pack is a self-contained diagnostic instrument: a taxonomy of named
- * misconceptions, an item bank whose every wrong option is mapped to one of
- * them, and a set of archetypes describing which misconceptions tend to travel
- * together in a real classroom.
+ * A subject pack contains named misconceptions, mapped questions, and response
+ * profiles used to generate the sample class. Those profiles are illustrative,
+ * not claims about which misconceptions co-occur in real classrooms.
  *
- * Nothing downstream knows this pack is about algebra. Swap it for biology or
- * for something a language model wrote thirty seconds ago and the inference,
- * clustering and item analysis behave identically.
+ * The analysis code is subject-agnostic: it uses the pack contract rather than
+ * assumptions about the subject.
  */
 
 export default {
@@ -35,7 +33,7 @@ export default {
     short: 'Treats a^b as a times b',
     belief: 'Collapses exponentiation into multiplication, so 3^4 becomes 12 and (x+3)^2 becomes 2x+6.',
     student: 'You may be multiplying the base by the exponent, so 3^4 becomes 12. An exponent means repeated multiplication: 3 × 3 × 3 × 3.',
-    reteach: 'This survives because it gives the right answer exactly once, at a^2 when a=2. Kill it with a counting task rather than a rule: ask for the number of outcomes from 3 coins, then 4, and let the doubling do the work. Repeated multiplication has to be re-grounded before the notation comes back.',
+    reteach: 'This can seem to work in a simple case, such as a^2 when a=2. Use a counting task rather than starting with a rule: compare the outcomes from 3 coins and 4 coins, then connect the doubling pattern to repeated multiplication. Revisit the pattern before introducing the notation.',
     verify: ['Evaluate 3^4.', 'How many 3-letter codes use only A and B?', 'Is 2^5 equal to 10? Show why or why not.']
   },
   {
@@ -107,7 +105,7 @@ export default {
     short: 'x+5=12 to x=17',
     belief: 'Moves a term to the other side without inverting its operation, applying the change to one side only.',
     student: 'When moving a term across the equals sign, you may be keeping it the same. Moving it means undoing it on both sides, so + becomes -.',
-    reteach: 'Caused by teaching "move it over and flip the sign" as a gesture. Replace it with the operation performed on both sides, written on both sides, every step. Slower on the page, but the balance model is what actually generalises to inequalities and systems later.',
+    reteach: 'The shortcut "move it over and flip the sign" can hide the operation being performed. Instead, write the same operation on both sides at every step. The balance model also connects this method to inequalities and systems.',
     verify: ['Solve y - 4 = 10 showing the operation on both sides.', 'Solve x + 5 = 12 and check by substitution.', 'Explain why x + 5 = 12 cannot give x = 17.']
   },
   {
@@ -116,7 +114,7 @@ export default {
     short: '2(x+3)=10 to 2x+3=10',
     belief: 'Multiplies the leading term inside the bracket and leaves the rest of the bracket unchanged.',
     student: 'You may be multiplying only the first term inside the brackets. The number outside multiplies every term inside.',
-    reteach: 'Closely related to M07 and often the same student. Arrows drawn from the coefficient to every term inside the bracket, before any arithmetic, make the omission visible. Pair with an area model so the second product is a region rather than an afterthought.',
+    reteach: 'This is related to M07 because both involve distributing across parentheses. Draw arrows from the coefficient to every term inside the bracket before doing any arithmetic. Pair this with an area model to make each product visible.',
     verify: ['Expand 3(x-1) and mark an arrow to each term.', 'Solve 2(x+3)=10 and check by substitution.', 'Find the area of a rectangle with sides 2 and (x+3).']
   },
   {
@@ -180,8 +178,8 @@ export default {
      Two items per misconception is not enough. The inference layer holds out
      one item at a time to check whether an item agrees with the rest of the
      test, and with only two probes that leaves a single item behind — which by
-     the model's own logic can never be conclusive. Three probes make every
-     leave-one-out question answerable, and materially improve recall. */
+     the model needs evidence from more than one remaining item. Three probes
+     allow each item to be compared with the others and improve recall. */
   { id: 'Q23', topic: 'Exponents', stem: 'Evaluate 4^-1.',
     opts: [ {t:'1/4', c:true}, {t:'-4', mis:'M01'}, {t:'-1/4', mis:'M01'}, {t:'0.4', mis:null} ] },
   { id: 'Q24', topic: 'Exponents', stem: 'Evaluate 2^5.',
@@ -208,9 +206,8 @@ export default {
     opts: [ {t:'13', c:true}, {t:'17', mis:'M12'}, {t:'169', mis:null}, {t:'84.5', mis:null} ] },
 
   /* Two deliberately weak items. The item-analysis layer has to find these on
-     its own — nothing in the data marks them. Q35 is trivial and carries no
-     information; Q36 is ambiguously worded, so responses are near-random
-     regardless of how strong the student is. */
+     its own — nothing in the analysis data identifies them. Q35 is trivial;
+     Q36 is deliberately ambiguous in the simulation. */
   { id: 'Q35', topic: 'Exponents', stem: 'Evaluate 5^1.',
     opts: [ {t:'5', c:true}, {t:'1', mis:null}, {t:'0', mis:null}, {t:'25', mis:null} ], _weak: 'trivial' },
   { id: 'Q36', topic: 'Expanding', stem: 'What is the value of the expression above?',
@@ -242,7 +239,7 @@ export default {
   {
     id: 'D',
     label: 'Broadly secure',
-    blurb: 'No stable misconception. Errors are slips, and scattered rather than patterned.',
+    blurb: 'No stable misconception pattern in the sample class.',
     core: [],
     weight: 0.18
   }

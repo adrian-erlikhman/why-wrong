@@ -34,7 +34,7 @@
   --good:        #0f7b6c;
   --good-tint:   #e3f4ef;
   --good-line:   #b6e0d5;
-  --accent-hi:   var(--good);   /* the "no reteach" band on the sorted map */
+  --accent-hi:   var(--good);   /* the no-clear-pattern band on the sorted map */
   --warn:        #a35a05;
   --warn-tint:   #fdf3e3;
   --warn-line:   #f0d3a5;

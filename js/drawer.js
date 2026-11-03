@@ -1,21 +1,10 @@
 /**
- * drawer.js -- inspect one student, or one question.
- * ---------------------------------------------------------------------------
- * The part that makes the analysis trustworthy rather than merely impressive.
- *
- * A tool that tells a teacher "Milo holds the sign-distribution misconception,
- * 87%" and offers no way to check has asked for faith. And a teacher who cannot
- * check will, correctly, ignore it the first time it says something surprising.
- *
- * So every diagnosis opens up. The inference model is a sum of independent
- * log-odds contributions, one per question, which means the reasoning is
- * genuinely decomposable -- not reconstructed after the fact, but the actual
- * arithmetic that produced the number. Each question either pushed the
- * conclusion up or pulled it down, and by how much.
+ * Open a student or question detail panel. Student panels show the evidence
+ * behind each estimate so teachers can review how the result was produced.
  */
 
 import { correctIndex, misById } from './pack.js';
-import { PARAMS, untested } from './infer.js';
+import { PARAMS, isTested, untested } from './infer.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
@@ -106,7 +95,7 @@ export function openStudent(ctx, s) {
   }
   facts.appendChild(fact(
     !group || group.isThin || group.isSecure ? '—' : `Group ${groups.indexOf(group) + 1}`,
-    group?.isThin ? 'too few answers' : group?.isSecure ? 'no reteach needed' : 'reteach group'
+    group?.isThin ? 'too few answers' : group?.isSecure ? 'no clear pattern' : 'reteach group'
   ));
   wrap.appendChild(facts);
 
@@ -115,23 +104,24 @@ export function openStudent(ctx, s) {
     .map((mid, k) => ({ mid, p: inf.posterior[s][k], k }))
     .sort((a, b) => b.p - a.p);
 
-  const acted = ranked.filter(r => r.p >= PARAMS.decisionThreshold);
-  const rest = ranked.filter(r => r.p < PARAMS.decisionThreshold && r.p >= 0.12);
+  const tested = ranked.filter(r => isTested(inf, s, r.k));
+  const acted = tested.filter(r => r.p >= PARAMS.decisionThreshold);
+  const rest = tested.filter(r => r.p < PARAMS.decisionThreshold && r.p >= 0.12);
 
   const h = el('div', 'dr-h');
   h.appendChild(el('span', null, acted.length
-    ? `${acted.length} misunderstanding${acted.length === 1 ? '' : 's'} identified`
-    : thin ? 'Too few answers to say' : 'No misunderstanding identified'));
+    ? `${acted.length} possible misunderstanding${acted.length === 1 ? '' : 's'} indicated`
+    : thin ? 'Not enough answers for an estimate' : 'No clear pattern identified'));
   h.appendChild(infoButton('confidence'));
   wrap.appendChild(h);
 
   if (thin) {
     wrap.appendChild(el('p', 'dr-note dr-warn',
-      `This student answered ${answered} of ${total} questions. Blanks count as no evidence, so ${acted.length ? 'anything else they believe has not been tested' : 'this is not a clean result, just an empty one'}.`));
+      `This student answered ${answered} of ${total} questions. Blank answers add no evidence, so other misunderstandings may not be visible in this result.`));
   } else if (!acted.length) {
     wrap.appendChild(el('p', 'dr-note', score === answered
-      ? 'Everything this student answered was right.'
-      : 'This student’s wrong answers do not repeat and do not point anywhere in particular. That is a slip profile: they need practice and attention rather than a reteach.'));
+      ? 'All recorded answers were correct; this test has not indicated a reteach need.'
+      : 'The wrong answers did not form a clear pattern on this test. Review the student’s work or check in with them before deciding what support would help.'));
   }
 
   // A misunderstanding with its questions left blank has not been ruled out, even
@@ -154,10 +144,10 @@ export function openStudent(ctx, s) {
   // --- what to do ----------------------------------------------------------
   const top = acted[0] && byId[acted[0].mid];
   if (top?.reteach) {
-    wrap.appendChild(el('div', 'dr-h', 'What to do'));
+    wrap.appendChild(el('div', 'dr-h', 'Suggested next step'));
     wrap.appendChild(setMath(el('p', 'dr-plan'), top.reteach));
     if (top.verify?.length) {
-      wrap.appendChild(el('div', 'dr-sub', 'Check it landed'));
+      wrap.appendChild(el('div', 'dr-sub', 'Check understanding'));
       const ul = el('ul', 'checks');
       top.verify.forEach(v => ul.appendChild(setMath(el('li'), v)));
       wrap.appendChild(ul);
@@ -210,7 +200,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
       row.appendChild(el('span', 'ev-id', c.itemId));
       const what = c.omitted ? 'left blank'
         : c.isCorrect ? 'answered correctly'
-        : (c.isDiagnostic ? `chose “${c.chose}”` : `chose “${c.chose}” (unrelated slip)`);
+        : (c.isDiagnostic ? `chose “${c.chose}”` : `chose “${c.chose}” (not linked to this pattern)`);
       row.appendChild(setMath(el('span', 'ev-what'), what));
       row.appendChild(el('span', 'ev-w', c.omitted ? 'no evidence' : c.logOdds > 0 ? 'supports' : 'argues against'));
       list.appendChild(row);
@@ -220,7 +210,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   const blank = ev.filter(c => c.omitted).length;
   const seen = ev.length - blank;
   list.appendChild(el('p', 'ev-sum',
-    `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} that test this point to the misunderstanding${blank ? `; ${blank} left blank` : ''}.`));
+    `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} supported this estimate${blank ? `; ${blank} ${blank === 1 ? 'was' : 'were'} left blank` : ''}.`));
 
   card.appendChild(list);
   return card;
@@ -241,12 +231,12 @@ export function openQuestion(ctx, i) {
   wrap.appendChild(setMath(el('h3', 'dr-title'), item.stem));
 
   const verdict = {
-    strong: ['Working well', 'This question separates students who understand from those who do not.'],
-    ok: ['Acceptable', 'Not the sharpest question on the paper, but it is doing its job.'],
-    diagnostic: ['Diagnosing, not ranking', 'Statistically this looks weak, and it is not. It targets one misunderstanding, so exactly the students who hold that misunderstanding miss it — whatever their ability elsewhere.'],
-    minor: ['Minor issue', 'The question works. One of its options is going to waste.'],
-    weak: ['Worth rewriting', 'This question is not earning its place on the paper.'],
-    broken: ['Measuring backwards', 'Stronger students did worse on this than weaker ones, which usually means the wording misleads.']
+    strong: ['Tracks overall score', 'Responses to this question tend to track scores on the rest of the paper.'],
+    ok: ['Acceptable', 'The results do not show a strong signal either way.'],
+    diagnostic: ['Specific pattern', 'This question has a weak relationship with overall scores, while answers to other questions tend to support the same pattern.'],
+    minor: ['Minor issue', 'One option was rarely chosen and may not be adding much information.'],
+    weak: ['Worth reviewing', 'Responses suggest this question may need revision.'],
+    broken: ['Unexpected pattern', 'Students with higher scores on the rest of the paper were less likely to answer this correctly. Review the wording, options, and answer key.']
   }[st.quality] || ['—', ''];
 
   const v = el('div', `dr-verdict v-${st.quality}`);

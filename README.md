@@ -2,20 +2,23 @@
 
 **"You got it wrong" is the least useful sentence in education.**
 
-A red X tells a student nothing and a teacher less. Why Wrong takes a class's
-answer sheets and works out the *specific misconception* behind each wrong
-answer, groups the class into the handful of failure modes it actually shares,
-and then turns the lens around to audit which of the teacher's questions
-measured anything at all.
+A red X says which answer was wrong, but not why. Why Wrong looks for response
+patterns that may point to a misunderstanding, groups students with similar
+patterns, and helps teachers review which questions gave useful information.
+Its results are estimates to check against student work and teacher judgment,
+not confirmed explanations of what a student thinks.
 
-**Works for any subject.** Two curated instruments ship built in (Algebra 1 and
-Evolution & Inheritance). For anything else, name a topic and a model writes the
-misconception taxonomy and a distractor-mapped item bank for it, which is then
-validated against the same structural contract before a single number is
-computed.
+**Use a built-in subject or draft a new one.** Algebra 1 and Evolution &
+Inheritance ship with the page. For another topic, an AI model can draft a
+misconception list and question bank. Structural checks catch missing or
+inconsistent fields, but do not verify subject accuracy or whether a question
+really identifies the misunderstanding it is intended to test.
 
 **Live:** https://adrian-erlikhman.github.io/why-wrong/
-**Everything runs in the browser.** No server, no account, no data leaves the page.
+**Class names and answer sheets stay in the browser.** No account is needed.
+Optional AI features send the topic or group-level misconception details to
+Anthropic with the API key you provide; they do not send student names or raw
+answers.
 
 A first visit opens a short guided tour of the real page (the map, the sort, a
 reteach group, the test audit, the recovery numbers); **Take the tour** replays
@@ -31,7 +34,7 @@ links never open the tour; `?demo=1` forces it and `?demo=0` suppresses it.
 
 The loop closes in both directions, on paper.
 
-1. **Pick a subject**, or build one for any topic you teach.
+1. **Pick a subject**, or draft a question set for a topic you teach.
 2. **Materials** prints the questions and the answer key, or downloads a blank
    answer sheet as a spreadsheet with one column per question.
 3. Give it. Mark it, or don't — you only need which option each student picked.
@@ -44,17 +47,19 @@ The loop closes in both directions, on paper.
    the paper: each question's options are shuffled, seeded by its id, so the
    key is not "A" every time and the printout, the answer key and the paste-back
    always agree.
-5. Get reteach groups, a plan per group, and an audit of your questions.
+5. Review groups based on similar response patterns, suggested plans, and an
+   audit of your questions.
    **Print plan** puts the groups on paper; **Export CSV** puts them in a
    spreadsheet.
 
-Nothing is uploaded. There is no account, no server, and the class data never
-leaves the tab.
+There is no Why Wrong server or account. Student names and raw answers stay in
+the tab. If you choose an AI feature, the topic or group-level misconception
+details needed for that request are sent to Anthropic.
 
 **Students → Print student slips** gives each student their own slip to go back
-with the paper: what their answers suggest they might be thinking, and the check
-questions for it. Slips carry no percentages or group numbers, and each one says
-it is a best guess and not a grade. Each misunderstanding has a `student` line
+with the paper: what their answers may suggest, and check questions for review.
+Slips carry no percentages or group numbers, and each one says it is an estimate,
+not a grade. Each misunderstanding has a `student` line
 written for this, so a slip says "you may be adding the tops and the bottoms"
 rather than "adds fractions componentwise". Pick a group or search a name first,
 and it prints only those slips.
@@ -79,8 +84,10 @@ letters as the paper.
 ### After the reteach
 
 Give the same paper again and paste the new answers into **After the reteach**.
-Every student is compared with themselves, by name, and a misunderstanding only
-counts as cleared if its questions were answered both times.
+Students with a unique matching name are compared across sittings. A pattern is
+counted as no longer indicated only when enough of its questions were answered
+both times; the comparison is based on estimates, not a confirmed change in
+understanding.
 
 The counts alone would mislead, because diagnoses near the line flip between
 sittings with no teaching at all. What carries information is the split: how
@@ -89,9 +96,11 @@ exact McNemar test on that split and says plainly when a change could be chance.
 Sitting the same paper twice also teaches the paper, so a good result is evidence
 rather than proof.
 
-The tab also shows each reteach group on its own: how many of the students the
-lesson was aimed at cleared that group's main misunderstanding, and who needs it
-again. **Print** puts it all on paper with every name showing.
+The tab also summarizes each reteach group: how many students had its main
+pattern indicated before and no longer indicated after, how many still had it
+indicated, and which students were not tested. These are changes in the
+analysis, not proof that understanding changed. **Print** puts the summary on
+paper with names.
 
 On the sample class, **Simulate a reteach** removes 70% of each student's hidden
 misunderstandings and generates new answers, so the reported change can be
@@ -101,36 +110,37 @@ requires no more than 2 false calls when nothing was taught.
 ### A teacher's own test
 
 A test that already exists on paper can be used as it is. Write it as a pack
-file (JSON: misconceptions, and each question's options in her printed order,
-with every wrong option tagged or left untagged as a slip), then **+ New
-subject → Open a .json file**. The file is read in the tab and never uploaded,
-and her option order is kept, so her "A" is the tool's "A". True/false
+file (JSON: misconceptions, and each question's options in its printed order,
+with wrong options linked to a possible misunderstanding or left unlinked), then
+**+ New subject → Open a .json file**. The file is read in the tab and never
+uploaded, and its option order is kept, so the printed letters stay consistent.
+True/false
 questions work, and T and F read on them.
 
-**Materials → Print the labels for the teacher to check** gives her every
+**Materials → Print the labels for the teacher to check** lists each
 wrong answer with its label and a line to agree or fix it, plus a first page
-for her predictions, written before she sees any result. Answers come back as
+for predictions, written before results are shown. Answers come back as
 one row per student (S01, S02…) and one letter per question.
 
 Keep teachers' tests in `local/`, which git ignores: the repo is public.
 
 A real class has no hidden answers to score against, but it does have a teacher
-who knows it. On a pasted class, **Does it work?** takes the predictions from
-that first page and sets them against the result: how many she expected are
-among the most common, what she did not expect, and what she expected that barely
-appears. It only counts if they were written down first.
+who knows it. On a pasted class, **Does it work?** compares predictions recorded
+on that first page with the patterns that appear most often. Treat any
+agreement or surprise as a prompt for review, not as proof that either the
+prediction or the analysis is correct.
 
 ### Every diagnosis opens up
 
-A tool that says *"Milo holds the sign-distribution misconception, 87%"* and
-offers no way to check has asked for faith — and a teacher who cannot check
-will, correctly, ignore it the first time it says something surprising.
+A tool that says *"Milo's answers suggest a sign-distribution misunderstanding,
+87%"* should also show how it reached that estimate. Teachers need a way to
+review the evidence, especially when a result is surprising.
 
-So click any student. You get the confidence for each misunderstanding and,
-under it, **the questions that produced that number**: which ones pointed to it,
-which argued against it, and what they actually chose. Because the model is a
-sum of one term per question, that trail is not an explanation written
-afterwards — it is the arithmetic itself, taken apart again.
+Click a student to see the estimate for each misunderstanding and **the
+questions that contributed to it**: which answers supported the pattern, which
+argued against it, and what the student chose. This evidence trail shows the
+calculation behind the estimate; it does not independently confirm the
+student's thinking.
 
 Click any question instead and you get how the class answered it, which
 misunderstanding each wrong option corresponds to, and **the names of the
@@ -153,30 +163,31 @@ students who picked it**.
 - **What a paste turned up stays on the page**: a name pasted twice, a cell that
   could not be read, a class too small to group. A paste with no readable answers
   is refused.
-- Groups are formed by *what students believe*, not by score — two students with
-  very different grades routinely land in the same group, which is the point.
-- Students with no stable misunderstanding are separated out rather than forced
-  into a group. They are not a failure mode; they need practice, not a reteach.
+- Groups are formed from *answer patterns*, not scores. Students with different
+  grades can show similar patterns.
+- Students with no clear pattern are kept out of the reteach groups. This does
+  not establish that they have no misunderstandings; it means the test did not
+  identify a stable pattern.
 - Students who left too much blank are separated out too, because no evidence is
   not the same as good news.
 
 ## The idea
 
-Most assessment tooling reports *that* a student was wrong. What changes
-instruction is knowing *why* — which broken rule in their head produced that
-particular answer.
+Most assessment tooling reports *that* a student was wrong. Response patterns
+can offer clues about *why*, but an answer alone cannot establish what a student
+was thinking.
 
-That is possible only if the test is built for it. Every wrong option in this
-item bank is tagged with the misconception that generates it, so a wrong answer
-carries information rather than merely being negative. This is how real concept
-inventories work; the Force Concept Inventory in physics is the canonical
-example.
+That is possible only if the test is built for it. Wrong options in these item
+banks are linked to possible misunderstandings when they are designed to
+represent one; other options are left unlinked. The mapping is a hypothesis
+about what an answer may indicate, and should be reviewed before using the
+results to plan instruction.
 
 From there the tool answers three questions:
 
-1. **Which misconception does this student hold?** — inferred, not read off.
-2. **What does the class share?** — 28 students are rarely 28 problems.
-3. **Was the test any good?** — the response matrix scores the questions too.
+1. **Which patterns may this student's answers indicate?** — estimated, not read off.
+2. **What response patterns does the class share?** — a starting point for planning.
+3. **Which questions merit review?** — the response matrix also summarizes item performance.
 
 ## Pipeline
 
@@ -184,9 +195,10 @@ Four stages. **Two of them are not a language model.**
 
 **1 · Distractor mapping** *(model-authored for generated subjects)*
 A *subject pack* is a self-contained instrument: named misconceptions, an item
-bank whose every wrong option maps to one of them, and archetypes describing
-which misconceptions travel together. Wrong options carrying no diagnostic
-meaning are tagged as slips so they contribute no signal.
+bank with wrong options linked to possible misunderstandings where appropriate,
+and archetypes describing which misconceptions may co-occur. Unmapped options
+contribute no signal; the reason a student chose one cannot be known from the
+answer alone.
 
 Authoring one is the genuinely knowledge-intensive part of this exercise: it
 needs someone who knows not just the content but the characteristic ways
@@ -220,9 +232,9 @@ assumptions rather than facts.
 Each student becomes a point in misconception space. Two design
 decisions matter more than the choice of algorithm:
 
-- Students with no confident misconception are **separated out before**
-  clustering. They aren't a failure mode, they're the students who are fine, and
-  leaving them in drags every centroid toward the origin.
+- Students with no confidently indicated misconception are **separated out
+  before** clustering. This avoids forcing students without a clear pattern into
+  a group; it does not establish that they have no misunderstandings.
 - The rest are compared by **direction, not magnitude** — posteriors are
   L2-normalised so k-means operates on cosine similarity. A student who
   expresses the sign misconceptions weakly belongs with those who express them
@@ -233,10 +245,11 @@ k is chosen by mean silhouette, ties broken toward *fewer* groups. A teacher can
 act on three groups and not on eleven. Students are put in a fixed order before
 any of this runs, so the groups do not change with the order of the sheet.
 
-**4 · Prescription.** Each failure mode gets a reteach aimed at the specific
-belief, plus verification items. Then the paper is given again and each student
-is compared with themselves (`js/compare.js`), so the loop closes on evidence
-rather than on a feeling that the lesson went well.
+**4 · Next steps.** Each indicated group gets a reteach suggestion and
+verification items. The paper can then be given again and results compared for
+students with unique matching names (`js/compare.js`). This summarizes changes
+in the estimates; it cannot establish that a lesson caused a change in
+understanding.
 
 ## The test also gets graded
 
@@ -252,20 +265,20 @@ held by one subgroup gets missed by that subgroup regardless of their ability
 elsewhere, so it can correlate weakly, even negatively, with total score while
 being the most informative question on the page.
 
-So before pronouncing an item broken, the tool asks whether it **agrees with the
-rest of the test**: of the students who chose its main diagnostic distractor, how
-many are independently diagnosed with that same misconception by the other items?
-The posterior used has that item's own contribution subtracted out, so an item is
-never allowed to vote on its own validity.
+Before flagging an item, the tool checks whether it **agrees with the rest of the
+test**: of the students who chose its main mapped distractor, how many also show
+that pattern in their responses to other items? The item's own contribution is
+subtracted from the estimate for this comparison. Agreement is useful evidence
+for review, not independent proof that the item is valid.
 
-Low agreement plus low discrimination is a broken item. Low discrimination with
-high agreement is a *diagnostic* item, and it gets defended rather than flagged.
+Low agreement plus low discrimination can flag an item for review. Low
+discrimination with high agreement may point to a diagnostic item worth keeping,
+but the teacher should still review the question and its response patterns.
 
-Similarly, Cronbach's alpha comes out low here — and correctly so. Alpha assumes
-a single underlying trait; this instrument targets twelve distinct
-misconceptions. Low internal consistency is evidence of multidimensionality, not
-of an unreliable test, and the UI says so rather than leaving the number to be
-misread.
+Similarly, Cronbach's alpha may be low here. Alpha assumes a single underlying
+trait, while this instrument targets several distinct misconceptions. A low
+value is not by itself evidence that the test is unreliable; interpret it
+alongside the item-level results.
 
 ## Does it actually work?
 
@@ -288,10 +301,11 @@ whatever seed is loaded:
 | Group recovery (Adjusted Rand Index) | **0.674** | **0.535** |
 | Correct number of groups recovered | 36/40 | 30/40 |
 
-Two deliberately defective questions are planted in the item bank — one trivial,
-one ambiguously worded — and marked nowhere in the data. The item analysis has to
-find them on its own. It catches the trivial one in 39/40 seeds and the ambiguous
-one in 36/40.
+Two deliberately weak questions are planted in the item bank — one trivial,
+one ambiguously worded — and marked nowhere in the analysis data. The item
+analysis flags the trivial one in 39/40 seeds and the ambiguous one in 36/40.
+These results describe the simulation, not how reliably real classroom items
+will be flagged.
 
 Reproduce:
 
@@ -307,11 +321,11 @@ is fully functional with no key, no network, and no account.
 
 Two optional uses, both requiring a key. **Authoring a new subject** is the
 substantial one, described above. The smaller one rewrites a reteach plan for the
-specific *combination* of misconceptions a given group holds and its size.
+specific *combination* of patterns attributed to a group and its size.
 That's an appropriate use of a language model — generating prose conditioned on
-structured input — rather than asking it to do the diagnosis, which arithmetic
-does more reliably. The key is held in the tab only, never stored, and sent
-nowhere except `api.anthropic.com`.
+structured input — rather than asking it to analyze student responses. Review
+generated plans before using them. The key is held in the tab only, never stored,
+and sent only to `api.anthropic.com`.
 
 ## Running locally
 
@@ -355,14 +369,14 @@ test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
 
 ## Honest limitations
 
-- The class is **simulated**, not real. That buys a measurable ground truth and
-  costs external validity: the response model is my model of how students err,
-  so recovery figures describe the pipeline's consistency with that model, not
+- The class is **simulated**, not real. That provides known profiles for testing,
+  but limits external validity: recovery figures describe the pipeline's
+  consistency with the simulation's assumptions, not
   its accuracy on a real classroom.
 - Built-in item banks are hand-authored and cover two topics. A generated pack
   is only as good as the model that wrote it: the contract checks it is
-  *structurally* sound (every misconception probed enough times, every
-  distractor mapped, exactly one correct option) but cannot check that a
+  *structurally* sound (every misconception probed enough times, each wrong
+  option mapped or left unlinked, exactly one correct option) but cannot check that a
   distractor really is what that misconception produces. Treat a generated
   instrument as a first draft for a teacher to review, not a finished
   assessment.
@@ -373,14 +387,17 @@ test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
   Algebra, at a cost of 4 points of planted-defect detection, and the page says
   the figures are rough under 20 students.
 - Unanswered questions carry no evidence either way, rather than counting as
-  wrong. So a student who skipped most of the paper has no diagnosis, which is
-  not the same as a clean one. Anyone who answered under half the paper is moved
-  out of "no reteach" into a separate **Not enough answers** group, and a
-  misconception whose questions were left blank is listed as not tested on the
-  student card. The 50% line is a judgement call, not a measured threshold.
-- Misconceptions are treated as conditionally independent. Real ones co-occur
-  causally — M07 and M11 are plausibly the same underlying failure — and a model
-  with a dependency structure would do better.
+  wrong. A student who skipped most of the paper may have too little evidence
+  for a useful estimate; that is not the same as a clean result. Students in the
+  no-pattern group who answered under half the paper are moved to a separate
+  **Not enough answers** group. A pattern with too few answered questions is
+  listed as not tested on the student card and is not used as a diagnosis or
+  for grouping. At least two questions mapped to a pattern must be answered
+  before the estimate is reported. The 50% line is a judgement call, not a
+  measured threshold.
+- Misconceptions are treated as conditionally independent. In practice, some
+  response patterns may overlap or share an underlying cause; the model does
+  not represent those dependencies.
 
 ## License
 

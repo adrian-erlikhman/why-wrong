@@ -8,7 +8,7 @@
  * So a class can be saved as a file on the teacher's own computer and opened
  * again later. Browser storage was the other option and it was rejected: school
  * computers are shared, and student names should not stay behind in a browser
- * for the next person. A file is something she can see, move and delete.
+ * for the next person. A file is something a teacher can see, move and delete.
  *
  * Answers are stored as option indices, which only mean something against the
  * exact test they were entered on. If a pack changes after a class was saved,
