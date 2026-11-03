@@ -1429,13 +1429,13 @@ async function doGenerate() {
   $('#modal-progress').innerHTML = '';
 
   try {
-    const { pack, report, attempts } = await generatePack(key, topic, {
+    const { pack, report } = await generatePack(key, topic, {
       onProgress: p => progressStep(p.message)
     });
     if (report.warnings.length) {
       progressStep(`Checked, with ${report.warnings.length} warning${report.warnings.length === 1 ? '' : 's'}.`, 'done');
     }
-    progressStep(`Ready — ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions, ${attempts} pass${attempts === 1 ? '' : 'es'}.`, 'done');
+    progressStep(`Ready — ${pack.misconceptions.length} misunderstandings, ${pack.items.length} questions.`, 'done');
 
     addPack(pack);
     dropClass();
