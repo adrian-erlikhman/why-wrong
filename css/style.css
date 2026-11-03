@@ -816,6 +816,9 @@ html.key-above .legend { padding-bottom: 20px; }
 .rname {
   font: inherit;
   font-size: 13.5px;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -1010,7 +1013,8 @@ html.key-above .legend { padding-bottom: 20px; }
 }
 .stu:hover { border-color: var(--line-hi); box-shadow: var(--shadow-2); }
 
-.stu-name { font-size: 17px; font-weight: 700; }
+.stu-l { min-width: 0; }
+.stu-name { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
 .stu-meta { font-size: 14px; color: var(--muted); margin-top: 2px; }
 .stu-m { display: flex; flex-wrap: wrap; gap: 5px; }
 .stu-r { display: flex; align-items: center; gap: 16px; }
@@ -1065,7 +1069,7 @@ html.key-above .legend { padding-bottom: 20px; }
 .prog-n { text-align: right; font-family: var(--mono); color: var(--ink); }
 .prog-who { margin-top: 10px; font-size: 15px; }
 .prog-who summary { cursor: pointer; color: var(--accent); font-weight: 600; }
-.prog-who p { margin: 6px 0 0; color: var(--ink-2); }
+.prog-who p { margin: 6px 0 0; color: var(--ink-2); overflow-wrap: anywhere; }
 
 .metrics {
   display: grid;
@@ -1438,7 +1442,7 @@ html.key-above .legend { padding-bottom: 20px; }
   color: var(--accent);
   margin-bottom: 8px;
 }
-.dr-title { font-size: 27px; margin-bottom: 22px; line-height: 1.15; }
+.dr-title { font-size: 27px; margin-bottom: 22px; line-height: 1.15; overflow-wrap: anywhere; }
 
 .dr-facts {
   display: flex;
@@ -1566,7 +1570,7 @@ html.key-above .legend { padding-bottom: 20px; }
   .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; left: -60px; }
   .band-tag { width: 46px; font-size: 11px; }
   .bar-t { width: 124px; flex-basis: 124px; }
-  .stu { grid-template-columns: 1fr; gap: 10px; }
+  .stu { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .stu-r { justify-content: space-between; }
   .dr { padding: 4px 20px 32px; }
   .drawer-panel { width: 100vw; }
