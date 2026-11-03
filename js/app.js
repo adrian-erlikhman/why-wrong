@@ -973,10 +973,10 @@ function renderItems() {
     box.appendChild(el('h3', null, 'These look weak by the usual measure. Keep them.'));
     const p = el('p', null,
       'The standard check asks whether students who did well overall also got the question right. That assumes the test measures one thing. This one does not: a question aimed at one misunderstanding is missed by exactly the students who hold it, whatever their ability elsewhere. Before calling anything broken, the tool checks whether the rest of the paper agrees with the question.');
-    box.appendChild(p);
     const anchor = el('span', 'x-anchor', ' ');
     anchor.appendChild(infoButton('diagnosing'));
-    box.appendChild(anchor);
+    p.appendChild(anchor);
+    box.appendChild(p);
     host.appendChild(box);
   }
 

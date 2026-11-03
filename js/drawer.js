@@ -304,7 +304,6 @@ export function openQuestion(ctx, i) {
       row.appendChild(el('div', 'opt-tag', 'Correct answer'));
     } else if (o.mis) {
       const t = el('div', 'opt-tag');
-      t.appendChild(el('span', 'opt-mis', o.mis));
       t.appendChild(el('span', null, byId[o.mis]?.name || ''));
       row.appendChild(t);
     } else {

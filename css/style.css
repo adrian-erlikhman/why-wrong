@@ -292,7 +292,7 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* ---------------------------- how it works ----------------------------- */
 
-.how { position: relative; background: var(--sand); padding: 112px 0 96px; }
+.how { position: relative; background: var(--sand); padding: 112px 0 128px; }
 /* The tide line between the hero and the section under it. */
 .how::before {
   content: "";
@@ -300,6 +300,15 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
   inset: -1px 0 auto;
   height: 42px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 42' preserveAspectRatio='none'%3E%3Cpath d='M0 0h600v16c-50 22-100 22-150 8s-100-14-150 0-100 14-150 0S50-2 0 16z' fill='%230b2545'/%3E%3C/svg%3E") repeat-x 0 0 / 600px 42px;
+}
+
+.how::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 42px;
+  transform: scaleY(-1);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 42' preserveAspectRatio='none'%3E%3Cpath d='M0 0h600v16c-50 22-100 22-150 8s-100-14-150 0-100 14-150 0S50-2 0 16z' fill='%23ffffff'/%3E%3C/svg%3E") repeat-x 0 0 / 600px 42px;
 }
 
 .sec-head { margin-bottom: 44px; }
@@ -390,7 +399,7 @@ sup { font-size: .68em; line-height: 0; }
 
 /* ------------------------------ app intro ------------------------------ */
 
-.app-intro { padding: 80px 0 8px; }
+.app-intro { padding: 64px 0 8px; }
 
 .app-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
 .app-head h2 { font-size: clamp(30px, 3.4vw, 42px); margin-bottom: 10px; }
@@ -1196,7 +1205,7 @@ html.key-above .legend { padding-bottom: 20px; }
 .confusion table { width: 100%; border-collapse: collapse; font-size: 15.5px; }
 .confusion th, .confusion td { border-bottom: 1px solid var(--line); padding: 12px 14px; text-align: center; color: var(--ink-2); }
 .confusion th { color: var(--muted); font-family: var(--ui); font-weight: 500; font-size: 13.5px; }
-.confusion tbody th { text-align: left; padding-left: 0; }
+.confusion tbody th, .confusion thead th:first-child { text-align: left; padding-left: 0; }
 .confusion td.hot { background: var(--deep); color: var(--sand); font-weight: 600; }
 .confusion caption { text-align: left; color: var(--ink-2); font-size: 16px; margin-bottom: 14px; caption-side: top; }
 /* The table can be wider than a phone and scroll. Its caption should not. */
@@ -1640,7 +1649,6 @@ html.key-above .legend { padding-bottom: 20px; }
 .opt-track { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
 .opt-fill { display: block; height: 100%; border-radius: 4px; background: var(--slip); }
 .opt-tag { font-size: 14px; color: var(--muted); margin-top: 6px; display: flex; gap: 7px; align-items: baseline; }
-.opt-mis { font-size: 14px; font-weight: 600; color: var(--ink-2); }
 .opt-slip { font-style: italic; }
 .opt-who {
   font-size: 13.5px;
@@ -1668,12 +1676,12 @@ html.key-above .legend { padding-bottom: 20px; }
   .wrap { padding: 0 20px; }
   .main { padding: 28px 20px 96px; }
   .hero { padding: 32px 0 88px; }
-  .how { padding: 88px 0 64px; }
+  .how { padding: 88px 0 96px; }
   .app-intro { padding-top: 56px; }
   :root { --cell: 13px; --row: 16px; --gap: 2px; }
   .m-name { width: 84px; flex-basis: 84px; font-size: 12.5px; }
   .matrix.sorted .m-name { width: 140px; flex-basis: 140px; padding-left: 60px; left: -60px; }
-  .band-tag { left: 8px; width: 54px; font-size: 10.5px; }
+  .band-tag { left: 8px; width: 56px; font-size: 9.5px; }
   .group { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .group-body { grid-template-columns: minmax(0, 1fr); }
   .item { grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -1717,7 +1725,13 @@ html.key-above .legend { padding-bottom: 20px; }
   .app-head { flex-direction: column; gap: 14px; }
   .ex-head { flex-direction: column; gap: 0; }
   .hero-cta .btn { width: 100%; }
-  .sum-v { font-size: 28px; }
+  .sum-v { font-size: 30px; }
+  .head-actions .btn-quiet:first-child { margin-left: -16px; }
+  /* A metric reads as one line of a list here: the figure, then what it means. */
+  #metrics .metric { display: grid; grid-template-columns: 92px minmax(0, 1fr); column-gap: 14px; padding: 16px 0; }
+  #metrics .metric + .metric { border-top: 1px solid var(--line); }
+  #metrics .metric-v { grid-row: 1 / span 2; font-size: 32px; }
+  #metrics .metric-k { margin-top: 0; }
   .search { min-width: 0; width: 100%; }
   .head-actions { width: 100%; }
   .coach-dots { display: none; }
@@ -1760,21 +1774,22 @@ html.key-above .legend { padding-bottom: 20px; }
   .prog-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .main { padding: 0; }
   body { font-size: 11pt; background: #fff; color: #111; }
-  .groups { display: block; }
+  .groups { display: block; border: none; }
   /* A big class has groups taller than a page, and asking the browser to keep one
      whole leaves a blank sheet before it. The pieces stay whole instead. */
   .group-top, .group-more h4, .checks, .roster { break-inside: avoid; page-break-inside: avoid; }
   .group-top, .group .lab, .group-more h4 { break-after: avoid; page-break-after: avoid; }
   .group {
+    display: block;
     margin-bottom: 14pt;
+    padding: 12pt;
     border: 1px solid #999;
-    background: #fff;
-    box-shadow: none;
   }
-  .group-top { background: none; }
+  .group-body { display: block; margin-top: 10pt; }
+  .group-more { border: none; margin: 0; padding: 0; }
   .roster-names { display: block; }
-  .rname { border: none; background: none; padding: 0 6px 0 0; color: #333; }
-  .chip { background: none; color: #333; }
+  .rname { padding: 0 6px 0 0; color: #333; text-decoration: none; }
+  .chip { color: #333; }
   .view-head h2 { font-size: 16pt; margin-bottom: 6pt; }
   a[href]::after { content: ""; }
 }
