@@ -137,7 +137,8 @@ students who picked it**.
   walk it like a spreadsheet; left and right move between the tabs.
 
 - **Click a colour** in the key to show only that misunderstanding across the
-  whole class map.
+  whole class map. **Show letters** marks every cell with a letter as well, for
+  anyone who cannot tell the colours apart.
 - **Every statistic has a "?"** next to it. Plain-language explanation of what it
   means, and what to do about the number in front of you.
 - Groups are formed by *what students believe*, not by score — two students with

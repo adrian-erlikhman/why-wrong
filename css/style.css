@@ -591,6 +591,15 @@ body.has-import .import-only { display: inline-flex; }
   transition: opacity .2s;
 }
 .m-cell.slip { background: var(--slip); }
+.show-letters .m-cell[data-letter], .show-letters .leg .sw[data-letter] { display: grid; place-items: center; }
+.show-letters .m-cell[data-letter]::after, .show-letters .leg .sw[data-letter]::after {
+  content: attr(data-letter);
+  font: 700 10.5px/1 var(--mono);
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,.85), 0 0 1px rgba(0,0,0,.85);
+}
+.show-letters .leg .sw[data-letter] { width: 16px; height: 16px; }
+#show-letters[aria-pressed="true"] { background: var(--accent-tint); border-color: var(--accent-line); color: var(--accent-2); }
 .m-cell:hover {
   outline: 2px solid var(--ink);
   outline-offset: 1px;
@@ -640,6 +649,7 @@ body.has-import .import-only { display: inline-flex; }
 
 /* -------------------------------- legend ------------------------------- */
 
+.legend-actions { display: inline-flex; gap: 8px; }
 .legend-head {
   display: flex;
   align-items: center;

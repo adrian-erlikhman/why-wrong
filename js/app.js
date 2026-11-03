@@ -63,9 +63,14 @@ const VERDICTS = {
 };
 
 let colourOf = {};
+let letterOf = {};
 function assignColours(pack) {
   colourOf = {};
-  pack.misconceptions.forEach((m, i) => { colourOf[m.id] = `var(--m${(i % 12) + 1})`; });
+  letterOf = {};
+  pack.misconceptions.forEach((m, i) => {
+    colourOf[m.id] = `var(--m${(i % 12) + 1})`;
+    letterOf[m.id] = i < 26 ? String.fromCharCode(65 + i) : String(i + 1);
+  });
 }
 
 const state = {
@@ -304,7 +309,12 @@ function renderMatrix() {
         what = 'correct';
       } else {
         const mis = item.opts[choice].mis;
-        if (mis) { c.style.background = colourOf[mis]; c.dataset.mis = mis; what = byId[mis]?.short ?? mis; }
+        if (mis) {
+          c.style.background = colourOf[mis];
+          c.dataset.mis = mis;
+          c.dataset.letter = letterOf[mis];
+          what = byId[mis]?.short ?? mis;
+        }
         else { c.classList.add('slip'); what = 'wrong, no pattern'; }
       }
 
@@ -482,6 +492,7 @@ function renderLegend() {
     n.dataset.mis = p.id;
     const sw = el('span', 'sw');
     sw.style.background = colourOf[p.id];
+    sw.dataset.letter = letterOf[p.id];
     n.appendChild(sw);
     n.appendChild(el('span', 'leg-n', p.id));
     n.appendChild(setMath(el('span'), m.short || m.name));
@@ -1602,6 +1613,14 @@ $('#reorder').addEventListener('click', toggleSort);
 $('#matrix').addEventListener('keydown', moveInMatrix);
 $('.tabs-in').addEventListener('keydown', moveInTabs);
 $('#clear-filter').addEventListener('click', () => applyFilter(null));
+
+// Colour alone cannot carry the map: about 1 man in 12 cannot tell these hues
+// apart. Letters give every misunderstanding a second, independent mark.
+$('#show-letters').addEventListener('click', e => {
+  const on = !document.body.classList.contains('show-letters');
+  document.body.classList.toggle('show-letters', on);
+  e.target.setAttribute('aria-pressed', String(on));
+});
 $('#pack').addEventListener('change', e => switchPack(e.target.value));
 $('#new-subject').addEventListener('click', openSubject);
 $('#materials').addEventListener('click', () => openM('#mats'));
