@@ -16,7 +16,7 @@ export default {
   name: 'Algebra 1',
   subject: 'Mathematics',
   level: 'Grade 8-9',
-  blurb: 'Exponent rules, signed arithmetic, fraction operations and one-step equations -- the cluster of topics where procedural fluency most often hides a broken rule.',
+  blurb: 'Exponent rules, signed arithmetic, fraction operations and one-step equations — the cluster of topics where procedural fluency most often hides a broken rule.',
   source: 'built-in',
 
   misconceptions: [
@@ -26,7 +26,7 @@ export default {
     short: 'Negative exponent to negative number',
     belief: 'Reads the minus sign in an exponent as a sign on the value, so 2^-3 becomes -8 instead of 1/8.',
     student: 'You may be reading a minus sign in an exponent as making the answer negative, so 2^-3 becomes -8. It really means 1/8.',
-    reteach: 'The minus sign in an exponent is an instruction, not a sign. Anchor it in the pattern 2^3=8, 2^2=4, 2^1=2, 2^0=1 -- each step down divides by 2, so 2^-1 must be 1/2. Have students continue the halving pattern themselves before you write the reciprocal rule at all. The rule is the conclusion of the pattern, not a substitute for it.',
+    reteach: 'The minus sign in an exponent is an instruction, not a sign. Anchor it in the pattern 2^3=8, 2^2=4, 2^1=2, 2^0=1 — each step down divides by 2, so 2^-1 must be 1/2. Have students continue the halving pattern themselves before you write the reciprocal rule at all. The rule is the conclusion of the pattern, not a substitute for it.',
     verify: ['Evaluate 3^-2.', 'Continue the pattern: 4^2, 4^1, 4^0, 4^-1.', 'True or false: 10^-1 is a negative number. Explain.']
   },
   {
@@ -44,7 +44,7 @@ export default {
     short: 'x^a . x^b to x^(ab)',
     belief: 'Applies the power-of-a-power rule to a product, so x^2 . x^3 becomes x^6 rather than x^5.',
     student: 'When multiplying powers with the same base, you may be multiplying the exponents, so x^2 . x^3 becomes x^6. Those exponents add, giving x^5.',
-    reteach: 'Students hold two rules and no way to tell them apart, so they choose by coin flip. Do not restate the rules -- make them expand. Writing x^2 . x^3 as (x.x)(x.x.x) and counting five factors is self-correcting, and it also shows why the other rule multiplies. Return to expansion every time the two rules collide.',
+    reteach: 'Students hold two rules and no way to tell them apart, so they choose by coin flip. Do not restate the rules — make them expand. Writing x^2 . x^3 as (x.x)(x.x.x) and counting five factors is self-correcting, and it also shows why the other rule multiplies. Return to expansion every time the two rules collide.',
     verify: ['Simplify a^5 . a^2 by expanding first.', 'Simplify (a^5)^2 by expanding first.', 'Explain in one sentence why those two answers differ.']
   },
   {
@@ -71,7 +71,7 @@ export default {
     short: '1/2 + 1/3 to 2/5',
     belief: 'Adds fractions componentwise, treating them as two independent whole numbers.',
     student: 'You may be adding fractions by adding the tops and adding the bottoms, so 1/2 + 1/3 becomes 2/5. Fractions need a common denominator first.',
-    reteach: 'Estimation exposes this instantly: 1/2 + 1/3 must exceed 1/2, but 2/5 is smaller than 1/2, so the answer is wrong before any procedure is checked. Build the habit of bounding the answer first, then re-establish that only like units add -- thirds and halves are different units until renamed.',
+    reteach: 'Estimation exposes this instantly: 1/2 + 1/3 must exceed 1/2, but 2/5 is smaller than 1/2, so the answer is wrong before any procedure is checked. Build the habit of bounding the answer first, then re-establish that only like units add — thirds and halves are different units until renamed.',
     verify: ['Without computing, is 1/2 + 1/3 more or less than 1/2?', 'Add 2/3 + 1/4.', 'Why can 1/5 + 2/5 be added directly but 1/5 + 1/3 cannot?']
   },
   {
@@ -98,7 +98,7 @@ export default {
     short: '(x+2)/2 to x+1 or x',
     belief: 'Cancels a denominator against one term of a sum in the numerator rather than against the whole numerator.',
     student: 'You may be cancelling with just one term on top of a fraction. You can only cancel something that multiplies the whole top.',
-    reteach: 'Cancelling is division, and division must reach every term. Splitting the fraction first -- (x+2)/2 = x/2 + 2/2 -- makes the requirement structural rather than a prohibition to remember. A numeric counterexample such as (4+2)/2 seals it: the answer is 3, not 5.',
+    reteach: 'Cancelling is division, and division must reach every term. Splitting the fraction first — (x+2)/2 = x/2 + 2/2 — makes the requirement structural rather than a prohibition to remember. A numeric counterexample such as (4+2)/2 seals it: the answer is 3, not 5.',
     verify: ['Simplify (3x+6)/3 by splitting the fraction.', 'Test (x+2)/2 = x+1 at x=4.', 'Why can (2x)/2 be cancelled but (x+2)/2 cannot?']
   },
   {
@@ -179,7 +179,7 @@ export default {
   /* Third probe for each misconception.
      Two items per misconception is not enough. The inference layer holds out
      one item at a time to check whether an item agrees with the rest of the
-     test, and with only two probes that leaves a single item behind -- which by
+     test, and with only two probes that leaves a single item behind — which by
      the model's own logic can never be conclusive. Three probes make every
      leave-one-out question answerable, and materially improve recall. */
   { id: 'Q23', topic: 'Exponents', stem: 'Evaluate 4^-1.',
@@ -208,7 +208,7 @@ export default {
     opts: [ {t:'13', c:true}, {t:'17', mis:'M12'}, {t:'169', mis:null}, {t:'84.5', mis:null} ] },
 
   /* Two deliberately weak items. The item-analysis layer has to find these on
-     its own -- nothing in the data marks them. Q35 is trivial and carries no
+     its own — nothing in the data marks them. Q35 is trivial and carries no
      information; Q36 is ambiguously worded, so responses are near-random
      regardless of how strong the student is. */
   { id: 'Q35', topic: 'Exponents', stem: 'Evaluate 5^1.',
