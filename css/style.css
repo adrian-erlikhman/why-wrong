@@ -1573,6 +1573,14 @@ body.has-import .import-only { display: inline-flex; }
 
 /* --------------------------------- print -------------------------------- */
 
+@media (max-width: 640px) {
+  #progress .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #progress .metric { padding: 14px 16px; }
+  #progress .metric-x { display: none; }
+  #progress .metric-k { font-size: 14.5px; overflow-wrap: anywhere; }
+  .prog-group-top .prog-name { order: 3; flex-basis: 100%; }
+}
+
 @media print {
   :root { --bg: #fff; --surface: #fff; --bg-2: #fff; --bg-3: #f4f5f7; --line: #bbb; --line-soft: #ddd; --line-hi: #999; }
   .bar, .tabs, .hero, .how, .app-intro, .foot, .drawer, .modal, .coach,

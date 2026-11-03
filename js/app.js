@@ -1446,10 +1446,20 @@ function showView(name) {
     t.tabIndex = on ? 0 : -1;
   });
   $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
+  showActiveTab();
 
   // Rows are absolutely positioned, so they need re-laying out whenever the
   // matrix returns from display:none at a possibly different width.
   if (name === 'matrix' && state.cls) layout(rowOrder());
+}
+
+/** On a phone the tabs scroll sideways, so keep the open one in view. */
+function showActiveTab() {
+  const bar = $('.tabs-in');
+  const tab = $('.tab.is-active');
+  const [b, t] = [bar.getBoundingClientRect(), tab.getBoundingClientRect()];
+  if (t.left < b.left) bar.scrollLeft -= b.left - t.left;
+  else if (t.right > b.right) bar.scrollLeft += t.right - b.right;
 }
 
 /** Left and right move between tabs, as they do in any tab list. */
