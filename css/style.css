@@ -263,6 +263,11 @@ a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ex-n { font-size: 15px; color: var(--muted); text-align: right; }
 .ex-why { grid-column: 2 / -1; display: flex; align-items: baseline; gap: 8px; font-size: 15px; color: var(--ink-2); line-height: 1.35; }
 .ex-why .sw { transform: translateY(1px); }
+/* A sentence on one line would squeeze the bar away, so it sits underneath. */
+.ex-long .ex-opt { grid-template-columns: 26px 1fr 30px; }
+.ex-long .ex-t { white-space: normal; line-height: 1.3; }
+.ex-long .ex-n { grid-column: 3; grid-row: 1; }
+.ex-long .ex-track { grid-column: 2 / -1; grid-row: 2; }
 .ex-opt.is-correct .ex-why { color: var(--good); font-weight: 600; }
 .ex-opt.is-slip .ex-why { color: var(--muted); }
 .ex-foot { padding: 16px 22px; background: var(--bg-2); border-top: 1px solid var(--line-soft); font-size: 15.5px; color: var(--ink-2); }

@@ -215,7 +215,7 @@ function renderExample() {
       <span>How ${cls.meta.imported ? 'your' : 'the sample'} class of ${n} answered</span>
     </div>
     <p class="ex-q">${mathHtml(item.stem)}</p>
-    <ol class="ex-opts">${rows}</ol>
+    <ol class="ex-opts${wordyOptions(item) ? ' ex-long' : ''}">${rows}</ol>
     <figcaption class="ex-foot">
       Every wrong option is written to catch one misunderstanding. One answer proves nothing, so
       Why Wrong adds up each student&rsquo;s answers across every question that tests the same idea
