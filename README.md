@@ -328,9 +328,13 @@ js/a11y.js             focus handling for dialogs
 js/explain.js          inline glossary written for teachers
 js/llm.js              optional reteach adaptation, plain-language API errors
 js/tour.js             first-visit intro and guided tour
+js/notation.js         sets typed maths on screen
+js/rng.js              seeded random numbers, so a class can be re-rolled
 js/app.js              orchestration and rendering
 og.png                 link-preview card
-test/pipeline.test.mjs runs every built-in pack, plus the paper round trip
+test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
+                       on blanks, spreadsheets, saved classes, retests and the
+                       model layer
 ```
 
 ## Honest limitations
