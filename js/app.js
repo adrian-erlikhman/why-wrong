@@ -337,7 +337,7 @@ function renderMatrix() {
     const name = el('button', 'm-name', cls.students[s].name);
     name.tabIndex = -1;
     name.title = `${cls.students[s].name} — click for the full evidence trail`;
-    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s); });
+    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s, rowOrder()); });
     const head = el('span', 'm-head');
     head.setAttribute('role', 'rowheader');
     head.appendChild(name);
@@ -765,7 +765,7 @@ function roster(g) {
   const list = el('div', 'roster-names');
   g.members.forEach(m => {
     const b = el('button', 'rname', state.cls.students[m].name);
-    b.addEventListener('click', () => openStudent(ctx(), m));
+    b.addEventListener('click', () => openStudent(ctx(), m, g.members));
     list.appendChild(b);
   });
   box.appendChild(list);
@@ -890,7 +890,7 @@ function renderStudents() {
     rr.appendChild(el('span', 'stu-go', '→'));
     card.appendChild(rr);
 
-    card.addEventListener('click', () => openStudent(ctx(), r.s));
+    card.addEventListener('click', () => openStudent(ctx(), r.s, shown.map(x => x.s)));
     host.appendChild(card);
   });
 }
@@ -951,7 +951,8 @@ function renderItems() {
     host.appendChild(box);
   }
 
-  list.forEach(s => host.appendChild(itemCard(s)));
+  const order = list.map(x => x.index);
+  list.forEach(s => host.appendChild(itemCard(s, order)));
 
   const alpha = cronbachAlpha(pack, cls.responses);
   const note = $('#alpha-note');
@@ -961,7 +962,7 @@ function renderItems() {
   note.appendChild(a);
 }
 
-function itemCard(s) {
+function itemCard(s, order) {
   const card = el('button', `item ${s.quality}`);
 
   const top = el('div', 'item-top');
@@ -1007,7 +1008,7 @@ function itemCard(s) {
   });
   card.appendChild(bars);
 
-  card.addEventListener('click', () => openQuestion(ctx(), s.index));
+  card.addEventListener('click', () => openQuestion(ctx(), s.index, order));
   return card;
 }
 

@@ -1456,6 +1456,21 @@ html.key-above .legend { padding-bottom: 20px; }
 }
 .drawer-x:hover { background: var(--bg-2); color: var(--ink); }
 
+/* Step through the list the panel was opened from. */
+.drawer-step { display: flex; align-items: center; gap: 4px; margin-right: auto; }
+.drawer-nav {
+  font: inherit; font-size: 20px; line-height: 1;
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-2);
+  cursor: pointer; transition: background .12s, color .12s, opacity .12s;
+}
+.drawer-nav:hover:not(:disabled) { background: var(--bg-2); color: var(--ink); }
+.drawer-nav:disabled { opacity: .35; cursor: default; }
+.drawer-pos { font-size: 14px; color: var(--muted); min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.drawer-pos:focus { outline: none; }
+.dr-step { animation: dr-step .18s var(--ease-out, ease-out); }
+@keyframes dr-step { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
 .dr { padding: 4px 32px 44px; }
 .dr-kicker {
   font-size: 15px;
@@ -1642,7 +1657,7 @@ html.key-above .legend { padding-bottom: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .m-row, .band, .band-tag, .m-name { transition: none !important; animation: none !important; }
+  .m-row, .band, .band-tag, .m-name, .dr-step { transition: none !important; animation: none !important; }
 }
 
 /* --------------------------------- print -------------------------------- */
