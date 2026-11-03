@@ -408,6 +408,9 @@ for (const pack of BUILT_IN) {
   check('an unquoted "Last, First" stays one name', commas.ok && commas.students[2].name === 'Last2, First' &&
     commas.responses.every((row, s) => row.every((v, i) => v === c.responses[s][i])));
 
+  const wrong = parseResponses(BUILT_IN[0], plain, BUILT_IN);
+  check('answers for another test name that test', !wrong.ok && wrong.errors[0].includes(pack.name));
+
   const twice = parseResponses(pack, `${plain}\n${q(c.students[0].name.toUpperCase())},${letters[1].join(',')}`);
   check('a repeated name is flagged at paste', twice.ok && twice.warnings.some(w => /more than once/.test(w)));
 }

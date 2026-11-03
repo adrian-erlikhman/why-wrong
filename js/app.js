@@ -1326,7 +1326,7 @@ function reportImport(res) {
 }
 
 function doImport() {
-  const res = parseResponses(state.pack, $('#import-text').value);
+  const res = parseResponses(state.pack, $('#import-text').value, allPacks());
   if (!reportImport(res)) return;
 
   closeM('#import');

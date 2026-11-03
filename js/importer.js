@@ -427,7 +427,7 @@ function looksLikeAnswers(pack, row) {
  *
  * @returns {{ok, students, responses, errors, warnings, omitted, matchedBy}}
  */
-export function parseResponses(pack, text) {
+export function parseResponses(pack, text, otherPacks = []) {
   const errors = [];
   const warnings = [];
   const rows = splitRows(String(text || '').replace(/^\uFEFF/, ''));   // Excel's BOM
@@ -457,6 +457,19 @@ export function parseResponses(pack, text) {
   });
 
   const matchedById = Object.keys(idIndex).length >= Math.ceil(pack.items.length * 0.8);
+
+  // A header naming another loaded test's questions is the wrong subject, not a
+  // sheet to read by position. Saying which one saves a confusing error at best
+  // and, on two tests of the same length, every answer being misread at worst.
+  if (!matchedById) {
+    const heads = new Set(header.map(h => h.trim().toLowerCase()));
+    const other = otherPacks.find(o => o.id !== pack.id &&
+      o.items.filter(it => heads.has(it.id.toLowerCase())).length >= Math.ceil(o.items.length * 0.8));
+    if (other) {
+      return { ok: false, errors: [`These answers are for “${other.name}”, but “${pack.name}” is selected. Switch the subject first.`], warnings: [], students: [], responses: [] };
+    }
+  }
+
   const emailCol = header.findIndex(h => EMAIL_COL.test(h.trim()));
   let nameCol = 0;
   let dataStart = 1;
