@@ -314,7 +314,7 @@ function splitRows(text) {
   }
   const last = normalized.slice(start);
   if (last.trim()) rows.push(last);
-  return rows;
+  return quoted ? null : rows;
 }
 
 /** Split one CSV/TSV row, honouring quotes. */
@@ -468,6 +468,16 @@ export function parseResponses(pack, text, otherPacks = []) {
   const errors = [];
   const warnings = [];
   const rows = splitRows(String(text || '').replace(/^\uFEFF/, ''));   // Excel's BOM
+
+  if (rows === null) {
+    return {
+      ok: false,
+      errors: ['A quoted cell is not closed. Check for a missing or extra double quote, then paste again.'],
+      warnings,
+      students: [],
+      responses: []
+    };
+  }
 
   if (rows.length < 2) {
     return { ok: false, errors: ['Paste at least a header row and one student row.'], warnings: [], students: [], responses: [] };

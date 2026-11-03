@@ -720,6 +720,11 @@ for (const pack of BUILT_IN) {
   check('delimiter detection ignores commas inside quoted TSV headers',
     same(parseResponses(pack, commaHeadersTsv)));
 
+  const unclosedQuote = parseResponses(pack, `${plain}\n"Unclosed student,${letters[0].join(',')}`);
+  check('an unclosed CSV quote returns a clear import error',
+    !unclosedQuote.ok && unclosedQuote.students.length === 0 &&
+    /quoted cell is not closed/i.test(unclosedQuote.errors[0]));
+
   const keyed = parseResponses(pack, `${plain}\nAnswer Key,${pack.items.map(it => paperLetter(it, it.opts.findIndex(o => o.c))).join(',')}`);
   check('a row called Key is not a student', same(keyed) && keyed.warnings.some(w => /row called Key/.test(w)));
 
