@@ -25,6 +25,7 @@ export default {
     name: 'Negative exponent means negative result',
     short: 'Negative exponent to negative number',
     belief: 'Reads the minus sign in an exponent as a sign on the value, so 2^-3 becomes -8 instead of 1/8.',
+    student: 'You may be reading a minus sign in an exponent as making the answer negative, so 2^-3 becomes -8. It really means 1/8.',
     reteach: 'The minus sign in an exponent is an instruction, not a sign. Anchor it in the pattern 2^3=8, 2^2=4, 2^1=2, 2^0=1 -- each step down divides by 2, so 2^-1 must be 1/2. Have students continue the halving pattern themselves before you write the reciprocal rule at all. The rule is the conclusion of the pattern, not a substitute for it.',
     verify: ['Evaluate 3^-2.', 'Continue the pattern: 4^2, 4^1, 4^0, 4^-1.', 'True or false: 10^-1 is a negative number. Explain.']
   },
@@ -33,6 +34,7 @@ export default {
     name: 'Exponent multiplies the base',
     short: 'Treats a^b as a times b',
     belief: 'Collapses exponentiation into multiplication, so 3^4 becomes 12 and (x+3)^2 becomes 2x+6.',
+    student: 'You may be multiplying the base by the exponent, so 3^4 becomes 12. An exponent means repeated multiplication: 3 × 3 × 3 × 3.',
     reteach: 'This survives because it gives the right answer exactly once, at a^2 when a=2. Kill it with a counting task rather than a rule: ask for the number of outcomes from 3 coins, then 4, and let the doubling do the work. Repeated multiplication has to be re-grounded before the notation comes back.',
     verify: ['Evaluate 3^4.', 'How many 3-letter codes use only A and B?', 'Is 2^5 equal to 10? Show why or why not.']
   },
@@ -41,6 +43,7 @@ export default {
     name: 'Multiplies exponents when multiplying like bases',
     short: 'x^a . x^b to x^(ab)',
     belief: 'Applies the power-of-a-power rule to a product, so x^2 . x^3 becomes x^6 rather than x^5.',
+    student: 'When multiplying powers with the same base, you may be multiplying the exponents, so x^2 . x^3 becomes x^6. Those exponents add, giving x^5.',
     reteach: 'Students hold two rules and no way to tell them apart, so they choose by coin flip. Do not restate the rules -- make them expand. Writing x^2 . x^3 as (x.x)(x.x.x) and counting five factors is self-correcting, and it also shows why the other rule multiplies. Return to expansion every time the two rules collide.',
     verify: ['Simplify a^5 . a^2 by expanding first.', 'Simplify (a^5)^2 by expanding first.', 'Explain in one sentence why those two answers differ.']
   },
@@ -49,6 +52,7 @@ export default {
     name: 'Adds exponents when raising a power to a power',
     short: '(x^a)^b to x^(a+b)',
     belief: 'The mirror image of M03: applies the product rule to a nested power, so (x^3)^2 becomes x^5 instead of x^6.',
+    student: 'When raising a power to a power, you may be adding the exponents, so (x^3)^2 becomes x^5. Those exponents multiply, giving x^6.',
     reteach: 'Same root cause as M03 and best taught alongside it. (x^3)^2 means x^3 . x^3, so write the repetition out explicitly. Students who can say "the outer exponent tells me how many copies" stop guessing between the two rules.',
     verify: ['Simplify (m^4)^3 by writing out the copies.', 'Which is larger, (2^3)^2 or 2^3 . 2^2?', 'Write (x^2)^5 as a repeated product.']
   },
@@ -57,6 +61,7 @@ export default {
     name: 'Distributes an exponent over a sum',
     short: '(a+b)^2 to a^2 + b^2',
     belief: 'Treats squaring as distributive across addition, dropping the cross term entirely.',
+    student: 'You may be squaring each part of a sum separately, so (a+b)^2 becomes a^2 + b^2. That leaves out the middle term, 2ab.',
     reteach: 'Distribution is legal over multiplication and illegal over addition, and students have no felt difference between the two cases. Use area: a square of side (a+b) visibly contains two squares and two rectangles. The 2ab is a region on the page, not a term to memorise. Once seen geometrically it is hard to unsee.',
     verify: ['Expand (x+4)^2.', 'Test (a+b)^2 = a^2+b^2 with a=3, b=4.', 'Draw a square of side (a+b) and label all four regions.']
   },
@@ -65,6 +70,7 @@ export default {
     name: 'Adds numerators and denominators',
     short: '1/2 + 1/3 to 2/5',
     belief: 'Adds fractions componentwise, treating them as two independent whole numbers.',
+    student: 'You may be adding fractions by adding the tops and adding the bottoms, so 1/2 + 1/3 becomes 2/5. Fractions need a common denominator first.',
     reteach: 'Estimation exposes this instantly: 1/2 + 1/3 must exceed 1/2, but 2/5 is smaller than 1/2, so the answer is wrong before any procedure is checked. Build the habit of bounding the answer first, then re-establish that only like units add -- thirds and halves are different units until renamed.',
     verify: ['Without computing, is 1/2 + 1/3 more or less than 1/2?', 'Add 2/3 + 1/4.', 'Why can 1/5 + 2/5 be added directly but 1/5 + 1/3 cannot?']
   },
@@ -73,6 +79,7 @@ export default {
     name: 'Negative sign not distributed across parentheses',
     short: '-(x-3) to -x-3',
     belief: 'Applies the leading minus to the first term only, leaving the remaining signs untouched.',
+    student: 'You may be applying a minus sign in front of brackets to the first term only. It changes the sign of every term inside.',
     reteach: 'Students read the minus as decoration on the first term rather than as multiplication by -1. Have them rewrite every leading minus as -1 times the bracket for a week, no shortcuts allowed. The distribution then follows from a rule they already trust instead of a new one.',
     verify: ['Simplify -(2y-5).', 'Rewrite -(a+b-c) as -1 times the bracket, then expand.', 'Check your answer to the first item at y=1.']
   },
@@ -81,6 +88,7 @@ export default {
     name: 'Subtracting a negative treated as subtracting',
     short: '5 - (-3) to 2',
     belief: 'Ignores the second minus sign, collapsing subtraction of a negative into ordinary subtraction.',
+    student: 'You may be skipping the second minus sign, so 5 - (-3) becomes 2. Subtracting a negative adds, so it is 8.',
     reteach: 'Rules about "two negatives" get memorised and then misfire. Ground it on the number line instead: subtraction asks for distance and direction from -3 to 5, which is 8 to the right. Temperature or elevation works equally well. The sign rule should be the summary of a movement students can already picture.',
     verify: ['Compute -4 - (-9).', 'On a number line, how far is it from -3 up to 5?', 'The temperature rises from -6 to 2. What is the change?']
   },
@@ -89,6 +97,7 @@ export default {
     name: 'Illegal cancellation across addition',
     short: '(x+2)/2 to x+1 or x',
     belief: 'Cancels a denominator against one term of a sum in the numerator rather than against the whole numerator.',
+    student: 'You may be cancelling with just one term on top of a fraction. You can only cancel something that multiplies the whole top.',
     reteach: 'Cancelling is division, and division must reach every term. Splitting the fraction first -- (x+2)/2 = x/2 + 2/2 -- makes the requirement structural rather than a prohibition to remember. A numeric counterexample such as (4+2)/2 seals it: the answer is 3, not 5.',
     verify: ['Simplify (3x+6)/3 by splitting the fraction.', 'Test (x+2)/2 = x+1 at x=4.', 'Why can (2x)/2 be cancelled but (x+2)/2 cannot?']
   },
@@ -97,6 +106,7 @@ export default {
     name: 'Sign error moving a term across the equals sign',
     short: 'x+5=12 to x=17',
     belief: 'Moves a term to the other side without inverting its operation, applying the change to one side only.',
+    student: 'When moving a term across the equals sign, you may be keeping it the same. Moving it means undoing it on both sides, so + becomes -.',
     reteach: 'Caused by teaching "move it over and flip the sign" as a gesture. Replace it with the operation performed on both sides, written on both sides, every step. Slower on the page, but the balance model is what actually generalises to inequalities and systems later.',
     verify: ['Solve y - 4 = 10 showing the operation on both sides.', 'Solve x + 5 = 12 and check by substitution.', 'Explain why x + 5 = 12 cannot give x = 17.']
   },
@@ -105,6 +115,7 @@ export default {
     name: 'Distributes a coefficient to only the first term',
     short: '2(x+3)=10 to 2x+3=10',
     belief: 'Multiplies the leading term inside the bracket and leaves the rest of the bracket unchanged.',
+    student: 'You may be multiplying only the first term inside the brackets. The number outside multiplies every term inside.',
     reteach: 'Closely related to M07 and often the same student. Arrows drawn from the coefficient to every term inside the bracket, before any arithmetic, make the omission visible. Pair with an area model so the second product is a region rather than an afterthought.',
     verify: ['Expand 3(x-1) and mark an arrow to each term.', 'Solve 2(x+3)=10 and check by substitution.', 'Find the area of a rectangle with sides 2 and (x+3).']
   },
@@ -113,6 +124,7 @@ export default {
     name: 'Root of a sum equals sum of roots',
     short: 'sqrt(a^2+b^2) to a+b',
     belief: 'Distributes a square root across addition, so sqrt(9+16) becomes 3+4=7 instead of 5.',
+    student: 'You may be taking the square root of each part of a sum, so sqrt(9+16) becomes 3+4=7. Add first: sqrt(25) is 5.',
     reteach: 'The same distribution error as M05 arriving from the other direction, and it is why Pythagorean answers come back wrong. Compute inside first, always: sqrt(9+16)=sqrt(25)=5. A 3-4-5 triangle drawn to scale shows immediately that the hypotenuse is not 7.',
     verify: ['Compute sqrt(9+16).', 'Does sqrt(a+b) = sqrt(a)+sqrt(b)? Test with a=9, b=16.', 'A right triangle has legs 6 and 8. Find the hypotenuse.']
   }

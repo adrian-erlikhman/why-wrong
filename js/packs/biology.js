@@ -24,6 +24,7 @@ export default {
       name: 'Individuals evolve during their lifetime',
       short: 'Organisms adapt, populations do not',
       belief: 'Treats evolution as something that happens to an organism while it lives, rather than to allele frequencies in a population across generations.',
+      student: 'You may be thinking an animal changes during its life to adapt. Evolution is a change in a population over generations, not in one animal.',
       reteach: 'The unit of selection is the population, and the timescale is generations. Take a single beetle and ask what changed about *it* over its life: nothing. Then show the same population across five generations with the proportion of dark beetles rising. Students need to see that no individual changed colour for the idea to land -- the population changed composition because different individuals left different numbers of offspring.',
       verify: [
         'A moth population becomes darker over 50 years. Did any individual moth get darker? Explain.',
@@ -36,6 +37,7 @@ export default {
       name: 'Evolution is goal-directed',
       short: 'Species change because they need to',
       belief: 'Explains adaptation by need or purpose -- the species developed the trait in order to survive -- rather than by differential survival of variation that already existed.',
+      student: 'You may be thinking species develop a trait because they need it. Traits that already vary in a population get passed on more when they help survival.',
       reteach: 'Teleology is the hardest one to shift because the language of the textbook encourages it. Ban the words "in order to" and "needed to" for a lesson and require every explanation to name (1) the variation that already existed, (2) which variants left more offspring, and (3) why. The constraint does the teaching; students discover the causal story is available without purpose.',
       verify: [
         'Rewrite "giraffes grew long necks to reach high leaves" without the word "to".',
@@ -48,6 +50,7 @@ export default {
       name: 'Mutations are always harmful',
       short: 'All mutation is damage',
       belief: 'Treats mutation as uniformly deleterious, which makes the origin of beneficial variation inexplicable and quietly forces a teleological account of adaptation.',
+      student: 'You may be thinking mutations are always harmful. Many do nothing and some help, which is where useful new traits come from.',
       reteach: 'This misconception props up B02, so treat them together. Most mutations are neutral, a minority are harmful, a small minority are beneficial -- and "beneficial" is relative to an environment, not absolute. The sickle-cell allele is the standard case precisely because it is harmful and protective in the same body depending on the malaria context.',
       verify: [
         'Classify: a mutation in non-coding DNA. Harmful, neutral, or beneficial?',
@@ -60,6 +63,7 @@ export default {
       name: 'Fitness means physical strength',
       short: 'Survival of the strongest',
       belief: 'Reads "fittest" as strongest, fastest or biggest rather than as reproductive success in a particular environment.',
+      student: 'You may be reading "fittest" as strongest or fastest. In evolution, fitness means leaving more offspring in a particular environment.',
       reteach: 'Fitness is a count of surviving offspring and nothing else. Give three organisms -- a large male that fathers none, a small one that fathers eight, a fast one eaten before breeding -- and have students rank fitness. The ranking inverts the intuitive one, which is the point. "Survival of the fittest" is a circular phrase students should learn to distrust.',
       verify: [
         'Rank by fitness: an organism with 0 offspring, 3 offspring, 9 offspring.',
@@ -72,6 +76,7 @@ export default {
       name: 'Humans descended from modern chimpanzees',
       short: 'We came from chimps',
       belief: 'Reads a phylogeny as a ladder from living species to living species rather than as branching from shared ancestors.',
+      student: 'You may be thinking humans came from the chimpanzees alive today. Humans and chimpanzees share an ancestor, and both lines branched from it.',
       reteach: 'A tree diagram read left-to-right invites this error. Draw the branch point explicitly and label the common ancestor as a third, extinct species. Ask which living species is "more evolved" -- the answer, that the question is malformed because both lineages have been evolving for exactly the same time, is the concept.',
       verify: [
         'On a tree, where are humans and chimpanzees relative to their common ancestor?',
@@ -84,6 +89,7 @@ export default {
       name: 'Dominant alleles are more common',
       short: 'Dominant means frequent',
       belief: 'Confuses dominance, which is about how an allele is expressed in a heterozygote, with frequency, which is about how common it is in a population.',
+      student: 'You may be thinking dominant traits are the most common. Dominant only describes how an allele shows up, not how often it appears.',
       reteach: 'Two independent ideas share one word. Polydactyly is dominant and rare; blue eyes are recessive and common in some populations. Give the frequencies first and ask students to predict dominance, then reveal it -- the failure of prediction is the lesson. Insist on the definition: dominant describes what happens in a heterozygote, nothing more.',
       verify: [
         'Polydactyly is dominant and affects about 1 in 1000. Explain how both can be true.',
@@ -96,6 +102,7 @@ export default {
       name: 'Heterozygotes show a blended phenotype',
       short: 'Aa gives an in-between trait',
       belief: 'Applies blending inheritance to a Mendelian trait, so a heterozygote is expected to show an intermediate form rather than the dominant one.',
+      student: 'You may be expecting offspring to show a blend of two forms. With a dominant allele, someone with one copy of each shows the dominant form.',
       reteach: 'Blending was the pre-Mendelian model and it is intuitive, so it returns whenever attention lapses. Run a monohybrid cross on the board and have students predict the heterozygote phenotype before the reveal. Then distinguish the genuine exceptions -- incomplete dominance in snapdragons, codominance in AB blood -- so students learn these are named special cases, not the default.',
       verify: [
         'A cross of RR x rr gives Rr. What phenotype do the offspring show?',
@@ -108,6 +115,7 @@ export default {
       name: 'Selection creates new traits on demand',
       short: 'The environment produces the mutation',
       belief: 'Believes the environment induces the useful variation, so exposure to antibiotics causes the resistance mutation rather than selecting among bacteria that already varied.',
+      student: 'You may be thinking the environment causes the useful change, like antibiotics making bacteria resistant. Resistant bacteria were already there, and the antibiotic leaves them behind.',
       reteach: 'Selection sorts; it does not author. The classic demonstration is that resistant bacteria can be isolated from a culture that has never met the antibiotic. Sequence the story explicitly on the board: variation exists first, the selective pressure arrives second, frequencies shift third. Students who can put those three in order stop inventing on-demand mutation.',
       verify: [
         'Did antibiotic resistance appear before or after the bacteria met the antibiotic?',

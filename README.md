@@ -55,7 +55,9 @@ leaves the tab.
 **Students → Print student slips** gives each student their own slip to go back
 with the paper: what their answers suggest they might be thinking, and the check
 questions for it. Slips carry no percentages or group numbers, and each one says
-it is a best guess and not a grade.
+it is a best guess and not a grade. Each misunderstanding has a `student` line
+written for this, so a slip says "you may be adding the tops and the bottoms"
+rather than "adds fractions componentwise".
 
 ### Keeping a class
 

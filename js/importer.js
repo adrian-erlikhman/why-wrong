@@ -229,8 +229,9 @@ export function slipsHtml(pack, cls, inf, cov) {
     if (held.length) {
       body = `<p class="lead">Your answers point to this mix-up:</p>` + held.map(({ m }) => {
         const tryThese = (m.verify || []).map(v => `<li>${mathHtml(v)}</li>`).join('');
+        const line = m.student || m.belief;
         return `<h3>${mathHtml(m.name)}</h3>
-${m.belief ? `<p>${mathHtml(m.belief)}</p>` : ''}
+${line ? `<p>${mathHtml(line)}</p>` : ''}
 ${tryThese ? `<p class="try">Try these:</p><ol>${tryThese}</ol>` : ''}`;
       }).join('');
     } else if (cov[s].thin) {

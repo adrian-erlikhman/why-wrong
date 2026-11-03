@@ -315,6 +315,13 @@ for (const pack of BUILT_IN) {
   const top = inf.misIds[inf.posterior[heldBy].indexOf(Math.max(...inf.posterior[heldBy]))];
   check('a slip names what the student most likely holds', slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));
   check('names are escaped', slips[1].includes('&lt;b&gt;Bo&lt;/b&gt; &amp; Co'));
+
+  const all = BUILT_IN.flatMap(p => p.misconceptions);
+  check('every built-in misunderstanding has a line for students', all.every(m => /^(You may|When )/.test(m.student ?? '')));
+  check('those lines stay short', all.every(m => m.student.length <= 190), String(Math.max(...all.map(m => m.student.length))));
+  const heldOn = pack.misconceptions.find(m => m.id === top);
+  check('a slip uses the student line, not the teacher one',
+    slips[heldBy].includes(heldOn.student.split(',')[0]) && !slips[heldBy].includes(heldOn.belief.split(',')[0]));
 }
 
 // ---------------------------------------------------------- broken test files

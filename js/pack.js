@@ -3,7 +3,9 @@
  * ---------------------------------------------------------------------------
  * A pack is a complete diagnostic instrument for one subject:
  *
- *   misconceptions[]  named, described, with a reteach and verification items
+ *   misconceptions[]  named, described, with a reteach and verification items,
+ *                     and optionally `student`, the same belief in words a
+ *                     student can read, used on the printed slips
  *   items[]           every wrong option mapped to a misconception, or to null
  *                     for an undiagnostic slip
  *   archetypes[]      which misconceptions travel together in a real class

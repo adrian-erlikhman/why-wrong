@@ -71,6 +71,7 @@ Respond with JSON only. No prose, no code fence, no commentary.
       "name": "<short name of the wrong belief>",
       "short": "<3-6 word label>",
       "belief": "<one sentence stating what the student wrongly believes>",
+      "student": "<1-2 plain sentences addressed to the student: 'You may be...', then what is actually true>",
       "reteach": "<2-4 sentences: a concrete instructional move that targets this belief>",
       "verify": ["<check question 1>", "<check question 2>", "<check question 3>"]
     }
