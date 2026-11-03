@@ -232,6 +232,31 @@ for (const pack of BUILT_IN) {
 
   const none = separateThin(raw, coverage(pack, c.responses.map(r => r.map(() => 0))));
   check('with no blanks the groups come back unchanged', none === raw);
+
+  // Item statistics are taken over the students who answered.
+  const clean = generateClass(pack, { seed: 21, size: 40 });
+  const ci = pack.items.map(it => it.opts.findIndex(o => o.c));
+  const cleanStats = analyseItems(pack, clean.responses, inferMisconceptions(pack, clean.responses));
+  check('with no blanks, difficulty is the plain share correct',
+    cleanStats.every((st, i) => Math.abs(st.difficulty - clean.responses.filter(r => r[i] === ci[i]).length / 40) < 1e-12));
+  const col = clean.responses.map(r => (r[0] === ci[0] ? 1 : 0));
+  const rest = clean.responses.map((r, s) => r.reduce((n, v, i) => n + (v === ci[i] ? 1 : 0), 0) - col[s]);
+  const corr = (x, y) => {
+    const m = a => a.reduce((p, q) => p + q, 0) / a.length;
+    const [mx, my] = [m(x), m(y)];
+    const dot = (a, b) => a.reduce((n, v, i) => n + v * b[i], 0);
+    const dx = x.map(v => v - mx), dy = y.map(v => v - my);
+    return dot(dx, dy) / Math.sqrt(dot(dx, dx) * dot(dy, dy));
+  };
+  check('with no blanks, discrimination is the usual corrected correlation',
+    Math.abs(cleanStats[0].discrimination - corr(col, rest)) < 1e-9);
+
+  const skipped = clean.responses.map((r, s) => r.map((v, i) => (i === 0 && s % 2 === 0 ? -1 : v)));
+  const hit = skipped.filter(r => r[0] === ci[0]).length;
+  const firstStat = analyseItems(pack, skipped)[0];
+  check('blanks leave difficulty out of the denominator', Math.abs(firstStat.difficulty - hit / 20) < 1e-12 && firstStat.answered === 20);
+  check('a question left blank by half the class is flagged', firstStat.flags.some(f => f.kind === 'skipped'));
+  check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
 }
 
 // -------------------------------------------------------------- saved class

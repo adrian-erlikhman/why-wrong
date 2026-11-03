@@ -26,6 +26,8 @@
 import { correctIndex } from './pack.js';
 import { posteriorWithout, PARAMS } from './infer.js';
 
+const isAnswered = c => c != null && c >= 0;
+
 function pearson(x, y) {
   const n = x.length;
   const mx = x.reduce((a, b) => a + b, 0) / n;
@@ -48,11 +50,22 @@ export function analyseItems(pack, responses, inference = null) {
   const ci = ITEMS.map(correctIndex);
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));
   const totals = scored.map(r => r.reduce((a, b) => a + b, 0));
+  const answeredBy = responses.map(row => row.filter(isAnswered).length);
 
   return ITEMS.map((item, i) => {
-    const col = scored.map(r => r[i]);
-    const rest = totals.map((t, s) => t - col[s]);       // rest score: total minus this item
-    const p = col.reduce((a, b) => a + b, 0) / nStudents;
+    // A blank is not a wrong answer, here any more than in the inference. Each
+    // statistic is taken over the students who actually answered this question,
+    // and a student's rest score is their share right on the others they
+    // answered, so a skipped half-paper does not read as a weak student. On a
+    // paper with no blanks that share is the rest score divided by a constant,
+    // which leaves the correlation exactly where it was.
+    const who = responses.map((_, s) => s)
+      .filter(s => isAnswered(responses[s][i]) && answeredBy[s] > 1);
+    const col = who.map(s => scored[s][i]);
+    const rest = who.map(s => (totals[s] - scored[s][i]) / (answeredBy[s] - 1));
+    const answered = responses.filter(row => isAnswered(row[i])).length;
+    const correct = responses.filter(row => row[i] === ci[i]).length;
+    const p = answered ? correct / answered : 0;
     const r = pearson(col, rest);
 
     const counts = item.opts.map((_, oi) =>
@@ -69,7 +82,7 @@ export function analyseItems(pack, responses, inference = null) {
       mis: o.mis || null,
       count: counts[oi],
       share: counts[oi] / nStudents,
-      dead: !o.c && counts[oi] / nStudents < 0.03
+      dead: answered > 0 && !o.c && counts[oi] / answered < 0.03
     }));
 
     // How concentrated is the item's diagnostic signal? An item can have poor
@@ -145,7 +158,7 @@ export function analyseItems(pack, responses, inference = null) {
     // a cutoff: is the observed proportion correct distinguishable from
     // guessing at this class size? The standard error shrinks as the class
     // grows, so the same rule stays honest for a class of 12 and a class of 300.
-    const chanceSe = Math.sqrt((chance * (1 - chance)) / nStudents);
+    const chanceSe = Math.sqrt((chance * (1 - chance)) / Math.max(1, answered));
     const zAboveChance = chanceSe > 0 ? (p - chance) / chanceSe : 0;
     const indistinguishableFromGuessing = zAboveChance < 1.64;
 
@@ -200,6 +213,8 @@ export function analyseItems(pack, responses, inference = null) {
       difficulty: p,
       discrimination: r,
       diagnosticShare,
+      correct,
+      answered,
       omitted,
       modelAgreement,
       agreementN,
@@ -244,6 +259,8 @@ export function diagnosticItems(stats) {
     .sort((a, b) => b.diagnosticShare - a.diagnosticShare);
 }
 
+const MIN_COMPLETE_PAPERS = 5;
+
 /**
  * Whole-instrument reliability: Cronbach's alpha over the scored matrix.
  *
@@ -254,7 +271,12 @@ export function diagnosticItems(stats) {
  * things, which is the design intent. It is not evidence the test is bad.
  * `interpretAlpha` says so rather than leaving the number to be misread.
  */
-export function cronbachAlpha(pack, responses) {
+export function cronbachAlpha(pack, allResponses) {
+  // Alpha needs every item for every student, so it is taken over complete
+  // papers only. Too few of those and there is no honest number to give.
+  const responses = allResponses.filter(row => row.every(isAnswered));
+  if (responses.length < MIN_COMPLETE_PAPERS) return null;
+
   const ITEMS = pack.items;
   const ci = ITEMS.map(correctIndex);
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));
@@ -276,6 +298,7 @@ export function cronbachAlpha(pack, responses) {
 
 /** Plain-language reading of an alpha value for a multidimensional instrument. */
 export function interpretAlpha(alpha) {
+  if (alpha === null) return 'Not enough fully answered papers to say.';
   if (alpha >= 0.8) {
     return `${alpha.toFixed(2)} -- high. The items are behaving as though they measure one common skill, which for a misconception inventory suggests the distractors are not separating distinct errors as intended.`;
   }

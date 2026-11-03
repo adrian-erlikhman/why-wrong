@@ -249,7 +249,7 @@ export function openQuestion(ctx, i) {
   d2.querySelector('.dr-fact-k').appendChild(infoButton('discrimination'));
   facts.appendChild(d1);
   facts.appendChild(d2);
-  facts.appendChild(fact(`${Math.round(st.difficulty * cls.students.length)}`, 'answered correctly'));
+  facts.appendChild(fact(`${st.correct}/${st.answered}`, 'answered correctly'));
   wrap.appendChild(facts);
 
   if (st.note) {

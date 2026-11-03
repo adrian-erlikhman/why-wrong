@@ -202,8 +202,12 @@ function renderSummary() {
   const biggest = real[0];
   const prev = prevalence(inf.posterior, inf.misIds)[0];
   const bad = problemItems(stats);
+  // Out of what was answered, so blanks do not drag the average down twice:
+  // once here and once by being read as missing evidence everywhere else.
   const scores = totalScores(pack, cls.responses);
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+  const correct = scores.reduce((a, b) => a + b, 0);
+  const answered = state.cov.reduce((n, c) => n + c.answered, 0);
+  const hasBlanks = answered < cls.students.length * pack.items.length;
   const byId = misById(pack);
 
   const cards = [
@@ -215,7 +219,7 @@ function renderSummary() {
     // badly inside a sentence. The name goes in the note below the strip instead.
     { v: prev ? String(Math.round(prev.expected)) : '—',
       k: 'share the top misunderstanding', go: 'matrix' },
-    { v: `${Math.round((avg / pack.items.length) * 100)}%`, k: 'class average' },
+    { v: answered ? `${Math.round((correct / answered) * 100)}%` : '—', k: hasBlanks ? 'correct of those answered' : 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
       cls: bad.length ? 'warn' : 'ok', go: 'items' },
     { v: secure ? String(secure.size) : '0', k: 'need no reteach', go: 'groups' }
