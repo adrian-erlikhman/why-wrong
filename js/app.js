@@ -83,6 +83,7 @@ function assignColours(pack) {
 const state = {
   pack: null, cls: null, inf: null, cl: null, groups: null, stats: null, cov: null,
   sorted: false, rows: [], apiKey: null,
+  ran: false,         // whether the page has been analysed once already
   imported: null,     // { students, responses } when the class is the teacher's own
   unsaved: false,     // the imported class exists only in this tab
   unsavedTest: null,  // id of a built test that exists only in this tab
@@ -154,6 +155,20 @@ function run() {
 
   $('#reorder').textContent = 'Sort into groups';
   $('#clear-filter').hidden = true;
+
+  // A re-run changes every number on the page at once; a short fade on the
+  // strip and the open view shows that it happened, where a silent swap reads
+  // as nothing having changed.
+  if (state.ran) [$('#summary'), $('.view.is-active')].forEach(n => replay(n));
+  state.ran = true;
+}
+
+/** Restart a one-shot entrance animation on `node`. */
+function replay(node, cls = 'entering') {
+  if (!node) return;
+  node.classList.remove(cls);
+  void node.offsetWidth;
+  node.classList.add(cls);
 }
 
 /** So two saved classes of one test can be told apart once they are open. */
@@ -1777,6 +1792,7 @@ async function rewriteGroups() {
 /* ======================================================================== */
 
 function showView(name) {
+  const was = $('.view.is-active')?.id;
   $$('.tab').forEach(t => {
     const on = t.dataset.view === name;
     t.classList.toggle('is-active', on);
@@ -1784,6 +1800,7 @@ function showView(name) {
     t.tabIndex = on ? 0 : -1;
   });
   $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
+  if (was !== `view-${name}`) replay($(`#view-${name}`));
   showActiveTab();
 
   // Rows are absolutely positioned, so they need re-laying out whenever the

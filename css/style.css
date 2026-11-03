@@ -490,6 +490,8 @@ body.has-import .import-only { display: inline-flex; }
 
 .view { display: none; }
 .view.is-active { display: block; }
+.view.entering, .summary.entering { animation: view-in .24s var(--ease-out, ease-out); }
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .view-head {
   display: flex;
@@ -1657,7 +1659,8 @@ html.key-above .legend { padding-bottom: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .m-row, .band, .band-tag, .m-name, .dr-step { transition: none !important; animation: none !important; }
+  .m-row, .band, .band-tag, .m-name, .dr-step, .view.entering, .summary.entering,
+  .drawer-panel, .drawer-scrim { transition: none !important; animation: none !important; }
 }
 
 /* --------------------------------- print -------------------------------- */
