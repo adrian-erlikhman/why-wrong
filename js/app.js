@@ -46,6 +46,14 @@ const ROW_H = () => parseInt(getComputedStyle(document.documentElement).getPrope
 /** Under this many students, per-question statistics are mostly noise. */
 const SMALL_CLASS = 20;
 
+/** Under this many, there is nothing to compare one question or group against. */
+const TOO_FEW = 5;
+
+const students = n => `${n} student${n === 1 ? '' : 's'}`;
+
+/** Join names into a sentence, which a name ending in "A." should not end twice. */
+const sentence = s => (s.endsWith('.') ? s : `${s}.`);
+
 /** Separation below this and the groups are a rough sketch (see explain.js). */
 const ROUGH_GROUPS = 0.2;
 
