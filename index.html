@@ -377,6 +377,13 @@
         <p class="mono-block" id="formula" tabindex="0" aria-label="The formula"></p>
         <p class="params" id="params"></p>
         <p>
+          Three things a real class does are built in. Each student&rsquo;s own accuracy is estimated
+          from their answers, so a student who guesses a lot is not labelled with a misunderstanding
+          every time a guess lands on its option. Wrong options that tempt everyone are recognised
+          from how the whole class answered. And a question that tests two misunderstandings a
+          student holds can only show one of them, so picking one is not counted against the other.
+        </p>
+        <p>
           The evidence trail shows which answers raised or lowered each estimate. It is the same
           calculation used to produce the result, not a separate explanation written afterwards.
         </p>
@@ -391,13 +398,20 @@
           questions designed to test it. If fewer were answered, that pattern stays untested and
           does not drive a diagnosis or reteach group.
         </p>
+        <p>
+          It also needs at least two of those answers to point to it. Tested on simulated classes
+          built to break the method&rsquo;s assumptions, an estimate resting on a single answer was
+          right less than half the time, so those are shown as worth one more question instead.
+        </p>
       </li>
       <li>
         <h3>Finding the groups <span class="pill">no model</span></h3>
         <p>
           Students with similar answer patterns are grouped together, regardless of score. Students
           without a clear pattern are kept out of the reteach groups; that does not prove they have
-          no misunderstandings, only that this test did not identify a stable one.
+          no misunderstandings, only that this test did not identify a stable one. Those of them who
+          are still getting most questions wrong are named separately: scattered errors that frequent
+          point to a gap or guessing, which needs practice and a check-in.
         </p>
         <p>
           The data helps choose how many groups to show, subject to a minimum group size. The minimum

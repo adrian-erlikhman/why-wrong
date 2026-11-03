@@ -13,7 +13,7 @@
 import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
-import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS, strength } from './infer.js';
+import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS, strength, MIN_TELLING } from './infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups, SUPPORT_BELOW } from './cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf, shownFlags } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
@@ -1384,8 +1384,12 @@ function renderPredictionResult() {
 function renderMethod() {
   $('#formula').textContent =
     'logit P(holds m | answers) = logit P(m) + Σ log [ P(answer | m) / P(answer | not m) ]';
+  const ability = state.inf.ability || [];
+  const avg = ability.length ? ability.reduce((a, b) => a + b, 0) / ability.length : PARAMS.baseCorrect;
   $('#params').textContent =
-    `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · correct without it ${PARAMS.baseCorrect} · reported above ${PARAMS.decisionThreshold}`;
+    `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · ` +
+    `correct without it: estimated per student (${Math.round(avg * 100)}% on average here) · ` +
+    `reported above ${PARAMS.decisionThreshold}, on at least ${MIN_TELLING} answers that point to it`;
 }
 
 /* ======================================================================== */
