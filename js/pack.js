@@ -32,7 +32,7 @@ export function distractorsFor(item, mid) {
 
 /** Items carrying a distractor mapped to `mid`. */
 export function itemsProbing(pack, mid) {
-  return pack.items.filter(it => it.opts.some(o => o.mis === mid));
+  return pack.items.filter(it => Array.isArray(it?.opts) && it.opts.some(o => o?.mis === mid));
 }
 
 export function misById(pack) {
@@ -46,6 +46,9 @@ export function misIds(pack) {
 /** Minimum probes per misconception for inference to have anything to work with. */
 export const MIN_PROBES = 3;
 
+/** Options per question: one for each printed letter, A to H. */
+const MAX_OPTIONS = 8;
+
 /**
  * Check a pack against every assumption the pipeline makes.
  * @returns {{ok: boolean, errors: string[], warnings: string[]}}
@@ -57,6 +60,11 @@ export function validatePack(pack) {
   if (!pack || typeof pack !== 'object') return { ok: false, errors: ['Pack is not an object.'], warnings };
   if (!Array.isArray(pack.misconceptions) || !pack.misconceptions.length) errors.push('Pack has no misconceptions.');
   if (!Array.isArray(pack.items) || !pack.items.length) errors.push('Pack has no items.');
+  if (errors.length) return { ok: false, errors, warnings };
+
+  // A file can hold anything. A hole in it should be reported, not thrown.
+  if (pack.misconceptions.some(m => !m || typeof m !== 'object')) errors.push('A misconception entry is empty.');
+  if (pack.items.some(it => !it || typeof it !== 'object')) errors.push('A question entry is empty.');
   if (errors.length) return { ok: false, errors, warnings };
 
   const ids = new Set();
@@ -77,10 +85,16 @@ export function validatePack(pack) {
     else if (itemIds.has(it.id)) errors.push(`Duplicate item id ${it.id}.`);
     else itemIds.add(it.id);
 
-    if (!it.stem) errors.push(`${label} has no stem.`);
+    if (!String(it.stem ?? '').trim()) errors.push(`${label} has no stem.`);
     // Two options is a true/false question: one wrong answer, still a probe.
     if (!Array.isArray(it.opts) || it.opts.length < 2) {
       errors.push(`${label} needs at least 2 options.`);
+      return;
+    }
+    // Paper letters run A to H. A ninth option could not be printed or read back.
+    if (it.opts.length > MAX_OPTIONS) errors.push(`${label} has ${it.opts.length} options; ${MAX_OPTIONS} is the most that can be lettered.`);
+    if (it.opts.some(o => !o || typeof o !== 'object')) {
+      errors.push(`${label} has an option with no text.`);
       return;
     }
 

@@ -259,6 +259,27 @@ for (const pack of BUILT_IN) {
   check('alpha uses complete papers only', cronbachAlpha(pack, clean.responses.map(r => r.map((v, i) => (i ? v : -1)))) === null);
 }
 
+// ---------------------------------------------------------- broken test files
+// A test file comes from outside. Every hole has to come back as a sentence,
+// never as a crash, and never as a test that looks fine and reads back wrong.
+{
+  console.log(`\n${'='.repeat(66)}\nBroken test files\n${'='.repeat(66)}`);
+  const rejects = (name, edit) => {
+    const p = structuredClone(BUILT_IN[0]);
+    edit(p);
+    let r;
+    try { r = validatePack(p); } catch (e) { check(`${name}: reported, not thrown`, false, e.message); return; }
+    check(`${name}: refused with a reason`, !r.ok && r.errors.length > 0);
+  };
+  rejects('missing options', p => { delete p.items[0].opts; });
+  rejects('an empty question entry', p => { p.items[0] = null; });
+  rejects('an empty misconception entry', p => { p.misconceptions[0] = null; });
+  rejects('an option that is not an object', p => { p.items[0].opts[1] = 'hi'; });
+  rejects('a blank stem', p => { p.items[0].stem = '   '; });
+  rejects('more options than letters', p => { for (let i = 0; i < 6; i++) p.items[0].opts.push({ t: `extra ${i}` }); });
+  check('text that is not a test at all is refused', !validatePack([]).ok && !validatePack('x').ok && !validatePack(null).ok);
+}
+
 // -------------------------------------------------------- messy spreadsheets
 // What real sheets look like, as opposed to the template.
 {
