@@ -570,8 +570,9 @@ export function parseResponses(pack, text, otherPacks = []) {
   // "Last, First" typed into a comma-separated sheet splits the name in two and
   // pushes every answer one column right. One cell too many in a named row is
   // exactly that, so put the name back together.
+  const splitNameWidth = dataStart === 0 ? pack.items.length + 2 : header.length + 1;
   const rowsIn = table.slice(dataStart).map(row => {
-    if (delim === ',' && nameCol === 0 && row.length === header.length + 1) {
+    if (delim === ',' && nameCol === 0 && row.length === splitNameWidth) {
       return [`${row[0]}, ${row[1]}`, ...row.slice(2)];
     }
     return row;

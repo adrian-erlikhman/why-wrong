@@ -697,6 +697,13 @@ for (const pack of BUILT_IN) {
   const h = parseResponses(pack, headless);
   check('with no header row, the first student is kept', same(h) && h.warnings.some(w => /header row/.test(w)));
 
+  const headlessCommaNames = letters.map((row, s) => [`Last${s}`, 'First', ...row].join(',')).join('\n');
+  const hc = parseResponses(pack, headlessCommaNames);
+  check('unquoted comma names preserve the first row in a headerless paste',
+    hc.ok && hc.students.length === c.students.length &&
+    hc.students[0].name === 'Last0, First' &&
+    hc.responses.every((row, s) => row.every((v, i) => v === c.responses[s][i])));
+
   const plain = [['Student', ...ids].join(','), ...letters.map((row, s) => [q(c.students[s].name), ...row].join(','))].join('\n');
   check('an Excel BOM is ignored', same(parseResponses(pack, `\uFEFF${plain}`)));
 
