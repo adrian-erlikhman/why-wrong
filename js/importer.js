@@ -359,8 +359,11 @@ export function normName(name) {
 }
 
 const isBlank = v => !v || v === '-' || v === '.';
+/** "A", "a)", "(B)", "C.", "Option D" and "A. x+3" all name a letter. */
+const LETTERED = /^(?:(?:option|choice|answer)\s+)?\(?([a-h])(?:[).:]+(?:\s.*)?)?$/i;
 const asLetter = (v, n) => {
-  const li = v.length === 1 ? LETTERS.indexOf(v.toUpperCase()) : -1;
+  const m = LETTERED.exec(v);
+  const li = m ? LETTERS.indexOf(m[1].toUpperCase()) : -1;
   return li >= 0 && li < n ? li : null;
 };
 const asNumber = (v, n) => {
@@ -403,6 +406,14 @@ function readCell(raw, item, coding = 'letters') {
   const n = item.opts.length;
   const order = paperOrder(item);
   const norm = s => String(s).toLowerCase().replace(/\s+/g, '');
+
+  // "A. x+3" says what was chosen twice. The words are the safer of the two,
+  // since a form of the teacher's own may letter its options differently.
+  const words = v.replace(/^\(?[a-h][).:]+\s+/i, '');
+  if (words !== v) {
+    const i = item.opts.findIndex(o => norm(o.t) === norm(words));
+    if (i >= 0) return i;
+  }
 
   const readings = {
     letters: () => { const k = asLetter(v, n); return k === null ? null : order[k]; },

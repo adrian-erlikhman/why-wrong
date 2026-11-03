@@ -434,6 +434,16 @@ for (const pack of BUILT_IN) {
     ...letters.map((row, s) => [`kid.${s}@students.example.org`, `Kid ${s}`, ...row].join(','))].join('\n'));
   check('a name column beats an email column', both.ok && both.students[3].name === 'Kid 3');
 
+  const dressed = letters.map(row => row.map((l, i) => ['${l}.', '(${l})', '${l})', 'Option ${l}'][i % 4].replace('${l}', l)));
+  check('letters with punctuation read the same', same(parseResponses(pack, [['Student', ...ids].join(','), ...dressed.map((row, s) => [q(c.students[s].name), ...row].join(','))].join('\n'))));
+
+  const labelled = parseResponses(pack, [['Student', ...ids].join(','),
+    ...letters.map((row, s) => [q(c.students[s].name), ...row.map((l, i) => {
+      const chosen = c.responses[s][i];
+      return chosen < 0 ? '' : q(`H) ${pack.items[i].opts[chosen].t}`);
+    })].join(','))].join('\n'));
+  check('the words beat the letter when a form labels its answers', same(labelled));
+
   const nonsense = parseResponses(pack, [['Student', ...ids].join(','), ...letters.map((row, s) => [`Kid ${s}`, ...row.map(() => 'Z')].join(','))].join('\n'));
   check('a paste with no readable answer is refused', !nonsense.ok && /could be read/.test(nonsense.errors[0]));
 
