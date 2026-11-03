@@ -583,7 +583,7 @@ body.has-import .import-only { display: inline-flex; }
    whose row you are reading by the tenth question. The background only covers
    the name itself, so the group bars show through the padding, and on the sorted
    map the padding is allowed to scroll away. */
-.m-name { position: sticky; left: 0; z-index: 2; background: var(--surface); background-clip: content-box; }
+.m-name { position: sticky; left: 0; z-index: 2; background: var(--bg); background-clip: content-box; }
 .matrix.sorted .m-name { left: -88px; }
 .m-name:hover { color: var(--accent); text-decoration: underline; }
 
