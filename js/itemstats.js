@@ -37,6 +37,30 @@ function pearson(x, y) {
   return den === 0 ? 0 : num / den;
 }
 
+function binomialUpperTail(successes, trials, probability) {
+  if (successes <= 0) return 1;
+  if (successes > trials || probability <= 0) return 0;
+  if (probability >= 1) return 1;
+
+  const failures = trials - successes;
+  const terms = Math.min(successes, failures);
+  let logChoose = 0;
+  for (let i = 1; i <= terms; i++) {
+    logChoose += Math.log(trials - terms + i) - Math.log(i);
+  }
+
+  const logP = Math.log(probability);
+  const logQ = Math.log1p(-probability);
+  let logTerm = logChoose + successes * logP + failures * logQ;
+  let logTail = logTerm;
+  for (let k = successes; k < trials; k++) {
+    logTerm += Math.log(trials - k) - Math.log(k + 1) + logP - logQ;
+    const high = Math.max(logTail, logTerm);
+    logTail = high + Math.log1p(Math.exp(Math.min(logTail, logTerm) - high));
+  }
+  return Math.min(1, Math.exp(logTail));
+}
+
 /**
  * @returns {Array} one record per item, in item order.
  */
@@ -147,10 +171,18 @@ export function analyseItems(pack, responses, inference = null) {
 
     const flags = [];
     if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so this question may offer little information for this class.` });
-    // A low mean score alone does not establish a problem. Difficulty near
-    // chance is reported alongside weak discrimination to avoid flagging a
-    // question solely because it is challenging for this class.
-    if (p <= chance + 0.06 && r < 0.15) flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% answered correctly, compared with ${Math.round(chance * 100)}% expected from guessing. Scores on the other questions were not strongly related to this answer.` });
+    // A low mean score alone does not establish a problem. Separate a result
+    // that is unusually far below chance from one that is merely inconclusive.
+    const chanceUpperTail = answered > 0 ? binomialUpperTail(correct, answered, chance) : null;
+    const chanceLowerTail = answered > 0
+      ? binomialUpperTail(answered - correct, answered, 1 - chance)
+      : null;
+    const belowChance = chanceLowerTail !== null && chanceLowerTail <= 0.05;
+    if (belowChance) {
+      flags.push({ kind: 'below-chance', text: `Only ${Math.round(p * 100)}% answered correctly, unusually low for guessing among ${item.opts.length} choices. Check the answer key and wording.` });
+    } else if (answered > 0 && p <= chance + 0.06 && r < 0.15) {
+      flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% answered correctly, compared with ${Math.round(chance * 100)}% expected from guessing. Scores on the other questions were not strongly related to this answer.` });
+    }
     if (r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Students with higher scores on the other questions were less likely to answer this one correctly (discrimination ${r.toFixed(2)}).` });
     else if (r < weakBar) flags.push({ kind: 'no-discrimination', text: `Scores on the other questions were not strongly related to this answer (discrimination ${r.toFixed(2)}).` });
 
@@ -159,15 +191,13 @@ export function analyseItems(pack, responses, inference = null) {
     // is a different failure from poor discrimination and is worth naming
     // separately, because the remedy is different: rewrite the options so the
     // wrong ones mean something.
-    // "At chance" is a statistical claim, so test it as one rather than picking
-    // a cutoff: is the observed proportion correct distinguishable from
-    // guessing at this class size? The standard error shrinks as the class
-    // grows, so the same rule stays honest for a class of 12 and a class of 300.
-    const chanceSe = Math.sqrt((chance * (1 - chance)) / Math.max(1, answered));
-    const zAboveChance = chanceSe > 0 ? (p - chance) / chanceSe : 0;
-    const indistinguishableFromGuessing = zAboveChance < 1.64;
+    // Test whether the observed number correct exceeds chance using an exact
+    // one-sided binomial tail; the normal approximation is unreliable for small
+    // classes and discrete counts.
+    const indistinguishableFromGuessing = chanceUpperTail !== null &&
+      chanceUpperTail > 0.05 && chanceLowerTail > 0.05;
 
-    if (diagnosticShare === 0 && indistinguishableFromGuessing && r < 0.30) {
+    if (answered > 0 && diagnosticShare === 0 && indistinguishableFromGuessing && r < 0.30) {
       flags.push({ kind: 'uninformative', text: `None of this question's wrong answers are linked to a known misunderstanding, and ${Math.round(p * 100)}% correct is close to the ${Math.round(chance * 100)}% expected from guessing. Review the item and its answer choices.` });
     }
 
@@ -237,6 +267,7 @@ export function analyseItems(pack, responses, inference = null) {
 const FLAG_SEVERITY = {
   'no-information': 3,      // offers little variation in this class
   'uninformative': 3,       // no ranking and no diagnosis
+  'below-chance': 3,        // substantially worse than random guessing
   'negative-discrimination': 2,
   'at-chance': 2,
   'no-discrimination': 1,   // marginal: often just a small sample

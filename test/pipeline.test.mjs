@@ -507,6 +507,28 @@ for (const pack of BUILT_IN) {
     supportedAgreement.modelAgreement === 1 &&
     supportedAgreement.note.includes('Of the 3 students') &&
     supportedAgreement.note.includes('100% of those did'));
+
+  const chancePack = {
+    misconceptions: [],
+    items: [{ id: 'Chance', stem: 'Chance check', opts: [
+      { t: 'Correct', c: true }, { t: 'Distractor 1' }, { t: 'Distractor 2' }
+    ] }]
+  };
+  const sixOfTen = analyseItems(chancePack,
+    [[0], [0], [0], [0], [0], [0], [1], [1], [2], [2]])[0];
+  const sevenOfTen = analyseItems(chancePack,
+    [[0], [0], [0], [0], [0], [0], [0], [1], [2], [2]])[0];
+  const zeroOfTen = analyseItems(chancePack, Array(10).fill([1]))[0];
+  const allBlank = analyseItems(chancePack, Array(10).fill([-1]))[0];
+  check('small-class chance flags use exact binomial evidence',
+    sixOfTen.flags.some(f => f.kind === 'uninformative') &&
+    !sevenOfTen.flags.some(f => f.kind === 'uninformative'));
+  check('unexpectedly low scores are not described as close to chance',
+    zeroOfTen.flags.some(f => f.kind === 'below-chance') &&
+    !zeroOfTen.flags.some(f => f.kind === 'uninformative' || f.kind === 'at-chance'));
+  check('an unanswered item is not treated as a chance-level result',
+    allBlank.flags.some(f => f.kind === 'skipped') &&
+    !allBlank.flags.some(f => f.kind === 'uninformative' || f.kind === 'at-chance'));
 }
 
 // -------------------------------------------------------------- row order

@@ -275,6 +275,11 @@ Low agreement plus low discrimination can flag an item for review. Low
 discrimination with high agreement may point to a diagnostic item worth keeping,
 but the teacher should still review the question and its response patterns.
 
+For questions without mapped distractors, comparisons with random guessing use
+exact binomial probabilities rather than a normal approximation. Results that
+are unusually below chance are called out separately from results that are
+simply inconclusive.
+
 Similarly, Cronbach's alpha may be low here. Alpha assumes a single underlying
 trait, while this instrument targets several distinct misconceptions. A low
 value is not by itself evidence that the test is unreliable; interpret it
