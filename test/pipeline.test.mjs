@@ -10,7 +10,7 @@
 import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES, correctIndex } from '../js/pack.js';
 import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
-import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, isTested, posteriorForReporting, MIN_ANSWERED, PARAMS } from '../js/infer.js';
+import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, isTested, posteriorForReporting, strength, optionProbabilities, MIN_ANSWERED, MIN_TELLING, PARAMS } from '../js/infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
@@ -47,10 +47,13 @@ const allDiagnosticPack = {
     ]
   }]
 };
+// One student is too few to fit accuracy or slip spread to, so these run on
+// the fixed parameters, where the likelihood has a closed form: the belief
+// fires and picks one of its three distractors, or it does not and the
+// student answers like anyone else.
 const allDiagnosticPosterior = inferMisconceptions(allDiagnosticPack, [[1]]).posterior[0][0];
-const withMisLikelihood =
-  (PARAMS.express + (1 - PARAMS.express) * (1 - PARAMS.recoverCorrect)) / 3;
 const withoutMisLikelihood = (1 - PARAMS.baseCorrect) / 3;
+const withMisLikelihood = PARAMS.express / 3 + (1 - PARAMS.express) * withoutMisLikelihood;
 const expectedAllDiagnosticPosterior =
   PARAMS.prior * withMisLikelihood /
   (PARAMS.prior * withMisLikelihood + (1 - PARAMS.prior) * withoutMisLikelihood);
@@ -70,7 +73,8 @@ const saturationItems = Array.from({ length: saturationCount }, (_, i) => ({
 }));
 const saturationPack = { misconceptions: allDiagnosticPack.misconceptions, items: saturationItems };
 const saturationInference = inferMisconceptions(saturationPack, [saturationItems.map(() => 1)]);
-const diagnosticLogOdds = Math.log(PARAMS.express / ((1 - PARAMS.baseCorrect) / 3));
+const slipShare = (1 - PARAMS.baseCorrect) / 3;
+const diagnosticLogOdds = Math.log((PARAMS.express + (1 - PARAMS.express) * slipShare) / slipShare);
 const expectedSaturatedLogit =
   Math.log(PARAMS.prior / (1 - PARAMS.prior)) + saturationCount * diagnosticLogOdds;
 check('raw log-odds survive posterior saturation for leave-one-out analysis',
@@ -78,32 +82,43 @@ check('raw log-odds survive posterior saturation for leave-one-out analysis',
   Math.abs(saturationInference.logits[0][0] - expectedSaturatedLogit) < 1e-12 &&
   Math.abs(posteriorWithout(saturationInference, 0, 0, 'Q0') - 1 / (1 + Math.exp(-(expectedSaturatedLogit - diagnosticLogOdds)))) < 1e-12);
 
+// The response model is a distribution over a question's options for every
+// combination of beliefs the question probes: a student who holds two of them
+// can only show one, so the held set matters, not one belief at a time.
 let normalizedLikelihoods = true;
 let likelihoodChecks = 0;
-BUILT_IN.forEach(pack => pack.items.forEach((item, itemIndex) => {
-  const mappedMisconceptions = [...new Set(item.opts.map(option => option.mis).filter(Boolean))];
-  mappedMisconceptions.forEach(mid => {
-    let withMisTotal = 0;
-    let withoutMisTotal = 0;
-    item.opts.forEach((_, choice) => {
-      const row = Array(pack.items.length).fill(-1);
-      row[itemIndex] = choice;
-      const posterior = inferMisconceptions(pack, [row]).posterior[0][pack.misconceptions.findIndex(m => m.id === mid)];
-      const oddsRatio = (posterior / (1 - posterior)) / (PARAMS.prior / (1 - PARAMS.prior));
-      const withoutMis = choice === correctIndex(item)
-        ? PARAMS.baseCorrect
-        : (1 - PARAMS.baseCorrect) / (item.opts.length - 1);
-      withMisTotal += oddsRatio * withoutMis;
-      withoutMisTotal += withoutMis;
-    });
+BUILT_IN.forEach(pack => pack.items.forEach(item => {
+  const mapped = [...new Set(item.opts.map(option => option.mis).filter(Boolean))];
+  for (let mask = 0; mask < (1 << mapped.length); mask++) {
+    const held = mapped.filter((_, j) => mask & (1 << j));
+    const total = optionProbabilities(item, held).reduce((a, b) => a + b, 0);
     likelihoodChecks += 1;
-    if (Math.abs(withMisTotal - 1) > 1e-10 || Math.abs(withoutMisTotal - 1) > 1e-10) {
-      normalizedLikelihoods = false;
-    }
+    if (Math.abs(total - 1) > 1e-12) normalizedLikelihoods = false;
+  }
+}));
+check(`response likelihoods normalize for all ${likelihoodChecks} built-in question and held-belief combinations`,
+  normalizedLikelihoods);
+
+// On a question that probes one belief, one answer moves the odds by exactly
+// the ratio of the model's two likelihoods.
+let oddsMatch = true;
+let oddsChecks = 0;
+BUILT_IN.forEach(pack => pack.items.forEach((item, itemIndex) => {
+  const mapped = [...new Set(item.opts.map(option => option.mis).filter(Boolean))];
+  if (mapped.length !== 1) return;
+  const mid = mapped[0];
+  const withIt = optionProbabilities(item, [mid]);
+  const without = optionProbabilities(item, []);
+  item.opts.forEach((_, choice) => {
+    const row = Array(pack.items.length).fill(-1);
+    row[itemIndex] = choice;
+    const posterior = inferMisconceptions(pack, [row]).posterior[0][pack.misconceptions.findIndex(m => m.id === mid)];
+    const oddsRatio = (posterior / (1 - posterior)) / (PARAMS.prior / (1 - PARAMS.prior));
+    oddsChecks += 1;
+    if (Math.abs(oddsRatio - withIt[choice] / without[choice]) > 1e-9) oddsMatch = false;
   });
 }));
-check(`response likelihoods normalize for all ${likelihoodChecks} built-in item-misconception pairs`,
-  normalizedLikelihoods);
+check(`one answer moves the odds by the likelihood ratio (${oddsChecks} single-belief answers)`, oddsMatch);
 
 const throwsAs = (fn, ErrorType) => {
   try { fn(); } catch (error) { return error instanceof ErrorType; }
@@ -239,8 +254,13 @@ for (const pack of BUILT_IN) {
     inf.posterior.length === 28 && inf.posterior[0].length === pack.misconceptions.length);
   check('posteriors are probabilities',
     inf.posterior.every(r => r.every(p => p >= 0 && p <= 1 && Number.isFinite(p))));
-  check('fully answered classes retain their posterior estimates for reporting',
-    JSON.stringify(posteriorForReporting(inf)) === JSON.stringify(inf.posterior));
+  // On a full paper every belief is tested, so reporting changes only the
+  // beliefs that rest on a single telling answer, and only to hold them just
+  // under the line.
+  const reported = posteriorForReporting(inf);
+  check('fully answered classes retain their posterior estimates for reporting, except single-answer beliefs',
+    reported.every((row, s) => row.every((p, k) => p === inf.posterior[s][k] ||
+      (strength(inf, s, k).level === 'check' && p < PARAMS.decisionThreshold && p < inf.posterior[s][k]))));
 
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   console.log(`  diagnosis  precision ${(dq.precision * 100).toFixed(1)}%  recall ${(dq.recall * 100).toFixed(1)}%  F1 ${(dq.f1 * 100).toFixed(1)}%`);
