@@ -735,11 +735,13 @@ function renderProgress() {
   const host = $('#progress');
   host.innerHTML = '';
   $('#export-progress').hidden = !state.retest;
+  $('#print-progress').hidden = !state.retest;
   $('#clear-retest').hidden = !state.retest;
   if (!state.retest) { host.appendChild(progressEmpty()); return; }
 
   const { pack, cls, retest } = state;
-  const cmp = compareSittings(pack, cls, retest);
+  const real = reteachGroups(state.groups);
+  const cmp = compareSittings(pack, cls, retest, real);
   const { totals: t, match } = cmp;
 
   if (!match.pairs.length) {
@@ -768,6 +770,15 @@ function renderProgress() {
   host.appendChild(metrics);
 
   const byId = misById(pack);
+  const reached = cmp.groups.filter(g => g.cleared.length + g.stuck.length);
+  if (reached.length) {
+    host.appendChild(el('h3', 'prog-h', 'By reteach group'));
+    const box = el('div', 'prog-groups');
+    reached.forEach(g => box.appendChild(progressGroup(g, byId)));
+    host.appendChild(box);
+  }
+
+  host.appendChild(el('h3', 'prog-h', 'By misunderstanding'));
   const list = el('div', 'progs');
   cmp.misconceptions.filter(m => m.before || m.after).forEach(m => list.appendChild(progressCard(m, byId, t.students)));
   host.appendChild(list);
@@ -784,6 +795,33 @@ function renderProgress() {
     host.appendChild(el('p', 'note',
       `This retest is simulated: ${Math.round(retest.simulated.cleared * 100)}% of each student's misunderstandings were removed before new answers were generated. The class really went from ${held(cls.truth)} held to ${held(retest.truth)}; the tool, which never saw that, reports ${t.before} to ${t.after}.`));
   }
+}
+
+/** One reteach group: did its lesson reach the students it was for? */
+function progressGroup(g, byId) {
+  const held = g.cleared.length + g.stuck.length;
+  const row = el('div', 'prog-group');
+  row.style.setProperty('--gc', colourOf[g.main] ?? 'var(--accent)');
+
+  const head = el('div', 'prog-group-top');
+  const number = state.groups.findIndex(x => x.index === g.index) + 1;
+  head.appendChild(el('span', 'prog-group-n', `Group ${number}`));
+  head.appendChild(setMath(el('span', 'prog-name'), byId[g.main]?.name ?? g.main));
+  head.appendChild(el('span', 'prog-group-score', `${g.cleared.length} of ${held} cleared`));
+  row.appendChild(head);
+
+  if (g.stuck.length) {
+    const p = el('p', 'prog-group-who');
+    p.appendChild(el('b', null, 'Reteach again: '));
+    p.appendChild(document.createTextNode(g.stuck.join(', ')));
+    row.appendChild(p);
+  } else {
+    row.appendChild(el('p', 'prog-group-who', 'Everyone in this group who held it has cleared it.'));
+  }
+  if (g.absent.length) {
+    row.appendChild(el('p', 'prog-group-who', `Not retested: ${g.absent.join(', ')}.`));
+  }
+  return row;
 }
 
 function progressEmpty() {
@@ -878,6 +916,20 @@ function clearRetest() {
 function exportProgress() {
   download(`${state.pack.id}-after-reteach.csv`,
     progressCsv(compareSittings(state.pack, state.cls, state.retest), misById(state.pack)));
+}
+
+function printProgress() {
+  showView('progress');
+  closeDrawer();
+  // Names are the point of the printout, so nothing stays folded on paper.
+  const folded = $$('#progress details:not([open])');
+  folded.forEach(d => { d.open = true; });
+  document.body.classList.add('print-progress');
+  window.addEventListener('afterprint', () => {
+    document.body.classList.remove('print-progress');
+    folded.forEach(d => { d.open = false; });
+  }, { once: true });
+  window.print();
 }
 
 /* ======================================================================== */
@@ -1369,6 +1421,7 @@ $('#class-file').addEventListener('change', e => {
 });
 $('#save-class').addEventListener('click', saveClass);
 $('#export-progress').addEventListener('click', exportProgress);
+$('#print-progress').addEventListener('click', printProgress);
 $('#clear-retest').addEventListener('click', clearRetest);
 
 // Thirty typed answer sheets are not worth losing to a stray reload.

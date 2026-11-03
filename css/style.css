@@ -997,7 +997,15 @@ body.has-import .import-only { display: inline-flex; }
 .prog-verdict.is-worse { background: var(--bad-tint); border-color: var(--bad-line); }
 .prog-verdict.is-unclear { background: var(--warn-tint); border-color: var(--warn-line); }
 
-.progs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; margin-top: 18px; }
+.prog-h { font-size: 19px; margin: 28px 0 12px; }
+.prog-groups { display: grid; gap: 10px; }
+.prog-group { padding: 14px 18px; border: 1px solid var(--line); border-left: 4px solid var(--gc); border-radius: var(--r-s); background: var(--surface); }
+.prog-group-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.prog-group-n { font-size: 14px; font-weight: 700; color: var(--muted); }
+.prog-group-score { font-family: var(--mono); font-size: 14.5px; color: var(--ink); white-space: nowrap; }
+.prog-group-who { margin: 6px 0 0; font-size: 15px; color: var(--ink-2); }
+
+.progs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 12px; }
 .prog { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
 .prog-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
 .prog-top .sw { flex: none; margin-top: 6px; }
@@ -1570,6 +1578,14 @@ body.has-import .import-only { display: inline-flex; }
   .tour-lit { box-shadow: none !important; }
   .view { display: none !important; }
   .view#view-groups { display: block !important; }
+  body.print-progress .view#view-groups { display: none !important; }
+  body.print-progress .view#view-progress { display: block !important; }
+  .prog, .prog-group, .prog-verdict, .metric { break-inside: avoid; page-break-inside: avoid; background: #fff; box-shadow: none; }
+  .prog-who summary { display: none; }
+  .progs { display: block; }
+  .metrics { grid-template-columns: repeat(4, 1fr); }
+  .prog { margin-bottom: 8pt; }
+  .prog-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .main { padding: 0; }
   body { font-size: 11pt; background: #fff; color: #111; }
   .groups { display: block; }

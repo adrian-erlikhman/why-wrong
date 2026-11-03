@@ -77,6 +77,10 @@ exact McNemar test on that split and says plainly when a change could be chance.
 Sitting the same paper twice also teaches the paper, so a good result is evidence
 rather than proof.
 
+The tab also shows each reteach group on its own: how many of the students the
+lesson was aimed at cleared that group's main misunderstanding, and who needs it
+again. **Print** puts it all on paper with every name showing.
+
 On the sample class, **Simulate a reteach** removes 70% of each student's hidden
 misunderstandings and generates new answers, so the reported change can be
 checked against the real one. Over 40 classes of 28 per subject, `npm test`

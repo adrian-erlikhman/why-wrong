@@ -88,8 +88,9 @@ function readingOf(cleared, emerged) {
  * Compare two sittings of the same test.
  * @param before {{students, responses}}
  * @param after  {{students, responses}}
+ * @param groups the reteach groups from the first sitting, if there are any
  */
-export function compareSittings(pack, before, after) {
+export function compareSittings(pack, before, after, groups = []) {
   const match = matchStudents(before.students, after.students);
   const infB = inferMisconceptions(pack, before.responses);
   const infA = inferMisconceptions(pack, after.responses);
@@ -134,6 +135,7 @@ export function compareSittings(pack, before, after) {
   const sum = f => misconceptions.reduce((n, m) => n + f(m), 0);
   return {
     match,
+    groups: groupOutcomes(groups, misconceptions, before.students, match),
     misconceptions: misconceptions.slice().sort((x, y) => y.before - x.before || y.after - x.after),
     totals: {
       students: match.pairs.length,
@@ -146,6 +148,30 @@ export function compareSittings(pack, before, after) {
       ...readingOf(fewer, more)
     }
   };
+}
+
+/**
+ * What happened to each reteach group: did the lesson aimed at this group's main
+ * misunderstanding reach the students it was for? Clearing counts across the
+ * whole class hide that, since one group can clear it while another does not.
+ */
+function groupOutcomes(groups, misconceptions, students, match) {
+  const retested = new Set(match.pairs.map(p => p.before));
+  return groups.map(g => {
+    const main = g.signature[0]?.id;
+    const m = misconceptions.find(x => x.id === main);
+    const names = new Set(g.members.filter(s => retested.has(s)).map(s => students[s].name));
+    const within = list => (m ? m[list] : []).filter(n => names.has(n));
+    return {
+      index: g.index,
+      main,
+      size: g.size,
+      cleared: within('cleared'),
+      stuck: within('stuck'),
+      untested: within('untested'),
+      absent: g.members.filter(s => !retested.has(s)).map(s => students[s].name)
+    };
+  });
 }
 
 /** The comparison as a spreadsheet, one row per misunderstanding. */

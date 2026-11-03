@@ -398,6 +398,22 @@ for (const pack of BUILT_IN) {
   const pack = BUILT_IN[0];
   const c = generateClass(pack, { seed: 4, size: 28 });
   const r = generateRetest(c, { seed: 8, cleared: 0.7 });
+
+  const inf = inferMisconceptions(pack, c.responses);
+  const cl = clusterStudents(inf.posterior, { seed: 42 });
+  const groups = reteachGroups(describeClusters(inf.posterior, cl.labels, inf.misIds, cl));
+  const partial = { students: r.students.slice(2), responses: r.responses.slice(2) };
+  const byGroup = compareSittings(pack, c, partial, groups);
+  check('every reteach group gets an outcome', byGroup.groups.length === groups.length);
+  check('a group only counts its own members', byGroup.groups.every((g, i) => {
+    const mine = new Set(groups[i].members.map(s => c.students[s].name));
+    return [...g.cleared, ...g.stuck].every(n => mine.has(n));
+  }));
+  check('group outcomes add up to no more than the group', byGroup.groups.every(g =>
+    g.cleared.length + g.stuck.length + g.untested.length + g.absent.length <= g.size));
+  check('students missing from the retest are named', byGroup.groups.flatMap(g => g.absent).length ===
+    groups.flatMap(g => g.members).filter(s => s < 2).length);
+
   const gone = { students: r.students, responses: r.responses.map(row => row.map(() => -1)) };
   const blank = compareSittings(pack, c, gone);
   check('a blank retest clears nothing', blank.totals.cleared === 0 && blank.totals.reading === 'none');
