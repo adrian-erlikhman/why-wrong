@@ -1437,9 +1437,11 @@ function renderMethod() {
     'logit P(holds m | answers) = logit P(m) + Σ log [ P(answer | m) / P(answer | not m) ]';
   const ability = state.inf.ability || [];
   const avg = ability.length ? ability.reduce((a, b) => a + b, 0) / ability.length : PARAMS.baseCorrect;
+  const lift = state.inf.fitted?.slipLift ?? 1;
   $('#params').textContent =
     `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · ` +
     `correct without it: estimated per student (${Math.round(avg * 100)}% on average here) · ` +
+    `careless errors land on a pattern-linked option ${lift.toFixed(1)}× as often as on another wrong one, on this paper · ` +
     `reported above ${PARAMS.decisionThreshold}, on at least ${MIN_TELLING} answers that point to it`;
 }
 
