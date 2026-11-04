@@ -196,6 +196,23 @@ check('clustering rejects non-probability values',
   throwsAs(() => clusterStudents([[1.1]]), RangeError));
 check('clustering rejects an invalid confidence threshold',
   throwsAs(() => clusterStudents([[0.2]], { threshold: NaN }), RangeError));
+{
+  // Two clear groups and one student who holds both groups' beliefs equally.
+  const six = [0.9, 0.92, 0.88, 0.91, 0.89, 0.93];
+  const rows = [...six.map(p => [p, 0.1, 0.1]), ...six.map(p => [0.1, p, 0.1]), [0.8, 0.8, 0.1]];
+  const mid = rows.length - 1;
+  const cl = clusterStudents(rows, { seed: 42 });
+  const flagged = cl.between.map((b, s) => (b ? s : -1)).filter(s => s >= 0);
+  check('a student equally close to two groups is marked as between them',
+    cl.k === 2 && flagged.length === 1 && flagged[0] === mid && cl.between[mid].alt !== cl.labels[mid],
+    JSON.stringify({ k: cl.k, flagged }));
+  const desc = describeClusters(rows, cl.labels, ['A', 'B', 'C'], cl);
+  const home = desc.find(g => g.members.includes(mid));
+  check('a group lists its between members with the other group they are near',
+    home.between.length === 1 && home.between[0].s === mid &&
+    desc.some(g => g.index === home.between[0].alt && !g.isSecure) &&
+    desc.filter(g => g !== home).every(g => !g.between.length));
+}
 const oneProbeSlip = slipsHtml(singleDiagnosticPack,
   { students: [{ name: 'Student' }], responses: [[1]] },
   oneProbeInference, coverage(singleDiagnosticPack, [[1]]));

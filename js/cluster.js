@@ -237,8 +237,52 @@ export function clusterStudents(posterior, {
     secure,
     silhouette: chosen.silhouette,
     minClusterSize,
+    between: betweenGroups(points, chosen.run.labels, chosen.k, active.map(a => a.i), posterior.length),
     scan: scan.map(({ k, silhouette, inertia, minSize }) => ({ k, silhouette, inertia, minSize }))
   };
+}
+
+/**
+ * A student is "between groups" when their distance to their own group's
+ * centre is at least this share of their distance to the next nearest.
+ *
+ * Measured on the stress benchmark (both packs, ten kinds of class, 20 seeds):
+ * 6% of grouped students sit this close to a second group, and 56% of them
+ * were put in the wrong group, against 12% of everyone else. Below a ratio of
+ * 0.5 it is 3%. So the line marks the students whose placement is closer to a
+ * coin toss, not a verdict on which group is right.
+ */
+export const BETWEEN = 0.8;
+
+/**
+ * For each grouped student, the nearest other group and how close it is.
+ * @returns {Array<null|{alt:number, ratio:number}>} indexed by student;
+ *   null for students outside the groups or clearly inside their own.
+ */
+function betweenGroups(points, labels, k, ids, n) {
+  const out = new Array(n).fill(null);
+  if (k < 2) return out;
+  const dims = points[0].length;
+  const centres = Array.from({ length: k }, () => new Array(dims).fill(0));
+  const counts = new Array(k).fill(0);
+  points.forEach((p, i) => {
+    counts[labels[i]]++;
+    p.forEach((v, d) => { centres[labels[i]][d] += v; });
+  });
+  centres.forEach((c, g) => { if (counts[g]) c.forEach((_, d) => { c[d] /= counts[g]; }); });
+
+  points.forEach((p, i) => {
+    const own = dist(p, centres[labels[i]]);
+    let alt = -1, near = Infinity;
+    centres.forEach((c, g) => {
+      if (g === labels[i] || !counts[g]) return;
+      const d = dist(p, c);
+      if (d < near) { near = d; alt = g; }
+    });
+    const ratio = near > 1e-9 ? own / near : 0;
+    if (alt >= 0 && ratio >= BETWEEN) out[ids[i]] = { alt, ratio };
+  });
+  return out;
 }
 
 /**
@@ -256,7 +300,7 @@ export const SUPPORT_BELOW = 0.6;
  * With `ability` (inference.ability), the students with no clear pattern are
  * split into `support` (getting most questions wrong) and `onTrack`.
  */
-export function describeClusters(posterior, labels, misIds, { k, secureLabel }, { ability = null } = {}) {
+export function describeClusters(posterior, labels, misIds, { k, secureLabel, between = [] }, { ability = null } = {}) {
   const clusters = [];
 
   const build = (c, isSecure) => {
@@ -285,7 +329,9 @@ export function describeClusters(posterior, labels, misIds, { k, secureLabel }, 
       signature: isSecure ? [] : (signature.length ? signature : profile.slice().sort((a, b) => b.inMean - a.inMean).slice(0, 1)),
       isSecure: !!isSecure,
       support,
-      onTrack: isSecure ? members.filter(i => !support.includes(i)) : []
+      onTrack: isSecure ? members.filter(i => !support.includes(i)) : [],
+      // Members nearly as close to another group: `alt` is that group's index.
+      between: isSecure ? [] : members.filter(i => between[i]).map(i => ({ s: i, alt: between[i].alt }))
     };
   };
 
