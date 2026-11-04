@@ -368,6 +368,8 @@ function renderMatrix() {
       name.classList.add('m-between');
       name.title += `
 Almost as close to ${groupLabel(near)} as to their own group`;
+      // The underline and the tooltip are visual; say it to a screen reader too.
+      name.setAttribute('aria-label', `${cls.students[s].name}, almost as close to ${groupLabel(near)} as to their own group`);
     }
     name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s, rowOrder()); });
     const head = el('span', 'm-head');
