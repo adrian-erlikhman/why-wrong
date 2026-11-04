@@ -1524,7 +1524,41 @@ function renderValidation() {
   $('#validation-note').textContent =
     'Change the class variant in the toolbar to re-roll a different sample class. The figures are computed live each time, so a bad run shows a bad number.';
 
+  renderBetweenCheck();
   renderHideTest();
+}
+
+/**
+ * The between-groups flag, checked on this class: of the students it marks,
+ * how many sit in a group whose commonest planted profile is not theirs,
+ * against the same share for everyone else in the groups.
+ */
+function renderBetweenCheck() {
+  const { cls } = state;
+  const old = $('#between-check');
+  if (old) old.remove();
+  const real = reteachGroups(state.groups);
+  if (!cls.truth || real.length < 2) return;
+
+  const misplaced = new Set();
+  real.forEach(g => {
+    const count = new Map();
+    g.members.forEach(s => count.set(cls.truth[s].archetype, (count.get(cls.truth[s].archetype) || 0) + 1));
+    const main = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    g.members.forEach(s => { if (cls.truth[s].archetype !== main) misplaced.add(s); });
+  });
+  const flagged = real.flatMap(g => (g.between || []).map(b => b.s));
+  const rest = real.flatMap(g => g.members).filter(s => !flagged.includes(s));
+  const off = list => list.filter(s => misplaced.has(s)).length;
+
+  const p = el('p', 'note');
+  p.id = 'between-check';
+  p.textContent = flagged.length
+    ? `Between groups: ${flagged.length} student${flagged.length === 1 ? ' is' : 's are'} marked as almost as close to another group. ` +
+      `${off(flagged)} of them ${off(flagged) === 1 ? 'is' : 'are'} in a group whose commonest planted profile is not their own, against ${off(rest)} of the other ${rest.length}. ` +
+      'Across many simulated classes it is about half against one in eight.'
+    : `Between groups: no student in this class is marked as almost as close to another group. ${off(rest)} of the ${rest.length} grouped students are in a group whose commonest planted profile is not their own.`;
+  $('#validation-note').after(p);
 }
 
 /**
