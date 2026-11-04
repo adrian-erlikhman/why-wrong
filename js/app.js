@@ -504,7 +504,12 @@ function sortRows() {
     bar.style.background = colour;
     host.appendChild(bar);
 
-    const tag = el('div', 'band-tag', b.g.isThin ? 'too few answers' : b.g.isSecure ? 'no clear pattern' : `Group ${state.groups.indexOf(b.g) + 1}`);
+    // The label wraps onto a second row when the band has one; a one-row band
+    // gets the short form so it never runs into the next band's label.
+    const two = b.count >= 2;
+    const tag = el('div', 'band-tag', b.g.isThin ? (two ? 'too few answers' : 'few answers')
+      : b.g.isSecure ? (two ? 'no clear pattern' : 'no pattern')
+      : `Group ${state.groups.indexOf(b.g) + 1}`);
     tag.style.top = `${b.start * h - 1}px`;
     host.appendChild(tag);
 

@@ -674,7 +674,7 @@ html.key-above .legend { padding-bottom: 20px; }
   opacity: 0;
   transition: opacity .5s .55s;
   pointer-events: none;
-  white-space: nowrap;
+  line-height: 1.2;
 }
 .band-tag.on { opacity: 1; }
 
