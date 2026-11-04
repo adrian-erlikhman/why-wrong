@@ -64,6 +64,36 @@ function binomialUpperTail(successes, trials, probability) {
 }
 
 /**
+ * Upper end of a one-sided confidence interval for a correlation (Fisher's z).
+ * At 28 students a correlation of 0.10 is compatible with anything from about
+ * -0.2 to 0.4, so "low" is only a finding when even the top of that range is
+ * low. Below that, the honest verdict is that the class is too small to tell.
+ */
+function corrUpper(r, n, z = 1.28) {
+  if (n < 5) return 1;
+  const c = Math.min(Math.max(r, -0.999), 0.999);
+  return Math.tanh(Math.atanh(c) + z / Math.sqrt(n - 3));
+}
+
+/** One-sided two-proportion z: is a share among `na` students higher than among `nb`? */
+function liftZ(pa, na, pb, nb) {
+  if (!na || !nb) return 0;
+  const pool = (pa * na + pb * nb) / (na + nb);
+  const se = Math.sqrt(pool * (1 - pool) * (1 / na + 1 / nb));
+  return se > 0 ? (pa - pb) / se : 0;
+}
+
+// Calibrated on the stress benchmark (test/benchmark.mjs, runAudit), where
+// flat and miskeyed questions are planted next to sound ones. See the
+// comments at each use.
+const LOW_R = 0.15;             // below this a question is not separating students
+const AUDIT = {
+  liftMin: 0.15, liftZ: 1.64,   // defence of a diagnostic question
+  keyLift: 0.15, keyShare: 0.4, // check the key
+  skipZ: 2.5                    // skipped clearly more than the rest of the paper
+};
+
+/**
  * @returns {Array} one record per item, in item order.
  */
 export function analyseItems(pack, responses, inference = null) {
@@ -73,6 +103,9 @@ export function analyseItems(pack, responses, inference = null) {
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));
   const totals = scored.map(r => r.reduce((a, b) => a + b, 0));
   const answeredBy = responses.map(row => row.filter(isAnswered).length);
+  const blankRate = nStudents && ITEMS.length
+    ? responses.reduce((n, row) => n + row.filter(c => !isAnswered(c)).length, 0) / (nStudents * ITEMS.length)
+    : 0;
 
   return ITEMS.map((item, i) => {
     // A blank is not a wrong answer, here any more than in the inference. Each
@@ -131,48 +164,98 @@ export function analyseItems(pack, responses, inference = null) {
     // The posterior used here has this item's own contribution subtracted out,
     // so the item is not permitted to vote on its own validity.
     let modelAgreement = null;
+    let agreementOthers = null;
+    let agreementLift = null;
     let agreementN = 0;
     let signalN = 0;
     let signalMis = null;
+    let concentrated = false;
+
+    // Who the rest of the paper says holds `mid`, among the students who chose
+    // (or did not choose) one of its answers here and answered enough of its
+    // other questions to tell. The test asks whether the remaining items
+    // provide *net positive evidence*, not whether they independently clear a
+    // threshold: with two probes, removing one leaves a single item behind,
+    // and a single item can never clear an absolute bar. So the question for
+    // the evidence that survives is directional, above the prior or below it.
+    const agreement = (mid, chose) => {
+      const mIndex = inference.misIds.indexOf(mid);
+      if (mIndex < 0) return null;
+      const assessable = responses.map((_, s) => s).filter(s => isAnswered(responses[s][i]) &&
+        inference.evidence[s][mIndex]?.filter(c => !c.omitted && c.itemId !== item.id).length >= MIN_PROBES_ANSWERED);
+      const says = s => posteriorWithout(inference, s, mIndex, item.id) > PARAMS.prior;
+      const C = assessable.filter(s => chose(responses[s][i]));
+      const O = assessable.filter(s => !chose(responses[s][i]));
+      const share = C.length ? C.filter(says).length / C.length : null;
+      const others = O.length ? O.filter(says).length / O.length : 0;
+      return { n: C.length, share, others, lift: share === null ? null : share - others, z: share === null ? 0 : liftZ(share, C.length, others, O.length) };
+    };
 
     if (inference) {
       const top = options.filter(o => o.mis && o.count > 0)
         .sort((a, b) => b.count - a.count)[0];
       if (top) {
         signalMis = top.mis;
-        const mIndex = inference.misIds.indexOf(top.mis);
-        const chosers = responses
-          .map((row, s) => (row[i] === top.index ? s : -1))
-          .filter(s => s >= 0);
-        signalN = chosers.length;
-        const assessable = chosers.filter(s =>
-          inference.evidence[s][mIndex]?.filter(c => !c.omitted && c.itemId !== item.id).length >= MIN_PROBES_ANSWERED);
-        agreementN = assessable.length;
-        if (agreementN >= 3 && mIndex >= 0) {
-          // The test asks whether the remaining items provide *net positive
-          // evidence*, not whether they independently clear 50%. With each
-          // misconception probed by only two items, removing one leaves a
-          // single item behind, and a single item can never clear an absolute
-          // threshold -- that is the whole premise of the inference model. The
-          // right question for the evidence that survives is directional: does
-          // it push the probability above the prior, or below it?
-          const agreeing = assessable.filter(s =>
-            posteriorWithout(inference, s, mIndex, item.id) > PARAMS.prior).length;
-          modelAgreement = agreeing / agreementN;
+        const chose = c => isAnswered(c) && item.opts[c].mis === signalMis;
+        signalN = responses.filter(row => chose(row[i])).length;
+        const a = agreement(signalMis, chose);
+        agreementN = a ? a.n : 0;
+        if (a && agreementN >= 3) {
+          modelAgreement = a.share;
+          agreementOthers = a.others;
+          agreementLift = a.lift;
+          // Compared with the rest of the class, not with a fixed bar. How many
+          // students show a belief elsewhere depends on how common it is, so a
+          // fixed 60% defended rare beliefs' questions too seldom and common
+          // ones' too often. What a working diagnostic question shows is lift:
+          // on the benchmark, 0.34-0.50 for sound questions and about 0 for
+          // flat or miskeyed ones.
+          concentrated = a.lift >= AUDIT.liftMin && a.z >= AUDIT.liftZ;
         }
       }
     }
 
-    // A correlation over a dozen students swings by about 0.3 on noise alone, so
-    // the bars below move with class size. Above a class of 28, where the rules
-    // of thumb in the header were set, they stay where they are. A hair below zero
-    // is still zero, so backward takes a real gap.
-    const noise = Math.max(0, 1 / Math.sqrt(Math.max(1, col.length - 1)) - 1 / Math.sqrt(27));
-    const weakBar = 0.15 - noise;
-    const backwardBar = -0.1 - noise;
+    // Is the key wrong? The classic check: the strongest third of the class
+    // (by the rest of the paper) favour one wrong option over the key. On its
+    // own that also fires on hard diagnostic questions, where strong students
+    // genuinely hold the belief. What separates a miskey is that the students
+    // who chose that option show no sign of its belief anywhere else: they
+    // chose it because it is right. On the benchmark this names most planted
+    // miskeys at about one false alarm per six classes.
+    let keyCheck = null;
+    if (inference && r !== null && who.length >= 9 && r < LOW_R) {
+      const ranked = who.map((s, k) => [rest[k], s]).sort((a, b) => b[0] - a[0]);
+      const top = ranked.slice(0, Math.max(3, Math.round(who.length / 3))).map(x => x[1]);
+      const topCount = oi => top.filter(s => responses[s][i] === oi).length;
+      const fav = item.opts.map((_, oi) => oi).filter(oi => oi !== ci[i])
+        .sort((a, b) => topCount(b) - topCount(a))[0];
+      const favN = topCount(fav);
+      if (favN >= 3 && favN > topCount(ci[i]) && favN >= AUDIT.keyShare * top.length) {
+        const mis = item.opts[fav].mis;
+        const a = mis ? agreement(mis, c => c === fav) : null;
+        if (!a || a.lift === null || a.lift < AUDIT.keyLift) keyCheck = { option: fav, topN: top.length, favN, keyN: topCount(ci[i]) };
+      }
+    }
+
+    // A correlation over a dozen students swings by about 0.3 on noise alone,
+    // so a verdict is given only when the whole plausible range is low: the top
+    // of its 80% interval (corrUpper). Otherwise the question is too early to
+    // tell, which is what the data supports. On the benchmark this halves the
+    // sound questions sent for rewriting in a class of 28, and it grows
+    // stricter by itself as the class shrinks. A hair below zero is still zero,
+    // so backward takes a real gap.
+    const rUpper = r === null ? null : corrUpper(r, col.length);
+    const backward = r !== null && r < 0 && rUpper < 0.05;
+    const flat = r !== null && !backward && r < LOW_R && rUpper < 0.30;
+    const unclear = r !== null && !backward && !flat && r < LOW_R;
+
+    // Judged on the percentage the teacher sees: 13 of 14 shows as 93% and is
+    // treated as 93%, not as the 92.9% it is.
+    const nearlyAll = Math.round(p * 100) >= 93;
 
     const flags = [];
-    if (p >= 0.93) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so this question may offer little information for this class.` });
+    if (keyCheck) flags.push({ kind: 'miskey', text: `Your strongest students chose "${item.opts[keyCheck.option].t}" (${keyCheck.favN} of the top ${keyCheck.topN}) more often than the keyed answer (${keyCheck.keyN}), and nothing else on the paper suggests they hold the belief that option was written for. Check the answer key.` });
+    if (nearlyAll) flags.push({ kind: 'no-information', text: `${Math.round(p * 100)}% answered correctly, so this question may offer little information for this class.` });
     // A low mean score alone does not establish a problem. Separate a result
     // that is unusually far below chance from one that is merely inconclusive.
     const chanceUpperTail = answered > 0 ? binomialUpperTail(correct, answered, chance) : null;
@@ -188,8 +271,9 @@ export function analyseItems(pack, responses, inference = null) {
     } else if (answered > 0 && r !== null && p <= chance + 0.06 && r < 0.15) {
       flags.push({ kind: 'at-chance', text: `${Math.round(p * 100)}% answered correctly, compared with ${Math.round(chance * 100)}% expected from guessing. Scores on the other questions were not strongly related to this answer.` });
     }
-    if (r !== null && r < backwardBar) flags.push({ kind: 'negative-discrimination', text: `Students with higher scores on the other questions were less likely to answer this one correctly (discrimination ${r.toFixed(2)}).` });
-    else if (r !== null && r < weakBar) flags.push({ kind: 'no-discrimination', text: `Scores on the other questions were not strongly related to this answer (discrimination ${r.toFixed(2)}).` });
+    if (backward) flags.push({ kind: 'negative-discrimination', text: `Students with higher scores on the other questions were less likely to answer this one correctly (discrimination ${r.toFixed(2)}), by more than chance explains.` });
+    else if (flat) flags.push({ kind: 'no-discrimination', text: `Scores on the other questions were not strongly related to this answer (discrimination ${r.toFixed(2)}).` });
+    else if (unclear) flags.push({ kind: 'unclear', text: `Discrimination is ${r.toFixed(2)}, but with ${col.length} students that could be chance: it could plausibly be as high as ${rUpper.toFixed(2)}. Too early to tell; look again with the next class.` });
 
     // An item whose wrong answers are mapped to nothing, and on which the class
     // is performing at chance, produces neither a ranking nor a diagnosis. That
@@ -205,7 +289,14 @@ export function analyseItems(pack, responses, inference = null) {
       flags.push({ kind: 'uninformative', text: `None of this question's wrong answers are linked to a known misunderstanding, and ${Math.round(p * 100)}% correct is close to the ${Math.round(chance * 100)}% expected from guessing. Review the item and its answer choices.` });
     }
 
-    if (omitted / nStudents >= 0.20) flags.push({ kind: 'skipped', text: Math.round((omitted / nStudents) * 100) + '% of the class left this blank. Review the timing and wording to see whether either may have contributed.' });
+    // Skipped more than the rest of the paper, not merely often: a class that
+    // leaves 15% of every page blank has not found this question harder. Half
+    // the class or more is worth a look whatever the rest of the paper did.
+    const skipRate = omitted / (nStudents || 1);
+    const skipSe = Math.sqrt(Math.max(blankRate * (1 - blankRate), 1e-6) / (nStudents || 1));
+    if (skipRate >= 0.5 || (skipRate >= 0.20 && (skipRate - blankRate) / skipSe >= AUDIT.skipZ)) {
+      flags.push({ kind: 'skipped', text: `${Math.round(skipRate * 100)}% of the class left this blank${blankRate < skipRate ? `, against ${Math.round(blankRate * 100)}% across the paper` : ''}. Review the timing and wording to see whether either may have contributed.` });
+    }
 
     const dead = options.filter(o => o.dead);
     if (dead.length) flags.push({ kind: 'dead-distractor', text: `${dead.length} option${dead.length > 1 ? 's were' : ' was'} chosen by almost nobody (${dead.map(o => `"${o.text}"`).join(', ')}), so the question has fewer real choices than it looks.` });
@@ -221,24 +312,29 @@ export function analyseItems(pack, responses, inference = null) {
     // So mapped-answer concentration and agreement with the other items are
     // considered before the correlation verdict. These signals can help
     // prioritize review, but cannot establish that an item is valid or broken.
-    const concentrated = modelAgreement !== null && modelAgreement >= 0.6;
-    const lowDiscrim = r !== null && r < weakBar;
+    const lowDiscrim = r !== null && r < LOW_R;
 
-    // Severity also matters. A rarely chosen distractor may be a minor issue;
-    // report it separately from patterns that warrant a closer review.
-    const serious = flags.filter(f => f.kind !== 'dead-distractor');
+    // Severity also matters. A rarely chosen distractor may be a minor issue,
+    // and "too early to tell" is not a finding; report both separately from
+    // patterns that warrant a closer review. A suspected miskey comes before
+    // all of it: every other number about the item is computed against a key
+    // that may be wrong.
+    const serious = flags.filter(f => !['dead-distractor', 'unclear'].includes(f.kind));
 
     let quality;
-    if (p >= 0.93) quality = 'weak';                       // little variation in this class
+    if (keyCheck) quality = 'key';
+    else if (nearlyAll) quality = 'weak';                  // little variation in this class
     else if (r === null) quality = 'insufficient';
     else if (concentrated && lowDiscrim) quality = 'diagnostic';
-    else if (r < backwardBar) quality = 'broken';
+    else if (backward) quality = 'broken';
     else if (serious.length) quality = 'weak';
+    else if (unclear) quality = 'watch';
     else if (flags.length) quality = 'minor';
     else quality = r >= 0.3 ? 'strong' : 'ok';
 
+    const misName = pack.misconceptions.find(m => m.id === signalMis)?.name ?? signalMis;
     const note = quality === 'diagnostic'
-      ? `This question has a weak relationship with overall scores (${r.toFixed(2)}). Of the ${signalN} students who chose "${options.find(o => o.mis === signalMis && o.count > 0)?.text ?? ''}", ${agreementN} answered enough other questions to check for a similar pattern; ${Math.round(modelAgreement * 100)}% of those did. Review that evidence before deciding whether to keep the item.`
+      ? `This question has a weak relationship with overall scores (${r.toFixed(2)}). Of the ${signalN} students who chose an answer written for “${misName}”, ${agreementN} answered enough other questions to check for a similar pattern; ${Math.round(modelAgreement * 100)}% of those did, against ${Math.round(agreementOthers * 100)}% of the rest of the class. It is diagnosing rather than ranking; review that evidence before deciding whether to keep the item.`
       : null;
 
     return {
@@ -248,12 +344,16 @@ export function analyseItems(pack, responses, inference = null) {
       topic: item.topic,
       difficulty: p,
       discrimination: r,
+      discriminationUpper: rUpper,
       diagnosticShare,
       correct,
       answered,
       omitted,
       modelAgreement,
+      agreementOthers,
+      agreementLift,
       agreementN,
+      keyCheck,
       signalN,
       signalMis,
       options,
@@ -270,6 +370,7 @@ export function analyseItems(pack, responses, inference = null) {
  * not defects.
  */
 const FLAG_SEVERITY = {
+  'miskey': 4,              // every number about the item rests on the key
   'insufficient-discrimination-data': 2,
   'no-information': 3,      // offers little variation in this class
   'uninformative': 3,       // no ranking and no diagnosis
@@ -278,6 +379,7 @@ const FLAG_SEVERITY = {
   'at-chance': 2,
   'no-discrimination': 1,   // marginal: often just a small sample
   'skipped': 2,
+  'unclear': 0,             // too few students to say
   'dead-distractor': 0
 };
 
@@ -286,9 +388,21 @@ export function severityOf(item) {
   return item.flags.reduce((m, f) => Math.max(m, FLAG_SEVERITY[f.kind] ?? 0), 0);
 }
 
+/**
+ * The flags worth showing for an item, most serious first. "Too early to
+ * tell" is the item's whole story only when nothing firmer was found; next to
+ * a firmer finding it reads as a contradiction, so it is left out.
+ */
+export function shownFlags(item) {
+  return item.flags
+    .filter(f => f.kind !== 'unclear' || item.quality === 'watch')
+    .slice()
+    .sort((a, b) => (FLAG_SEVERITY[b.kind] ?? 0) - (FLAG_SEVERITY[a.kind] ?? 0));
+}
+
 export function problemItems(stats) {
   return stats
-    .filter(s => s.flags.length && ['broken', 'weak', 'insufficient'].includes(s.quality))
+    .filter(s => s.flags.length && ['key', 'broken', 'weak', 'insufficient'].includes(s.quality))
     .sort((a, b) => {
       const bySeverity = severityOf(b) - severityOf(a);
       if (bySeverity) return bySeverity;

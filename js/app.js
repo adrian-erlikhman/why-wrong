@@ -13,9 +13,9 @@
 import { allPacks, getPack, addPack, defaultPack, findPack, isBuiltIn } from './packs/index.js';
 import { correctIndex, misById, validatePack } from './pack.js';
 import { generateClass, generateRetest, totalScores } from './simulate.js';
-import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS } from './infer.js';
-import { clusterStudents, describeClusters, separateThin, reteachGroups } from './cluster.js';
-import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf } from './itemstats.js';
+import { inferMisconceptions, diagnose, prevalence, coverage, posteriorForReporting, isTested, PARAMS, strength, MIN_TELLING } from './infer.js';
+import { clusterStudents, describeClusters, separateThin, reteachGroups, SUPPORT_BELOW } from './cluster.js';
+import { analyseItems, problemItems, diagnosticItems, cronbachAlpha, interpretAlpha, severityOf, shownFlags } from './itemstats.js';
 import { scoreDiagnosis, scoreClustering, confusion, fmtPct } from './validate.js';
 import { setKey, rewritePlan } from './llm.js';
 import { generatePack } from './generate.js';
@@ -65,8 +65,8 @@ const ROUGH_GROUPS = 0.2;
 
 const VERDICTS = {
   strong: 'Working well', ok: 'Acceptable', diagnostic: 'Diagnosing, not ranking',
-  minor: 'Minor issue', weak: 'Worth reviewing', broken: 'Unexpected pattern',
-  insufficient: 'Too little evidence'
+  minor: 'Minor issue', watch: 'Too early to tell', weak: 'Worth reviewing',
+  broken: 'Unexpected pattern', insufficient: 'Too little evidence', key: 'Check the key'
 };
 
 let colourOf = Object.create(null);
@@ -83,6 +83,7 @@ function assignColours(pack) {
 const state = {
   pack: null, cls: null, inf: null, cl: null, groups: null, stats: null, cov: null,
   sorted: false, rows: [], apiKey: null,
+  ran: false,         // whether the page has been analysed once already
   imported: null,     // { students, responses } when the class is the teacher's own
   unsaved: false,     // the imported class exists only in this tab
   unsavedTest: null,  // id of a built test that exists only in this tab
@@ -128,10 +129,14 @@ function run() {
   const reportPosterior = posteriorForReporting(inf);
   const cl = clusterStudents(reportPosterior, { seed: 42 });
   const cov = coverage(pack, cls.responses);
-  const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl), cov);
+  const groups = separateThin(describeClusters(reportPosterior, cl.labels, inf.misIds, cl, { ability: inf.ability }), cov);
   const stats = analyseItems(pack, cls.responses, inf);
 
-  Object.assign(state, { cls, inf, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
+  // The beliefs reported for each student, once: the group cards, the plan
+  // export and the student list all read the same answer.
+  const dx = diagnose(reportPosterior, inf.misIds);
+
+  Object.assign(state, { cls, inf, dx, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
 
   fitMapToClass(cls.students.length);
   showTestNudge();
@@ -150,6 +155,20 @@ function run() {
 
   $('#reorder').textContent = 'Sort into groups';
   $('#clear-filter').hidden = true;
+
+  // A re-run changes every number on the page at once; a short fade on the
+  // strip and the open view shows that it happened, where a silent swap reads
+  // as nothing having changed.
+  if (state.ran) [$('#summary'), $('.view.is-active')].forEach(n => replay(n));
+  state.ran = true;
+}
+
+/** Restart a one-shot entrance animation on `node`. */
+function replay(node, cls = 'entering') {
+  if (!node) return;
+  node.classList.remove(cls);
+  void node.offsetWidth;
+  node.classList.add(cls);
 }
 
 /** So two saved classes of one test can be told apart once they are open. */
@@ -262,7 +281,10 @@ function renderSummary() {
     { v: answered ? `${Math.round((correct / answered) * 100)}%` : '—', k: hasBlanks ? 'correct of those answered' : 'class average' },
     { v: String(bad.length), k: `question${bad.length === 1 ? '' : 's'} to review`,
       cls: bad.length ? 'warn' : 'ok', go: 'items' },
-    { v: secure ? String(secure.size) : '0', k: 'with no clear pattern found', go: 'groups' }
+    // A student with no clear pattern who still gets most things wrong is the
+    // easiest one to miss on this page, so they are counted on their own line.
+    { v: secure ? String(secure.size) : '0', k: 'with no clear pattern found', go: 'groups',
+      sub: secure?.support?.length ? `${secure.support.length} getting most wrong` : null }
   ];
 
   cards.forEach(c => {
@@ -271,6 +293,7 @@ function renderSummary() {
     const k = el('div', 'sum-k', c.k);
     k.title = c.k;
     n.appendChild(k);
+    if (c.sub) n.appendChild(el('div', 'sum-sub', c.sub));
     if (c.go) n.addEventListener('click', () => { showView(c.go); scrollToView(); });
     host.appendChild(n);
   });
@@ -329,7 +352,7 @@ function renderMatrix() {
     const name = el('button', 'm-name', cls.students[s].name);
     name.tabIndex = -1;
     name.title = `${cls.students[s].name} — click for the full evidence trail`;
-    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s); });
+    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s, rowOrder()); });
     const head = el('span', 'm-head');
     head.setAttribute('role', 'rowheader');
     head.appendChild(name);
@@ -583,7 +606,7 @@ function renderGroups() {
   }
 
   const others = [
-    secure && `${secure.size} with no clear shared pattern`,
+    secure && `${secure.size} with no clear shared pattern${secure.support?.length ? ` (${secure.support.length} of them getting most questions wrong)` : ''}`,
     thin && `${thin.size} with too few answers for an estimate`
   ].filter(Boolean);
 
@@ -631,10 +654,28 @@ function groupCard(g, idx) {
     card.appendChild(top);
     const body = el('div', 'group-body');
     const scores = totalScores(state.pack, state.cls.responses);
-    body.appendChild(el('p', 'belief', g.members.every(s => scores[s] === state.cov[s].answered)
-      ? 'All recorded answers were correct. This test has not identified a reteach need for these students.'
-      : 'Their wrong answers did not form a clear pattern on this test. The results cannot tell you why; review the evidence or check in with the students before deciding what support they need.'));
-    body.appendChild(roster(g));
+    const support = g.support || [];
+    const onTrack = g.onTrack || g.members;
+    // Split by how often they are right where no belief is in play: the same
+    // scattered errors are carelessness from a strong student and a gap from
+    // a weak one, and the weak ones are the easiest students to miss here.
+    if (support.length) {
+      const box = el('div', 'sub-group');
+      box.appendChild(el('div', 'lab warn', `Getting most questions wrong · ${support.length}`));
+      box.appendChild(el('p', 'plan',
+        `Right on fewer than ${Math.round(SUPPORT_BELOW * 100)}% of the questions their errors do not explain. That points to a gap or guessing rather than one misunderstanding: work through a few problems with them and see where it breaks down.`));
+      box.appendChild(roster({ ...g, members: support }));
+      body.appendChild(box);
+    }
+    if (onTrack.length) {
+      const box = el('div', 'sub-group');
+      if (support.length) box.appendChild(el('div', 'lab', `The rest · ${onTrack.length}`));
+      box.appendChild(el('p', 'belief', onTrack.every(s => scores[s] === state.cov[s].answered)
+        ? 'All recorded answers were correct. This test has not identified a reteach need for these students.'
+        : 'Their wrong answers did not form a clear pattern on this test. The results cannot tell you why; review the evidence or check in with the students before deciding what support they need.'));
+      box.appendChild(roster({ ...g, members: onTrack }));
+      body.appendChild(box);
+    }
     card.appendChild(body);
     return card;
   }
@@ -663,8 +704,13 @@ function groupCard(g, idx) {
   card.appendChild(top);
 
   const body = el('div', 'group-body');
+  // A group is defined by what it shares on average, so not every member
+  // holds every belief in it: say how many hold the one the plan is for.
+  const lead = g.signature[0]?.id;
   if (details[0]?.belief) {
-    body.appendChild(el('div', 'lab', 'Pattern suggests'));
+    const lab = el('div', 'lab', 'Pattern suggests');
+    if (lead) lab.appendChild(el('span', 'lab-n', ` · ${g.members.filter(m => state.dx[m].has(lead)).length} of ${g.size} hold it`));
+    body.appendChild(lab);
     body.appendChild(setMath(el('p', 'belief'), details[0].belief));
   }
 
@@ -707,8 +753,25 @@ function groupCard(g, idx) {
   }
 
   body.appendChild(roster(g));
+
+  // A reteach reaches only the students in the room for it. Anyone else who
+  // holds the belief, but was grouped by a different one, belongs there too.
+  const outside = lead ? alsoBringIn(g) : [];
+  if (outside.length) {
+    const box = roster({ ...g, members: outside });
+    box.querySelector('.lab').textContent = `Also bring in · ${outside.length}`;
+    box.insertBefore(el('p', 'roster-note', 'They show this pattern too, but were grouped by another one.'), box.querySelector('.roster-names'));
+    body.appendChild(box);
+  }
+
   card.appendChild(body);
   return card;
+}
+
+/** Students outside group `g` who are reported with its lead belief. */
+function alsoBringIn(g) {
+  const lead = g.signature[0]?.id;
+  return state.dx.map((held, s) => (held.has(lead) && !g.members.includes(s) ? s : -1)).filter(s => s >= 0);
 }
 
 function roster(g) {
@@ -717,7 +780,7 @@ function roster(g) {
   const list = el('div', 'roster-names');
   g.members.forEach(m => {
     const b = el('button', 'rname', state.cls.students[m].name);
-    b.addEventListener('click', () => openStudent(ctx(), m));
+    b.addEventListener('click', () => openStudent(ctx(), m, g.members));
     list.appendChild(b);
   });
   box.appendChild(list);
@@ -740,7 +803,6 @@ function renderStudentFilter() {
   const host = $('#student-filter');
   host.innerHTML = '';
   const { groups, cls } = state;
-  host.hidden = groups.length < 2;
 
   const add = (label, n, key) => {
     const b = el('button', key === null ? 'seg-b is-on' : 'seg-b', `${label} · ${n}`);
@@ -758,6 +820,14 @@ function renderStudentFilter() {
   };
   add('Everyone', cls.students.length, null);
   groups.forEach((g, i) => add(groupLabel(g), g.members.length, i));
+  // Two ways of slicing the class that cut across the groups, offered only
+  // when this class has some: the students getting most questions wrong with
+  // no clear pattern, and the ones with a belief worth one more question.
+  const support = groups.find(g => g.isSecure)?.support?.length ?? 0;
+  if (support) add('Getting most wrong', support, 'support');
+  const check = cls.students.filter((_, s) => state.inf.misIds.some((__, k) => strength(state.inf, s, k).level === 'check')).length;
+  if (check) add('One more question', check, 'check');
+  host.hidden = host.children.length < 3;
 }
 
 function renderStudents() {
@@ -771,19 +841,23 @@ function renderStudents() {
 
   const rows = cls.students.map((st, s) => {
     const score = cls.responses[s].reduce((n, c, i) => n + (c === ci[i] ? 1 : 0), 0);
-    const held = inf.misIds
-      .map((mid, k) => ({ mid, k, p: inf.posterior[s][k] }))
-      .filter(x => isTested(inf, s, x.k) && x.p >= PARAMS.decisionThreshold)
-      .sort((a, b) => b.p - a.p);
+    const levels = inf.misIds.map((mid, k) => ({ mid, k, ...strength(inf, s, k) })).sort((a, b) => b.p - a.p);
+    const held = levels.filter(x => x.level === 'clear' || x.level === 'likely');
+    const check = levels.filter(x => x.level === 'check');
     const group = groups.find(g => g.members.includes(s));
-    return { s, st, score, held, group };
+    return { s, st, score, held, check, group };
   });
 
-  // Most to act on first: students with the most confident misconceptions, then
+  // Most to act on first: students with the most confident misconceptions,
+  // then, among those with none, the ones getting most questions wrong, then
   // lowest score. A teacher opening this wants triage, not the register.
-  rows.sort((a, b) => (b.held.length - a.held.length) || (a.score - b.score));
+  const struggling = r => (r.group?.isSecure && r.group.support?.includes(r.s) ? 1 : 0);
+  rows.sort((a, b) => (b.held.length - a.held.length) || (struggling(b) - struggling(a)) || (a.score - b.score));
 
-  const picked = state.studentGroup == null ? rows : rows.filter(r => r.group === groups[state.studentGroup]);
+  const picked = state.studentGroup == null ? rows
+    : state.studentGroup === 'support' ? rows.filter(r => r.group?.isSecure && r.group.support?.includes(r.s))
+    : state.studentGroup === 'check' ? rows.filter(r => r.check.length > 0)
+    : rows.filter(r => r.group === groups[state.studentGroup]);
   const shown = h ? picked.filter(r => normName(r.st.name).includes(h)) : picked;
 
   // Slips print what is on screen, so one group or one student takes no scissors.
@@ -806,7 +880,7 @@ function renderStudents() {
 
     const l = el('div', 'stu-l');
     l.appendChild(el('div', 'stu-name', r.st.name));
-    const placed = r.group ? groupLabel(r.group) : '';
+    const placed = !r.group ? '' : r.group.isSecure && r.group.support?.includes(r.s) ? 'Getting most wrong' : groupLabel(r.group);
     const blank = cov[r.s].total - cov[r.s].answered;
     l.appendChild(el('div', 'stu-meta', blank ? `${placed} · ${blank} left blank` : placed));
     card.appendChild(l);
@@ -824,8 +898,17 @@ function renderStudents() {
       if (r.held.length > 3) mid.appendChild(el('span', 'chip chip-more', `+${r.held.length - 3}`));
     } else if (r.group?.isThin) {
       mid.appendChild(el('span', 'chip chip-thin', 'Not enough answers for an estimate'));
-    } else {
-      mid.appendChild(el('span', 'chip chip-clear', 'No clear pattern found'));
+    } else if (!r.check.length) {
+      mid.appendChild(r.group?.support?.includes(r.s)
+        ? el('span', 'chip chip-check', 'Scattered errors: needs practice')
+        : el('span', 'chip chip-clear', 'No clear pattern found'));
+    }
+    // A belief resting on one answer is not a diagnosis; it is a question to ask.
+    if (r.check.length && (r.held.length < 3 || state.studentGroup === 'check')) {
+      const c = el('span', 'chip chip-check');
+      c.appendChild(setMath(el('span'), `Check: ${byId[r.check[0].mid]?.short || r.check[0].mid}`));
+      c.title = 'Only one answer points here. Ask one more question before acting on it.';
+      mid.appendChild(c);
     }
     card.appendChild(mid);
 
@@ -834,7 +917,7 @@ function renderStudents() {
     rr.appendChild(el('span', 'stu-go', '→'));
     card.appendChild(rr);
 
-    card.addEventListener('click', () => openStudent(ctx(), r.s));
+    card.addEventListener('click', () => openStudent(ctx(), r.s, shown.map(x => x.s)));
     host.appendChild(card);
   });
 }
@@ -895,7 +978,8 @@ function renderItems() {
     host.appendChild(box);
   }
 
-  list.forEach(s => host.appendChild(itemCard(s)));
+  const order = list.map(x => x.index);
+  list.forEach(s => host.appendChild(itemCard(s, order)));
 
   const alpha = cronbachAlpha(pack, cls.responses);
   const note = $('#alpha-note');
@@ -905,7 +989,7 @@ function renderItems() {
   note.appendChild(a);
 }
 
-function itemCard(s) {
+function itemCard(s, order) {
   const card = el('button', `item ${s.quality}`);
 
   const top = el('div', 'item-top');
@@ -917,14 +1001,17 @@ function itemCard(s) {
   top.appendChild(el('span', `verdict v-${s.quality}`, VERDICTS[s.quality] || ''));
   card.appendChild(top);
 
-  if (s.flags.length) {
+  // A question defended as diagnostic carries the flags that made it look
+  // weak; on its card the defence is the finding, so it is what is shown.
+  const shown = shownFlags(s);
+  if (s.note) {
+    card.appendChild(setMath(el('p', 'item-note'), s.note));
+  } else if (shown.length) {
     const flags = el('ul', 'flags');
-    s.flags.slice(0, 2).forEach(f => {
-      flags.appendChild(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null, f.text));
+    shown.slice(0, 2).forEach(f => {
+      flags.appendChild(setMath(el('li', severityOf({ flags: [f] }) <= 1 ? 'minor' : null), f.text));
     });
     card.appendChild(flags);
-  } else if (s.note) {
-    card.appendChild(el('p', 'item-note', s.note));
   }
 
   // Options in the order they are printed on paper, lettered to match.
@@ -948,7 +1035,7 @@ function itemCard(s) {
   });
   card.appendChild(bars);
 
-  card.addEventListener('click', () => openQuestion(ctx(), s.index));
+  card.addEventListener('click', () => openQuestion(ctx(), s.index, order));
   return card;
 }
 
@@ -1297,8 +1384,12 @@ function renderPredictionResult() {
 function renderMethod() {
   $('#formula').textContent =
     'logit P(holds m | answers) = logit P(m) + Σ log [ P(answer | m) / P(answer | not m) ]';
+  const ability = state.inf.ability || [];
+  const avg = ability.length ? ability.reduce((a, b) => a + b, 0) / ability.length : PARAMS.baseCorrect;
   $('#params').textContent =
-    `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · correct without it ${PARAMS.baseCorrect} · reported above ${PARAMS.decisionThreshold}`;
+    `starting assumption ${PARAMS.prior} · fires on a probing question ${PARAMS.express} · ` +
+    `correct without it: estimated per student (${Math.round(avg * 100)}% on average here) · ` +
+    `reported above ${PARAMS.decisionThreshold}, on at least ${MIN_TELLING} answers that point to it`;
 }
 
 /* ======================================================================== */
@@ -1624,7 +1715,7 @@ function wireMaterials() {
 
 function exportPlan() {
   download(`${state.pack.id}-reteach-plan.csv`,
-    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack)));
+    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack), state.dx));
 }
 
 /** Print with everything unfolded, since paper has no way to open a section. */
@@ -1705,6 +1796,7 @@ async function rewriteGroups() {
 /* ======================================================================== */
 
 function showView(name) {
+  const was = $('.view.is-active')?.id;
   $$('.tab').forEach(t => {
     const on = t.dataset.view === name;
     t.classList.toggle('is-active', on);
@@ -1712,6 +1804,7 @@ function showView(name) {
     t.tabIndex = on ? 0 : -1;
   });
   $$('.view').forEach(v => v.classList.toggle('is-active', v.id === `view-${name}`));
+  if (was !== `view-${name}`) replay($(`#view-${name}`));
   showActiveTab();
 
   // Rows are absolutely positioned, so they need re-laying out whenever the

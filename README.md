@@ -170,6 +170,19 @@ students who picked it**.
   identify a stable pattern.
 - Students who left too much blank are separated out too, because no evidence is
   not the same as good news.
+- Of the students with no clear pattern, those still **getting most questions
+  wrong** are named separately: scattered errors that frequent point to a gap or
+  guessing, which needs practice and a check-in rather than a reteach.
+- An estimate needs **two answers pointing to it** to be reported. One resting on
+  a single answer is shown as **worth one more question**, with the question to
+  ask.
+- Each reteach group says how many of its members hold its main pattern, and
+  **who else to bring in**: students in other groups who show it too.
+- The student or question panel **steps through** the list it was opened from
+  (‹ ›, or the left and right arrow keys).
+- The question audit can say **check the key**: the strongest students favour one
+  wrong answer, and nothing else on the paper suggests they hold the
+  misunderstanding it was written for.
 
 ## The idea
 
@@ -224,9 +237,30 @@ logit P(holds m | responses) = logit P(m) + Σᵢ log [ P(rᵢ | m) / P(rᵢ | �
 ```
 
 Naive Bayes over item responses — "naive" for the conditional-independence
-assumption that also makes Bayesian knowledge tracing tractable. The likelihood
-parameters are exported and shown in the UI rather than buried, because they are
-assumptions rather than facts.
+assumption that also makes Bayesian knowledge tracing tractable. Each term is
+the likelihood ratio of a mixture: a held misconception either **fires** and
+sends the student to its distractor, or it does not and they answer like anyone
+else. Three refinements make it hold up on a real class, each kept only because
+the stress benchmark (below) showed it helped:
+
+- **Explaining away.** A question can probe two or three misconceptions that
+  travel together, and a student who holds them all can only show one. Each
+  question's evidence is averaged over whether the other misconceptions it
+  probes are held (exact, a handful of combinations), solved in passes.
+- **Each student's own accuracy.** A student who gets half of everything wrong
+  lands on a given distractor by chance often enough that it proves little, so
+  accuracy where no misconception fires is estimated per student, shrunk toward
+  the class.
+- **Tempting options.** Where each question's slips land is estimated from the
+  class, so a wrong answer that tempts everyone is not read as a misconception.
+
+Both estimates need five students; below that the fixed parameters stand. An
+estimate is reported above 0.6 **and on at least two answers that point to it**:
+on the benchmark, one resting on a single answer was right 42% of the time, on
+two 79%, on three or more 97%. Fitting the fire rate and each misconception's
+prevalence to the class was tried and left out: it lowered F1 and group
+recovery. The likelihood parameters are exported and shown in the UI rather
+than buried, because they are assumptions rather than facts.
 
 **3 · Class structure** *(no LLM — `js/cluster.js`)*
 Each student becomes a point in misconception space. Two design
@@ -266,10 +300,13 @@ elsewhere, so it can correlate weakly, even negatively, with total score while
 being the most informative question on the page.
 
 Before flagging an item, the tool checks whether it **agrees with the rest of the
-test**: of the students who chose its main mapped distractor, how many also show
-that pattern in their responses to other items? The item's own contribution is
-subtracted from the estimate for this comparison. Agreement is useful evidence
-for review, not independent proof that the item is valid.
+test**: do the students who chose an answer mapped to its main pattern show that
+pattern in their responses to other items *clearly more often than the rest of
+the class does*? (Lift of at least 0.15 and a one-sided z of at least 1.64; on
+the benchmark the lift averages 0.34–0.50 on sound questions and about 0 on flat
+or miskeyed ones.) The item's own contribution is subtracted from the estimate
+for this comparison. Agreement is useful evidence for review, not independent
+proof that the item is valid.
 
 Low agreement plus low discrimination can flag an item for review. Low
 discrimination with high agreement may point to a diagnostic item worth keeping,
@@ -281,6 +318,13 @@ are unusually below chance are called out separately from results that are
 simply inconclusive. Discrimination is left unavailable when too few students
 answered or their scores on the other questions do not vary enough to calculate
 a meaningful correlation.
+
+Discrimination is a correlation over a few dozen students, so it is called low
+or backward only when the top of its 80% interval is low too; otherwise the
+question is **too early to tell**, not flagged. "Often skipped" means skipped
+clearly more than the rest of the paper (or by half the class). And **check the
+key** fires when the strongest third favour one wrong option over the key and
+its choosers show no sign of its pattern elsewhere.
 
 Similarly, Cronbach's alpha may be low here. Alpha assumes a single underlying
 trait, while this instrument targets several distinct misconceptions. A low
@@ -302,22 +346,49 @@ whatever seed is loaded:
 
 | Metric (mean over 40 seeds) | Algebra 1 | Evolution & Inheritance |
 | --- | --- | --- |
-| Diagnosis precision | 91.3% | 96.3% |
-| Diagnosis recall | 82.7% | 69.3% |
-| Diagnosis F1 | **0.867** | **0.804** |
-| Group recovery (Adjusted Rand Index) | **0.674** | **0.535** |
-| Correct number of groups recovered | 36/40 | 30/40 |
+| Diagnosis precision | 92.5% | 94.5% |
+| Diagnosis recall | 83.2% | 88.0% |
+| Diagnosis F1 | **0.875** | **0.910** |
+| Group recovery (Adjusted Rand Index) | **0.691** | **0.649** |
+| Correct number of groups recovered | 36/40 | 36/40 |
 
-Two deliberately weak questions are planted in the item bank — one trivial,
-one ambiguously worded — and marked nowhere in the analysis data. The item
-analysis flags the trivial one in 39/40 seeds and the ambiguous one in 36/40.
-These results describe the simulation, not how reliably real classroom items
-will be flagged.
+Deliberately weak questions are planted in the item bank — one trivial, one
+ambiguously worded — and marked nowhere in the analysis data. The item analysis
+flags Algebra's trivial one in 39/40 seeds, its ambiguous one in 37/40, and
+Biology's in 40/40. These results describe the simulation, not how reliably real
+classroom items will be flagged.
+
+### Stress test: classes that break the model's assumptions
+
+The table above is measured on classes generated exactly the way the model
+assumes, which flatters it. `test/benchmark.mjs` runs both packs over ten kinds
+of class that each break one assumption: distractors that fire less (55%) or
+more (92%) reliably, wrong options that tempt everyone, a weaker or stronger
+class, rarer misconceptions, 15% blanks, and classes of 14 and 90. It also
+plants a flat question and a miskeyed one next to the built-in weak questions.
+Averaged over every scenario, 40 seeds each:
+
+| | Before (main, 3 Nov afternoon) | Now |
+| --- | --- | --- |
+| Diagnosis F1 | 0.799 | **0.868** |
+| False diagnoses per student, weakest quarter of the class | 0.42 | **0.34** |
+| … in a weaker class (Algebra) | 1.31 | **0.40** |
+| … with tempting options (Algebra) | 1.55 | **0.90** |
+| Calibration error (when it says 80%, is it right 80%?) | 0.048 | **0.020** |
+| Group recovery (ARI) | 0.588 | **0.650** |
+| Sound questions flagged for review, per class | 4.03 | **1.30** |
+| Miskeyed questions named as such | never | **40–93%** |
+
+Where it costs something: flat questions (strong and weak students alike) are
+flagged less often in small classes, about half the time at 28 students, with
+another tenth marked too early to tell; and precision is a point lower on
+Biology's default class (96.7% → 94.5%) as recall rose from 66.6% to 88.0%.
 
 Reproduce:
 
 ```bash
 npm test
+node test/benchmark.mjs
 ```
 
 ## Where the language model fits
@@ -353,9 +424,9 @@ js/packs/algebra1.js   12 misconceptions, 36 items
 js/packs/biology.js     8 misconceptions, 24 items
 js/generate.js         model-authored packs for any subject, with a repair loop
 js/simulate.js         generative class model + planted ground truth
-js/infer.js            naive Bayes misconception inference
+js/infer.js            misconception inference, evidence levels
 js/cluster.js          cosine k-means, silhouette, adjusted Rand index
-js/itemstats.js        item analysis + leave-one-out model agreement
+js/itemstats.js        item analysis, leave-one-out agreement, key check
 js/validate.js         recovery scoring against planted truth
 js/drawer.js           per-student evidence trail, per-question breakdown
 js/importer.js         CSV/TSV import, printable quiz, answer sheet, plan export
@@ -372,6 +443,7 @@ og.png                 link-preview card
 test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
                        on blanks, spreadsheets, saved classes, retests and the
                        model layer
+test/benchmark.mjs     stress scenarios, planted flat and miskeyed questions
 ```
 
 ## Honest limitations
@@ -379,7 +451,8 @@ test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
 - The class is **simulated**, not real. That provides known profiles for testing,
   but limits external validity: recovery figures describe the pipeline's
   consistency with the simulation's assumptions, not
-  its accuracy on a real classroom.
+  its accuracy on a real classroom. The stress benchmark varies those
+  assumptions, but its scenarios are still a model of how students err.
 - Built-in item banks are hand-authored and cover two topics. A generated pack
   is only as good as the model that wrote it: the contract checks it is
   *structurally* sound (every misconception probed enough times, each wrong
@@ -387,12 +460,11 @@ test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
   distractor really is what that misconception produces. Treat a generated
   instrument as a first draft for a teacher to review, not a finished
   assessment.
-- At 28 students, per-item statistics are noisy. Several items pick up marginal
-  low-discrimination flags that are sample noise, which is why findings are
-  ranked by severity and the marginal ones are collapsed. Below 28 the bars widen
-  with the noise, which took a class of 12 from about 10 flags to about 7 on
-  Algebra, at a cost of 4 points of planted-defect detection, and the page says
-  the figures are rough under 20 students.
+- At 28 students, per-item statistics are noisy. Low discrimination is reported
+  only when its interval is low throughout, and otherwise as too early to tell,
+  which brought sound questions flagged per class from about 4 to about 1.3 on
+  the stress benchmark, at the cost of catching flat questions less often in
+  small classes. The page says the figures are rough under 20 students.
 - Unanswered questions carry no evidence either way, rather than counting as
   wrong. A student who skipped most of the paper may have too little evidence
   for a useful estimate; that is not the same as a clean result. Students in the

@@ -42,11 +42,20 @@ const FIRST = ['Amara','Ben','Chen','Dara','Eli','Farah','Gus','Hana','Ivan','Jo
 const LAST = ['A.','B.','C.','D.','E.','F.','G.','H.','I.','J.','K.','L.','M.','N.','O.','P.',
   'Q.','R.','S.','T.','U.','V.','W.','X.','Y.','Z.','Aa.','Bb.','Cc.','Dd.','Ee.','Ff.'];
 
-/** One student's answers, generated from their hidden profile. */
-function answerSheet(items, held, ability, rng) {
+/**
+ * One student's answers, generated from their hidden profile.
+ *
+ * `model` holds the stress knobs (see generateClass); `rng2` is a second
+ * stream they draw from, so that with every knob at its default the main
+ * stream, and so the class, is exactly what it always was.
+ */
+function answerSheet(items, held, ability, rng, model = {}, rng2 = rng) {
+  const { express = P_EXPRESS, slip = P_SLIP, pull = 0, omit = 0 } = model;
   const row = [];
   items.forEach(item => {
     const ci = correctIndex(item);
+
+    if (omit > 0 && rng2() < omit) { row.push(-1); rng(); rng(); return; }
 
     if (item._weak === 'trivial') {
       // Everyone can do it, so it separates nobody.
@@ -60,21 +69,44 @@ function answerSheet(items, held, ability, rng) {
       row.push(Math.floor(rng() * item.opts.length));
       return;
     }
+    if (item._weak === 'miskeyed') {
+      // The key on file is wrong: students who know the material choose the
+      // option that is actually right (`_truth`), which the key marks wrong.
+      const pRight = sigmoid(1.15 * ability + 1.85) * (1 - slip);
+      const others = item.opts.map((_, oi) => oi).filter(oi => oi !== item._truth);
+      row.push(rng() < pRight ? item._truth : others[Math.floor(rng() * others.length)]);
+      return;
+    }
+    if (item._weak === 'flat') {
+      // Answerable from a cue in the wording, or not at all: strong and weak
+      // students get it right equally often.
+      const wrong = item.opts.map((_, oi) => oi).filter(oi => oi !== ci);
+      row.push(rng() < 0.6 ? ci : wrong[Math.floor(rng() * wrong.length)]);
+      return;
+    }
 
     const firing = [];
     item.opts.forEach((o, oi) => { if (o.mis && held.has(o.mis)) firing.push(oi); });
 
-    if (firing.length && rng() < P_EXPRESS) {
+    if (firing.length && rng() < express) {
       row.push(firing[Math.floor(rng() * firing.length)]);
       return;
     }
 
-    const pCorrect = sigmoid(1.15 * ability + 1.85) * (1 - P_SLIP);
+    const pCorrect = sigmoid(1.15 * ability + 1.85) * (1 - slip);
     if (rng() < pCorrect) {
       row.push(ci);
     } else {
       const wrong = item.opts.map((_, oi) => oi).filter(oi => oi !== ci);
-      row.push(wrong[Math.floor(rng() * wrong.length)]);
+      // A tempting wrong option draws careless errors too, whether or not
+      // the student holds the belief it was written for.
+      const tempting = wrong.filter(oi => item.opts[oi].mis);
+      if (pull > 0 && tempting.length && rng2() < pull) {
+        row.push(tempting[Math.floor(rng2() * tempting.length)]);
+        rng();
+      } else {
+        row.push(wrong[Math.floor(rng() * wrong.length)]);
+      }
     }
   });
   return row;
@@ -82,12 +114,22 @@ function answerSheet(items, held, ability, rng) {
 
 /**
  * Generate a class for a pack.
+ *
+ * `model` overrides the response model, for stress-testing the analysis on a
+ * class that does not behave the way the analysis assumes: distractors that
+ * fire less reliably (`express`), wrong options that tempt students who hold
+ * nothing (`pull`), a weaker or stronger class (`abilityShift`), rarer or
+ * commoner beliefs (`holdCore`, `leak`), blanks (`omit`). Left empty, the
+ * class is exactly the default one for its seed.
+ *
  * @returns {{students, responses, truth, pack, meta}}
  *   responses[s][i] = index of the option student s chose on item i.
  *   truth[s] = { held: Set<string>, archetype: string, ability: number }
  */
-export function generateClass(pack, { seed = 7, size = 28 } = {}) {
+export function generateClass(pack, { seed = 7, size = 28, model = {} } = {}) {
+  const { holdCore = P_HOLD_CORE, leak = P_LEAK, abilityShift = 0 } = model;
   const rng = makeRng(seed);
+  const rng2 = makeRng(seed * 7919 + 13);
   const all = misIds(pack);
   const archetypes = archetypesFor(pack);
   const items = pack.items;
@@ -114,17 +156,17 @@ export function generateClass(pack, { seed = 7, size = 28 } = {}) {
 
   for (let s = 0; s < size; s++) {
     const arch = archetypes.find(a => a.id === assignment[s]) || archetypes[archetypes.length - 1];
-    const ability = normal(rng, 0, 1);
+    const ability = normal(rng, 0, 1) + abilityShift;
 
     // --- plant the latent profile ------------------------------------------
     const core = arch.core || [];
     const held = new Set();
-    core.forEach(m => { if (rng() < P_HOLD_CORE) held.add(m); });
+    core.forEach(m => { if (rng() < holdCore) held.add(m); });
     all.forEach(m => {
-      if (!core.includes(m) && rng() < P_LEAK) held.add(m);
+      if (!core.includes(m) && rng() < leak) held.add(m);
     });
 
-    const row = answerSheet(items, held, ability, rng);
+    const row = answerSheet(items, held, ability, rng, model, rng2);
 
     students.push({
       id: `S${String(s + 1).padStart(2, '0')}`,

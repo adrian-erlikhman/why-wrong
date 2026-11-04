@@ -427,6 +427,7 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 }
 .sum-v.ok { color: var(--accent); }
 .sum-v.warn { color: var(--warn); }
+.sum-sub { font-size: 14px; font-weight: 600; color: var(--warn); margin-top: 4px; }
 .sum-k {
   font-size: 15px;
   line-height: 1.3;
@@ -489,6 +490,8 @@ body.has-import .import-only { display: inline-flex; }
 
 .view { display: none; }
 .view.is-active { display: block; }
+.view.entering, .summary.entering { animation: view-in .24s var(--ease-out, ease-out); }
+@keyframes view-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .view-head {
   display: flex;
@@ -808,6 +811,11 @@ html.key-above .legend { padding-bottom: 20px; }
 .group-more-p { font-family: var(--mono); font-size: 14px; font-weight: 400; color: var(--muted); }
 
 .lab.accent { color: var(--accent); }
+.lab.warn { color: var(--warn); }
+.lab-n { font-weight: 500; color: var(--muted); }
+.roster-note { margin: 0 0 6px; }
+.sub-group + .sub-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.sub-group .plan { margin-bottom: 10px; }
 
 .plan { font-size: 16px; color: var(--ink); margin-bottom: 20px; }
 
@@ -878,10 +886,10 @@ html.key-above .legend { padding-bottom: 20px; }
   background: var(--ic, var(--line-hi));
 }
 .item:hover { border-color: var(--line-hi); box-shadow: var(--shadow-2); }
-.item.broken { --ic: var(--bad); }
+.item.broken, .item.key { --ic: var(--bad); }
 .item.weak { --ic: var(--warn); }
 .item.diagnostic { --ic: var(--good); }
-.item.minor { --ic: var(--muted); }
+.item.minor, .item.watch { --ic: var(--muted); }
 .item.strong, .item.ok { --ic: var(--line-hi); }
 
 .item-top {
@@ -905,7 +913,7 @@ html.key-above .legend { padding-bottom: 20px; }
   color: var(--ink-2);
   border: 1px solid var(--line);
 }
-.v-broken { background: var(--bad-tint); color: var(--bad); border-color: var(--bad-line); }
+.v-broken, .v-key { background: var(--bad-tint); color: var(--bad); border-color: var(--bad-line); }
 .v-weak { background: var(--warn-tint); color: var(--warn); border-color: var(--warn-line); }
 .v-diagnostic, .v-strong { background: var(--good-tint); color: var(--good); border-color: var(--good-line); }
 
@@ -1037,6 +1045,8 @@ html.key-above .legend { padding-bottom: 20px; }
 .chip-more, .chip-clear { color: var(--muted); cursor: default; }
 .chip-clear { background: var(--good-tint); border-color: var(--good-line); color: var(--good); font-weight: 600; }
 .chip-thin { background: var(--warn-tint); border-color: var(--warn-line); color: var(--warn); font-weight: 600; cursor: default; }
+/* One answer points here: a question to ask, not a diagnosis. */
+.chip-check { border-style: dashed; border-color: var(--warn-line); background: var(--warn-tint); color: var(--warn); cursor: default; }
 
 /* ------------------------------ validation ----------------------------- */
 
@@ -1448,6 +1458,21 @@ html.key-above .legend { padding-bottom: 20px; }
 }
 .drawer-x:hover { background: var(--bg-2); color: var(--ink); }
 
+/* Step through the list the panel was opened from. */
+.drawer-step { display: flex; align-items: center; gap: 4px; margin-right: auto; }
+.drawer-nav {
+  font: inherit; font-size: 20px; line-height: 1;
+  width: 34px; height: 34px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-2);
+  cursor: pointer; transition: background .12s, color .12s, opacity .12s;
+}
+.drawer-nav:hover:not(:disabled) { background: var(--bg-2); color: var(--ink); }
+.drawer-nav:disabled { opacity: .35; cursor: default; }
+.drawer-pos { font-size: 14px; color: var(--muted); min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; }
+.drawer-pos:focus { outline: none; }
+.dr-step { animation: dr-step .18s var(--ease-out, ease-out); }
+@keyframes dr-step { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
 .dr { padding: 4px 32px 44px; }
 .dr-kicker {
   font-size: 15px;
@@ -1515,6 +1540,8 @@ html.key-above .legend { padding-bottom: 20px; }
 .ev-row.for .ev-w { color: var(--bad); }
 .ev-row.against .ev-w { color: var(--good); }
 .ev-row.blank .ev-w, .ev-row.blank .ev-what { color: var(--muted); }
+.ev-ask { font-size: 15px; color: var(--ink-2); margin-top: 10px; padding: 10px 12px; border-radius: var(--r-s); background: var(--warn-tint); border: 1px dashed var(--warn-line); }
+.ev-ask b { color: var(--warn); font-weight: 700; }
 .ev-sum { font-size: 14.5px; color: var(--muted); margin-top: 10px; }
 
 .dr-more { margin-top: 8px; }
@@ -1524,10 +1551,10 @@ html.key-above .legend { padding-bottom: 20px; }
 .dr-verdict { border-radius: 12px; padding: 15px 18px; margin-bottom: 20px; background: var(--bg-2); border: 1px solid var(--line); }
 .dr-verdict-t { font-family: var(--display); font-size: 17px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.01em; }
 .dr-verdict-b { font-size: 15px; color: var(--ink-2); }
-.dr-verdict.v-broken { background: var(--bad-tint); border-color: var(--bad-line); }
+.dr-verdict.v-broken, .dr-verdict.v-key { background: var(--bad-tint); border-color: var(--bad-line); }
 .dr-verdict.v-weak { background: var(--warn-tint); border-color: var(--warn-line); }
 .dr-verdict.v-diagnostic, .dr-verdict.v-strong { background: var(--good-tint); border-color: var(--good-line); }
-.dr-verdict.v-broken .dr-verdict-t { color: var(--bad); }
+.dr-verdict.v-broken .dr-verdict-t, .dr-verdict.v-key .dr-verdict-t { color: var(--bad); }
 .dr-verdict.v-weak .dr-verdict-t { color: var(--warn); }
 .dr-verdict.v-diagnostic .dr-verdict-t, .dr-verdict.v-strong .dr-verdict-t { color: var(--good); }
 
@@ -1632,7 +1659,8 @@ html.key-above .legend { padding-bottom: 20px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .m-row, .band, .band-tag, .m-name { transition: none !important; animation: none !important; }
+  .m-row, .band, .band-tag, .m-name, .dr-step, .view.entering, .summary.entering,
+  .drawer-panel, .drawer-scrim { transition: none !important; animation: none !important; }
 }
 
 /* --------------------------------- print -------------------------------- */

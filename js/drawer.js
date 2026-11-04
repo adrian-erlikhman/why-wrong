@@ -4,7 +4,9 @@
  */
 
 import { correctIndex, misById } from './pack.js';
-import { PARAMS, isTested, untested } from './infer.js';
+import { untested, strength } from './infer.js';
+import { SUPPORT_BELOW } from './cluster.js';
+import { shownFlags } from './itemstats.js';
 import { infoButton } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
@@ -20,6 +22,7 @@ const el = (tag, cls, text) => {
 let host = null;
 let onCloseCb = null;
 let openedFrom = null;
+let nav = null;          // { order, at, noun, open(k) } for stepping through a list
 
 function ensureHost() {
   if (host) return host;
@@ -30,40 +33,81 @@ function ensureHost() {
   host.querySelector('.drawer-scrim').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', e => {
     if (host.hidden) return;
-    if (e.key === 'Escape') closeDrawer();
-    else trapTab(host.querySelector('.drawer-panel'), e);
+    if (e.key === 'Escape') { closeDrawer(); return; }
+    // Left and right step through the list the panel was opened from, unless
+    // the teacher is in a field or on a control that uses the arrows itself.
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+    if (!typing && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      e.preventDefault();
+      step(e.key === 'ArrowRight' ? 1 : -1, false);
+      return;
+    }
+    trapTab(host.querySelector('.drawer-panel'), e);
   });
   return host;
+}
+
+function step(d, fromButton) {
+  if (!nav) return;
+  const k = nav.at + d;
+  if (k < 0 || k >= nav.order.length) return;
+  nav.open(k);
+  // Keep focus on the control that did it, so the same key or button steps again.
+  const again = host.querySelector(fromButton ? (d > 0 ? '.drawer-next' : '.drawer-prev') : '.drawer-pos');
+  (again && !again.disabled ? again : host.querySelector('.drawer-x'))?.focus();
 }
 
 export function closeDrawer() {
   if (!host || host.hidden) return;
   host.classList.remove('is-open');
   setTimeout(() => { host.hidden = true; }, 200);
+  nav = null;
   openedFrom?.focus?.();
   openedFrom = null;
   if (onCloseCb) { const cb = onCloseCb; onCloseCb = null; cb(); }
 }
 
-function openWith(node, onClose, label) {
+function openWith(node, onClose, label, navigation = null) {
   ensureHost();
-  openedFrom = document.activeElement;
+  // Already open: this is a step to the next student or question, so the panel
+  // stays put, only its content changes, and focus still returns to whatever
+  // opened it in the first place.
+  const stepping = !host.hidden;
+  if (!stepping) openedFrom = document.activeElement;
   onCloseCb = onClose || null;
+  nav = navigation;
   const panel = host.querySelector('.drawer-panel');
   panel.setAttribute('aria-label', label);
   panel.innerHTML = '';
 
   const bar = el('div', 'drawer-bar');
+  if (nav && nav.order.length > 1) {
+    const box = el('div', 'drawer-step');
+    const prev = el('button', 'drawer-nav drawer-prev', '‹');
+    prev.setAttribute('aria-label', `Previous ${nav.noun}`);
+    prev.disabled = nav.at <= 0;
+    prev.addEventListener('click', () => step(-1, true));
+    const next = el('button', 'drawer-nav drawer-next', '›');
+    next.setAttribute('aria-label', `Next ${nav.noun}`);
+    next.disabled = nav.at >= nav.order.length - 1;
+    next.addEventListener('click', () => step(1, true));
+    const pos = el('span', 'drawer-pos', `${nav.at + 1} of ${nav.order.length}`);
+    pos.tabIndex = -1;
+    pos.title = 'The left and right arrow keys step through them too';
+    box.append(prev, pos, next);
+    bar.appendChild(box);
+  }
   const x = el('button', 'drawer-x', '×');
   x.setAttribute('aria-label', 'Close');
   x.addEventListener('click', closeDrawer);
   bar.appendChild(x);
   panel.appendChild(bar);
+  if (stepping) node.classList.add('dr-step');
   panel.appendChild(node);
 
   host.hidden = false;
   panel.scrollTop = 0;
-  x.focus();
+  if (!stepping) x.focus();
   setTimeout(() => host.classList.add('is-open'), 10);
 }
 
@@ -71,7 +115,12 @@ function openWith(node, onClose, label) {
 /*  Student                                                                 */
 /* ======================================================================== */
 
-export function openStudent(ctx, s) {
+/**
+ * `order` is the list the student was picked from (a group, the filtered
+ * student list, the map's rows), so the panel can step through it; without
+ * one it steps through the register.
+ */
+export function openStudent(ctx, s, order = null) {
   const { pack, cls, inf, groups, cov, colourOf } = ctx;
   const byId = misById(pack);
   const student = cls.students[s];
@@ -95,18 +144,18 @@ export function openStudent(ctx, s) {
   }
   facts.appendChild(fact(
     !group || group.isThin || group.isSecure ? '—' : `Group ${groups.indexOf(group) + 1}`,
-    group?.isThin ? 'too few answers' : group?.isSecure ? 'no clear pattern' : 'reteach group'
+    group?.isThin ? 'too few answers' : group?.isSecure ? (group.support?.includes(s) ? 'getting most wrong' : 'no clear pattern') : 'reteach group'
   ));
   wrap.appendChild(facts);
 
   // --- ranked diagnoses ----------------------------------------------------
   const ranked = inf.misIds
-    .map((mid, k) => ({ mid, p: inf.posterior[s][k], k }))
+    .map((mid, k) => ({ mid, k, ...strength(inf, s, k) }))
     .sort((a, b) => b.p - a.p);
 
-  const tested = ranked.filter(r => isTested(inf, s, r.k));
-  const acted = tested.filter(r => r.p >= PARAMS.decisionThreshold);
-  const rest = tested.filter(r => r.p < PARAMS.decisionThreshold && r.p >= 0.12);
+  const acted = ranked.filter(r => r.level === 'clear' || r.level === 'likely');
+  const check = ranked.filter(r => r.level === 'check');
+  const rest = ranked.filter(r => r.level === 'none' && r.p >= 0.12);
 
   const h = el('div', 'dr-h');
   h.appendChild(el('span', null, acted.length
@@ -119,9 +168,12 @@ export function openStudent(ctx, s) {
     wrap.appendChild(el('p', 'dr-note dr-warn',
       `This student answered ${answered} of ${total} questions. Blank answers add no evidence, so other misunderstandings may not be visible in this result.`));
   } else if (!acted.length) {
+    const right = inf.ability?.[s];
     wrap.appendChild(el('p', 'dr-note', score === answered
       ? 'All recorded answers were correct; this test has not indicated a reteach need.'
-      : 'The wrong answers did not form a clear pattern on this test. Review the student’s work or check in with them before deciding what support would help.'));
+      : right != null && right < SUPPORT_BELOW
+        ? `The wrong answers did not form a clear pattern, but this student was right on only about ${Math.round(right * 100)}% of the questions their errors do not explain. That points to a gap or guessing rather than one misunderstanding: work through a few problems with them and see where it breaks down.`
+        : 'The wrong answers did not form a clear pattern on this test. Review the student’s work or check in with them before deciding what support would help.'));
   }
 
   // A misunderstanding with its questions left blank has not been ruled out, even
@@ -133,6 +185,13 @@ export function openStudent(ctx, s) {
   }
 
   acted.forEach(r => wrap.appendChild(diagnosisCard(ctx, s, r, byId, colourOf, true)));
+
+  // Over the line on a single answer: right less than half the time, so it is
+  // offered as a question to ask rather than as a diagnosis.
+  if (check.length) {
+    wrap.appendChild(el('div', 'dr-h', 'Worth one more question'));
+    check.forEach(r => wrap.appendChild(diagnosisCard(ctx, s, r, byId, colourOf, false)));
+  }
 
   if (rest.length) {
     const more = el('details', 'dr-more');
@@ -154,7 +213,9 @@ export function openStudent(ctx, s) {
     }
   }
 
-  openWith(wrap, ctx.onClose, `Student: ${student.name}`);
+  const list = order && order.includes(s) ? order : cls.students.map((_, k) => k);
+  openWith(wrap, ctx.onClose, `Student: ${student.name}`,
+    { order: list, at: list.indexOf(s), noun: 'student', open: k => openStudent(ctx, list[k], list) });
 }
 
 function fact(v, k) {
@@ -212,6 +273,14 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   list.appendChild(el('p', 'ev-sum',
     `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} supported this estimate${blank ? `; ${blank} ${blank === 1 ? 'was' : 'were'} left blank` : ''}.`));
 
+  // Resting on one answer: name the question that would settle it.
+  if (r.level === 'check' && m?.verify?.length) {
+    const ask = el('p', 'ev-ask');
+    ask.appendChild(el('b', null, 'Before acting on it, ask: '));
+    ask.appendChild(setMath(el('span'), m.verify[0]));
+    list.appendChild(ask);
+  }
+
   card.appendChild(list);
   return card;
 }
@@ -220,7 +289,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
 /*  Question                                                                */
 /* ======================================================================== */
 
-export function openQuestion(ctx, i) {
+export function openQuestion(ctx, i, order = null) {
   const { pack, stats, cls, colourOf } = ctx;
   const st = stats[i];
   const item = pack.items[i];
@@ -237,7 +306,9 @@ export function openQuestion(ctx, i) {
     minor: ['Minor issue', 'One option was rarely chosen and may not be adding much information.'],
     weak: ['Worth reviewing', 'Responses suggest this question may need revision.'],
     broken: ['Unexpected pattern', 'Students with higher scores on the rest of the paper were less likely to answer this correctly. Review the wording, options, and answer key.'],
-    insufficient: ['Too little evidence', 'There is not enough response or score variation to estimate how this question relates to performance on the rest of the paper.']
+    insufficient: ['Too little evidence', 'There is not enough response or score variation to estimate how this question relates to performance on the rest of the paper.'],
+    watch: ['Too early to tell', 'Strong and weak students answered this about alike, but with this many students that could be chance. Nothing to rewrite yet; look again after the next class takes it.'],
+    key: ['Check the key', 'Your strongest students mostly chose an answer the key marks wrong, and nothing else on the paper suggests they hold the belief it was written for. The key may be wrong.']
   }[st.quality] || ['—', ''];
 
   const v = el('div', `dr-verdict v-${st.quality}`);
@@ -262,10 +333,11 @@ export function openQuestion(ctx, i) {
     wrap.appendChild(n);
   }
 
-  if (st.flags.length) {
-    wrap.appendChild(el('div', 'dr-h', 'Flags'));
+  const flagsShown = shownFlags(st);
+  if (flagsShown.length) {
+    wrap.appendChild(el('div', 'dr-h', st.quality === 'diagnostic' ? 'Why it looks weak' : 'Flags'));
     const ul = el('ul', 'flags');
-    st.flags.forEach(f => ul.appendChild(el('li', null, f.text)));
+    flagsShown.forEach(f => ul.appendChild(setMath(el('li'), f.text)));
     wrap.appendChild(ul);
   }
 
@@ -314,5 +386,7 @@ export function openQuestion(ctx, i) {
     wrap.appendChild(row);
   });
 
-  openWith(wrap, ctx.onClose, `Question ${item.id}`);
+  const list = order && order.includes(i) ? order : pack.items.map((_, k) => k);
+  openWith(wrap, ctx.onClose, `Question ${item.id}`,
+    { order: list, at: list.indexOf(i), noun: 'question', open: k => openQuestion(ctx, list[k], list) });
 }
