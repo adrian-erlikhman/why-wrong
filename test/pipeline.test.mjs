@@ -528,6 +528,10 @@ for (const pack of BUILT_IN) {
   const nowHeld = top.students.filter(s => namedDx[s].has('T1')).length;
   check('…and the students who showed it are now diagnosed with it', nowHeld >= 0.8 * top.students.length,
     `${nowHeld} of ${top.students.length}`);
+  const saved = readClassFile(classFile({ pack: named, students: c.students, responses: c.responses, builtIn: false }), () => null);
+  check('a class saved after naming a pattern reopens with the label in its test',
+    saved.ok && saved.embedded && saved.pack.misconceptions.some(m => m.id === 'T1' && m.tracked) &&
+    top.options.every(o => saved.pack.items[o.i].opts[o.oi].mis === 'T1'), saved.errors?.[0]);
   const second = labelPattern(named, top, 'Another name');
   check('a second label is T2 and a teacher\'s own test keeps its id',
     second.id === 'T2' && second.pack.id === named.id);
