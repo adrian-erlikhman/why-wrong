@@ -46,7 +46,13 @@ The loop closes in both directions, on paper.
    read as unanswered rather than wrong. Letters and numbers mean what is printed on
    the paper: each question's options are shuffled, seeded by its id, so the
    key is not "A" every time and the printout, the answer key and the paste-back
-   always agree.
+   always agree. Answers retyped by Forms, Docs or Word still match: minus signs
+   and dashes, curly quotes, x² for x^2 and √ for sqrt are folded before
+   comparing.
+   **Gave only part of the test?** Name those questions in the top row (by id or
+   by their text) and the class is read against a copy cut down to them: the
+   same ids and letters, only the misunderstandings those questions test, and
+   nothing counted as blank that was never asked.
 5. Review groups based on similar response patterns, suggested plans, and an
    audit of your questions.
    **Print plan** puts the groups on paper; **Export CSV** puts them in a
@@ -63,6 +69,11 @@ not a grade. Each misunderstanding has a `student` line
 written for this, so a slip says "you may be adding the tops and the bottoms"
 rather than "adds fractions componentwise". Pick a group or search a name first,
 and it prints only those slips.
+
+**Students → Print follow-up questions** puts every open call on one page for
+the teacher: each belief worth one more question and each student who sits
+between two groups, with the check question that settles it and room for the
+answer.
 
 ### Keeping a class
 
