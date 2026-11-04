@@ -742,6 +742,15 @@ for (const pack of BUILT_IN) {
   const wrong = parseResponses(BUILT_IN[0], plain, BUILT_IN);
   check('answers for another test name that test', !wrong.ok && wrong.errors[0].includes(pack.name));
 
+  const duplicateIds = ids.slice();
+  duplicateIds[1] = duplicateIds[0];
+  const duplicateQuestion = parseResponses(pack, [
+    ['Student', ...duplicateIds].join(','),
+    ...letters.map((row, s) => [q(c.students[s].name), ...row].join(','))
+  ].join('\n'));
+  check('duplicate question columns are refused instead of choosing one silently',
+    !duplicateQuestion.ok && duplicateQuestion.errors.some(e => /repeats question/i.test(e)));
+
   const both = parseResponses(pack, [['Email Address', 'Name', ...ids].join(','),
     ...letters.map((row, s) => [`kid.${s}@students.example.org`, `Kid ${s}`, ...row].join(','))].join('\n'));
   check('a name column beats an email column', both.ok && both.students[3].name === 'Kid 3');

@@ -493,11 +493,23 @@ export function parseResponses(pack, text, otherPacks = []) {
   const idIndex = {};
   let byText = 0;
   pack.items.forEach(it => {
-    let at = header.findIndex(h => h.trim().toLowerCase() === it.id.toLowerCase());
+    const idMatches = header
+      .map((h, i) => h.trim().toLowerCase() === it.id.toLowerCase() ? i : -1)
+      .filter(i => i >= 0);
+    if (idMatches.length > 1) {
+      errors.push(`The header repeats question ${it.id}. Keep only one column for each question.`);
+    }
+    let at = idMatches[0] ?? -1;
     if (at < 0) {
       const stem = textKey(it.stem);
-      at = header.findIndex(h => !META_COL.test(h.trim()) &&
-        (textKey(h) === stem || textKey(withoutNumber(h)) === stem));
+      const textMatches = header
+        .map((h, i) => !META_COL.test(h.trim()) &&
+          (textKey(h) === stem || textKey(withoutNumber(h)) === stem) ? i : -1)
+        .filter(i => i >= 0);
+      if (textMatches.length > 1) {
+        errors.push(`The header repeats the text for question ${it.id}. Keep only one column for each question.`);
+      }
+      at = textMatches[0] ?? -1;
       if (at >= 0) byText++;
     }
     if (at >= 0) idIndex[it.id] = at;
