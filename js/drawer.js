@@ -391,6 +391,17 @@ export function openQuestion(ctx, i, order = null) {
       row.appendChild(t);
     } else {
       row.appendChild(el('div', 'opt-tag opt-slip', 'Not linked to a misunderstanding'));
+      // Unlabelled, but picked together with other unlabelled answers by the
+      // same students (js/discover.js): name the answers it travels with.
+      const f = (ctx.found || []).find(p => p.options.some(x => x.i === i && x.oi === o.index));
+      if (f) {
+        const others = f.options.filter(x => x.i !== i).map(x => {
+          const it = pack.items[x.i];
+          return `${it.id} ${'ABCDEFGH'[paperOrder(it).indexOf(x.oi)]}`;
+        });
+        row.appendChild(el('div', 'opt-tag opt-found',
+          `Picked together with ${others.join(', ')} by ${f.count} students: a pattern the question set does not label (see Reteach groups)`));
+      }
     }
 
     // Naming the students is the point: this is what turns a statistic into

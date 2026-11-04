@@ -97,7 +97,7 @@ const state = {
 
 const ctx = () => ({
   pack: state.pack, cls: state.cls, inf: state.inf, cl: state.cl,
-  groups: state.groups, stats: state.stats, cov: state.cov, colourOf
+  groups: state.groups, stats: state.stats, cov: state.cov, colourOf, found: state.found
 });
 
 /* ======================================================================== */
