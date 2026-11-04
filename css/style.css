@@ -1734,6 +1734,8 @@ html.key-above .legend { padding-bottom: 20px; }
   .group-top { background: none; }
   .roster-names { display: block; }
   .rname { border: none; background: none; padding: 0 6px 0 0; color: #333; }
+  /* An unlabelled pattern's controls mean nothing on paper; its answers and students do. */
+  .group .btn, .track { display: none !important; }
   .chip { background: none; color: #333; }
   .view-head h2 { font-size: 16pt; margin-bottom: 6pt; }
   a[href]::after { content: ""; }
