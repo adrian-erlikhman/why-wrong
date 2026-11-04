@@ -124,8 +124,17 @@ function unit(v) {
  *            silhouette:number, scan:Array}}
  *   labels covers every student; secure students carry `secureLabel`.
  */
+/**
+ * How far below the best silhouette a smaller k may score and still be chosen.
+ * Swept on the stress benchmark (both packs, ten kinds of class, 40 seeds),
+ * the share of classes given the right number of groups was 0.79 at 0,
+ * 0.83 at 0.01, 0.875 at 0.02, 0.884 at 0.03, 0.83 at 0.05 and 0.68 at 0.07;
+ * group recovery (ARI) was flat to 0.03 and fell after it.
+ */
+export const PARSIMONY = 0.03;
+
 export function clusterStudents(posterior, {
-  kMin = 2, kMax = 6, restarts = 12, seed = 42, threshold = PARAMS.decisionThreshold
+  kMin = 2, kMax = 6, restarts = 12, seed = 42, threshold = PARAMS.decisionThreshold, margin = PARSIMONY
 } = {}) {
   if (!Array.isArray(posterior)) {
     throw new TypeError('Posterior must be an array of probability rows.');
@@ -225,7 +234,7 @@ export function clusterStudents(posterior, {
   const pool = viable.length ? viable : scan;
 
   const bestSil = Math.max(...pool.map(s => s.silhouette));
-  const chosen = pool.find(s => s.silhouette >= bestSil - 0.03) || pool[0];
+  const chosen = pool.find(s => s.silhouette >= bestSil - margin) || pool[0];
 
   chosen.run.labels.forEach((l, idx) => { labels[active[idx].i] = l; });
   const secureLabel = chosen.k;
