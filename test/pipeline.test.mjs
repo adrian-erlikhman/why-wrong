@@ -10,7 +10,7 @@
 import { BUILT_IN, addPack } from '../js/packs/index.js';
 import { validatePack, itemsProbing, misIds, MIN_PROBES, correctIndex } from '../js/pack.js';
 import { generateClass, generateRetest, totalScores } from '../js/simulate.js';
-import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, isTested, posteriorForReporting, strength, optionProbabilities, MIN_ANSWERED, MIN_TELLING, PARAMS } from '../js/infer.js';
+import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, isTested, posteriorForReporting, strength, optionProbabilities, MIN_ANSWERED, MIN_TELLING, NEAR, PARAMS } from '../js/infer.js';
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
@@ -289,6 +289,27 @@ for (const pack of BUILT_IN) {
   check('fully answered classes retain their posterior estimates for reporting, except single-answer beliefs',
     reported.every((row, s) => row.every((p, k) => p === inf.posterior[s][k] ||
       (strength(inf, s, k).level === 'check' && p < PARAMS.decisionThreshold && p < inf.posterior[s][k]))));
+
+  // Just under the line on two telling answers: an open question, not a diagnosis.
+  {
+    const near = [];
+    for (const [pk, model] of [[pack, {}], [pack, { express: 0.55 }]]) {
+      for (let seed = 1; seed <= 6 && near.length < 3; seed++) {
+        const c = generateClass(pk, { seed, size: 28, model });
+        const fi = inferMisconceptions(pk, c.responses);
+        const rp = posteriorForReporting(fi);
+        const dx = diagnose(rp, fi.misIds);
+        fi.misIds.forEach((mid, k) => c.responses.forEach((_, s) => {
+          const st = strength(fi, s, k);
+          if (st.p >= NEAR && st.p < PARAMS.decisionThreshold && st.telling >= MIN_TELLING) near.push({ st, rep: rp[s][k], held: dx[s].has(mid) });
+        }));
+      }
+    }
+    check('a belief just under the line on two telling answers is worth one more question',
+      near.length > 0 && near.every(x => x.st.level === 'check'), `${near.length} found`);
+    check('…and it changes no diagnosis and no group',
+      near.every(x => !x.held && x.rep === x.st.p && x.rep < PARAMS.decisionThreshold));
+  }
 
   const dq = scoreDiagnosis(diagnose(inf.posterior, inf.misIds), cls.truth, inf.misIds);
   console.log(`  diagnosis  precision ${(dq.precision * 100).toFixed(1)}%  recall ${(dq.recall * 100).toFixed(1)}%  F1 ${(dq.f1 * 100).toFixed(1)}%`);

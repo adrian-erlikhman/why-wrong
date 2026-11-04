@@ -409,10 +409,18 @@ export function isTested(inference, s, mIndex) {
  * the line on fewer is "check": worth one more question before acting on it.
  * Above CLEAR on two or more, 95% are right.
  *
+ * Just under the line is the same kind of open question from the other side:
+ * between NEAR and the line, on two or more telling answers, a belief is
+ * right 57% of the time (52% from 0.40, 61% from 0.50), which is more often
+ * than the single-answer ones above. Those are "check" too. They stay under
+ * the line, so they change no diagnosis and no group; they are only offered
+ * as worth asking about.
+ *
  * @returns {{p, level: 'untested'|'none'|'check'|'likely'|'clear', telling, answered, total, omitted}}
  */
 export const MIN_TELLING = 2;
 export const CLEAR = 0.85;
+export const NEAR = 0.45;
 
 export function strength(inference, s, k) {
   const p = inference.posterior[s][k];
@@ -421,7 +429,7 @@ export function strength(inference, s, k) {
   const answered = ev.filter(c => !c.omitted).length;
   let level;
   if (!isTested(inference, s, k)) level = 'untested';
-  else if (p < PARAMS.decisionThreshold) level = 'none';
+  else if (p < PARAMS.decisionThreshold) level = p >= NEAR && telling >= MIN_TELLING ? 'check' : 'none';
   else if (telling < MIN_TELLING) level = 'check';
   else level = p >= CLEAR ? 'clear' : 'likely';
   return { p, level, telling, answered, total: ev.length, omitted: ev.length - answered };

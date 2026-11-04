@@ -292,10 +292,10 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   list.appendChild(el('p', 'ev-sum',
     `${forN} of ${seen} answered question${seen === 1 ? '' : 's'} supported this estimate${blank ? `; ${blank} ${blank === 1 ? 'was' : 'were'} left blank` : ''}.`));
 
-  // Resting on one answer: name the question that would settle it.
+  // An open call, either way of the line: name the question that would settle it.
   if (r.level === 'check' && m?.verify?.length) {
     const ask = el('p', 'ev-ask');
-    ask.appendChild(el('b', null, 'Before acting on it, ask: '));
+    ask.appendChild(el('b', null, 'To settle it, ask: '));
     ask.appendChild(setMath(el('span'), m.verify[0]));
     list.appendChild(ask);
   }
