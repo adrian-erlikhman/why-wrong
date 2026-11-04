@@ -501,6 +501,8 @@ body.has-import .import-only { display: inline-flex; }
   margin-bottom: 26px;
   flex-wrap: wrap;
 }
+/* The heading's text gives a little before its buttons drop below it. */
+.view-head > div:first-child { flex: 1 1 400px; max-width: 660px; }
 
 .view-head h2 {
   font-size: clamp(23px, 2.4vw, 29px);
