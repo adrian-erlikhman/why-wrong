@@ -279,6 +279,14 @@ k is chosen by mean silhouette, ties broken toward *fewer* groups. A teacher can
 act on three groups and not on eleven. Students are put in a fixed order before
 any of this runs, so the groups do not change with the order of the sheet.
 
+A placement is not equally sure for everyone. When a student's distance to their
+own group's centre is at least 0.8 of their distance to the next nearest, they
+are marked **between groups**: on the benchmark (both packs, all ten scenarios,
+20 seeds, 11,420 grouped students) 6% of students land there and 56% of them
+were in the wrong group, against 12% of the rest and 3% below a ratio of 0.5.
+The group card lists them under "Check where they fit" with the other group,
+and so do the student panel, the Students filter and the CSV.
+
 **4 · Next steps.** Each indicated group gets a reteach suggestion and
 verification items. The paper can then be given again and results compared for
 students with unique matching names (`js/compare.js`). This summarizes changes
