@@ -148,6 +148,15 @@ export function openStudent(ctx, s, order = null) {
   ));
   wrap.appendChild(facts);
 
+  // A student almost as close to a second group: half of them were placed in
+  // the wrong one on the stress benchmark, so say which other group it is.
+  const near = group?.between?.find(b => b.s === s);
+  const other = near && groups.find(g => g.index === near.alt && !g.isSecure && !g.isThin);
+  if (other) {
+    wrap.appendChild(el('p', 'dr-note dr-warn',
+      `Their answers are almost as close to Group ${groups.indexOf(other) + 1}. Check the evidence below before deciding which lesson they join.`));
+  }
+
   // --- ranked diagnoses ----------------------------------------------------
   const ranked = inf.misIds
     .map((mid, k) => ({ mid, k, ...strength(inf, s, k) }))
