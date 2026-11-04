@@ -153,8 +153,18 @@ export function openStudent(ctx, s, order = null) {
   const near = group?.between?.find(b => b.s === s);
   const other = near && groups.find(g => g.index === near.alt && !g.isSecure && !g.isThin);
   if (other) {
-    wrap.appendChild(el('p', 'dr-note dr-warn',
-      `Their answers are almost as close to Group ${groups.indexOf(other) + 1}. Check the evidence below before deciding which lesson they join.`));
+    const n = groups.indexOf(other) + 1;
+    // One question settles it faster than rereading the paper: a check
+    // question for the other group's main misunderstanding.
+    const ask = byId[other.signature[0]?.id]?.verify?.[0];
+    const note = el('p', 'dr-note dr-warn', ask
+      ? `Their answers are almost as close to Group ${n}. To decide which lesson they join, ask them: `
+      : `Their answers are almost as close to Group ${n}. Check the evidence below before deciding which lesson they join.`);
+    if (ask) {
+      note.appendChild(setMath(el('b'), ask));
+      note.appendChild(document.createTextNode(` A wrong answer points to Group ${n}.`));
+    }
+    wrap.appendChild(note);
   }
 
   // --- ranked diagnoses ----------------------------------------------------
