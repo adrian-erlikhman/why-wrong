@@ -183,8 +183,17 @@ export function unlabelledPatterns(pack, responses, { reshuffles = RESHUFFLES, s
 
   const rng = makeRng(seed);
   const nullMax = [];
+  // A pattern needs a count above the cut, the (95%)th smallest reshuffled
+  // maximum. Once as many reshuffles as sit above that point have matched the
+  // largest pattern found, it cannot clear the cut and neither can any
+  // smaller one, so the rest would change nothing: stop. That is the usual
+  // case, an ordinary class, and the answer is the same as running all 100.
+  const above = reshuffles - Math.floor(0.95 * reshuffles);
+  let matched = 0;
   for (let r = 0; r < reshuffles; r++) {
-    nullMax.push(search(pack, reshuffle(rows, unl, rng), unl)[0]?.count ?? 0);
+    const m = search(pack, reshuffle(rows, unl, rng), unl)[0]?.count ?? 0;
+    nullMax.push(m);
+    if (m >= found[0].count && ++matched >= above) return { patterns: [], reshuffles, cut: null, stoppedAfter: r + 1 };
   }
   nullMax.sort((a, b) => a - b);
   const cut = nullMax[Math.floor(0.95 * reshuffles)] ?? 0;
