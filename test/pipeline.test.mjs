@@ -452,6 +452,43 @@ for (const pack of BUILT_IN) {
   check('the review sheet marks unmapped options as unlinked', (sheet.match(/not linked to a known pattern<\/span>/g) || []).length === 4);
 }
 
+// ------------------------------------------------------ tempting wrong options
+// When the options written for a belief also catch careless errors, the paper
+// shows it across every question, and the weakest students must not be
+// labelled with beliefs just for guessing onto them.
+{
+  console.log(`\n${'='.repeat(66)}\nTempting wrong options\n${'='.repeat(66)}`);
+  const seeds = [1, 2, 3, 4, 5];
+  BUILT_IN.forEach(pack => {
+    const lifts = model => seeds.map(seed =>
+      inferMisconceptions(pack, generateClass(pack, { seed, size: 28, model }).responses).fitted.slipLift);
+    const plain = lifts({}), tempting = lifts({ pull: 0.6 });
+    check(`${pack.id}: an ordinary class shows no pull toward belief-linked options`,
+      plain.every(x => x > 0.5 && x < 1.8), plain.map(x => x.toFixed(2)).join(' '));
+    check(`${pack.id}: a class drawn to them shows it`,
+      tempting.every(x => x > 2), tempting.map(x => x.toFixed(2)).join(' '));
+  });
+  check('a class too small to fit keeps an even split',
+    inferMisconceptions(BUILT_IN[0], generateClass(BUILT_IN[0], { seed: 1, size: 4 }).responses).fitted.slipLift === 1);
+
+  // The weakest quarter of a tempting class, fitted against unfitted.
+  const pack = BUILT_IN[0];
+  let fitted = 0, fixed = 0, n = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const c = generateClass(pack, { seed, size: 28, model: { pull: 0.6 } });
+    const weak = c.truth.map((t, s) => [t.ability, s]).sort((a, b) => a[0] - b[0]).slice(0, 7).map(x => x[1]);
+    const falseLabels = inf => {
+      const dx = diagnose(posteriorForReporting(inf), inf.misIds);
+      return weak.reduce((sum, s) => sum + [...dx[s]].filter(m => !c.truth[s].held.has(m)).length, 0);
+    };
+    fitted += falseLabels(inferMisconceptions(pack, c.responses));
+    fixed += falseLabels(inferMisconceptions(pack, c.responses, { fit: false }));
+    n += weak.length;
+  }
+  check('fitting the class halves false labels on its weakest students', fitted <= fixed / 2,
+    `${(fitted / n).toFixed(2)} vs ${(fixed / n).toFixed(2)} per student`);
+}
+
 // ---------------------------------------------------------- blank answers
 // A blank is no evidence. A student who left the paper blank has to come out
 // as unknown, never as fine.

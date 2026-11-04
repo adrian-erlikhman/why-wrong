@@ -282,26 +282,53 @@ export function inferMisconceptions(pack, responses, { fit = true } = {}) {
   // textbook. Treating a slip as equally likely to land anywhere reads every
   // pick of a tempting option as a belief. So where slips land is estimated
   // per question: each wrong answer counts toward its option by the odds that
-  // it was a slip rather than a belief firing, shrunk toward even.
-  const fitSlips = () => probes.forEach(p => {
-    const nWrong = p.item.opts.length - 1;
-    const mass = p.item.opts.map(() => 0);
-    responses.forEach((row, s) => {
-      const choice = row[p.i];
-      if (choice == null || choice < 0 || choice === p.ci) return;
-      const base = (1 - express) * (1 - ability[s]) * p.slip[choice];
-      let fired = 0;
-      p.mis.forEach(m => {
-        if (p.optMis[choice] !== m) return;
-        const f = express / p.optMis.filter(k => k === m).length;
-        fired += Q[s][m] * f / (f + base);
+  // it was a slip rather than a belief firing, shrunk toward the paper's own
+  // split between belief-linked and other wrong options (`slipLift`).
+  let slipLift = 1;
+  const fitSlips = () => {
+    const masses = probes.map(p => {
+      const mass = p.item.opts.map(() => 0);
+      responses.forEach((row, s) => {
+        const choice = row[p.i];
+        if (choice == null || choice < 0 || choice === p.ci) return;
+        const base = (1 - express) * (1 - ability[s]) * p.slip[choice];
+        let fired = 0;
+        p.mis.forEach(m => {
+          if (p.optMis[choice] !== m) return;
+          const f = express / p.optMis.filter(k => k === m).length;
+          fired += Q[s][m] * f / (f + base);
+        });
+        mass[choice] += 1 - Math.min(1, fired);
       });
-      mass[choice] += 1 - Math.min(1, fired);
+      return mass;
     });
-    const total = mass.reduce((a, b) => a + b, 0);
-    p.slip = p.item.opts.map((_, oi) => (oi === p.ci ? 0
-      : (mass[oi] + SLIP_WEIGHT / nWrong) / (total + SLIP_WEIGHT)));
-  });
+
+    // One question has a handful of slips to learn from; the whole paper has
+    // hundreds. Whether the options written for a belief draw more careless
+    // errors than the other wrong options is a property of the paper, so it
+    // is pooled across every question, and each question is shrunk toward
+    // that pooled split rather than toward an even one.
+    const pooled = { mapped: [0, 0], other: [0, 0] };   // [slip mass, options]
+    probes.forEach((p, j) => p.item.opts.forEach((_, oi) => {
+      if (oi === p.ci) return;
+      const side = p.optMis[oi] >= 0 ? pooled.mapped : pooled.other;
+      side[0] += masses[j][oi]; side[1] += 1;
+    }));
+    // Per-option slip rates, each with one option's worth of even prior so a
+    // paper with few of either kind stays near even.
+    const even = (pooled.mapped[0] + pooled.other[0] + 1) / (pooled.mapped[1] + pooled.other[1] + 1);
+    const rate = side => (side[0] + even) / (side[1] + 1);
+    const lift = slipLift = rate(pooled.mapped) / rate(pooled.other);
+
+    probes.forEach((p, j) => {
+      const mass = masses[j];
+      const weight = p.item.opts.map((_, oi) => (oi === p.ci ? 0 : p.optMis[oi] >= 0 ? lift : 1));
+      const wSum = weight.reduce((a, b) => a + b, 0) || 1;
+      const total = mass.reduce((a, b) => a + b, 0);
+      p.slip = p.item.opts.map((_, oi) => (oi === p.ci ? 0
+        : (mass[oi] + SLIP_WEIGHT * weight[oi] / wSum) / (total + SLIP_WEIGHT)));
+    });
+  };
 
   for (let round = 0; round < (fit ? ROUNDS : 1); round++) {
     solveRows();
@@ -318,7 +345,7 @@ export function inferMisconceptions(pack, responses, { fit = true } = {}) {
 
   return {
     posterior, misIds, evidence, logits, ability,
-    fitted: { prior, express, classAbility, fit }
+    fitted: { prior, express, classAbility, fit, slipLift }
   };
 }
 
