@@ -326,6 +326,14 @@ nothing beyond being wrong. It never named a wrong pattern, the students it
 names almost all hold the hidden belief, and with nothing hidden 2 of 80
 classes gave a false find. "Does it work?" runs this test live.
 
+A teacher who can tell what links the answers names it on the card, and the
+test gains it as a misunderstanding (`labelPattern`: T1, T2, ...; a built-in
+test is copied first). Labels are not part of a saved class's fingerprint, so
+the class still opens, and the labelled test travels inside the file. Sample
+classes are simulated on the test without these labels (`withoutTracked`),
+because the simulator draws once per misunderstanding and an extra one would
+re-roll the class the pattern was found in.
+
 **4 · Next steps.** Each indicated group gets a reteach suggestion and
 verification items. The paper can then be given again and results compared for
 students with unique matching names (`js/compare.js`). This summarizes changes
