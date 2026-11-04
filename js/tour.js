@@ -25,7 +25,8 @@ const STEPS = [
     title: 'Plan for each group',
     view: 'groups', target: '#groups .group',
     text: f => f.topName
-      ? `${plural(f.topSize, 'student')} show a similar pattern around “${f.topName}”. Each group gets a reteach suggestion and three questions to check understanding.`
+      ? `${plural(f.topSize, 'student')} show a similar pattern around “${f.topName}”. Each group gets a reteach suggestion and three questions to check understanding.` +
+        (f.between ? ` ${f.between === 1 ? 'One student sits' : `${f.between} students sit`} almost as close to another group; each card names them under “Check where they fit”.` : '')
       : 'No clear shared misunderstanding emerged in this class. Review the individual evidence before deciding what support students need.'
   },
   {

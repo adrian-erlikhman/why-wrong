@@ -2269,7 +2269,8 @@ function tourFacts() {
     worstId: bad[0]?.id,
     worstVerdict: bad[0] ? VERDICTS[bad[0].quality] : null,
     recall: null,
-    precision: null
+    precision: null,
+    between: real.reduce((n, g) => n + (g.between?.length || 0), 0)
   };
   if (state.cls.truth) {
     const dq = scoreDiagnosis(diagnose(posteriorForReporting(state.inf), state.inf.misIds), state.cls.truth, state.inf.misIds);
