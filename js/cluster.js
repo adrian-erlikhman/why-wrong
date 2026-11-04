@@ -100,6 +100,15 @@ function unit(v) {
 }
 
 /**
+ * How far below the best silhouette a smaller k may score and still be chosen.
+ * Swept on the stress benchmark (both packs, ten kinds of class, 40 seeds),
+ * the share of classes given the right number of groups was 0.79 at 0,
+ * 0.83 at 0.01, 0.875 at 0.02, 0.884 at 0.03, 0.83 at 0.05 and 0.68 at 0.07;
+ * group recovery (ARI) was flat to 0.03 and fell after it.
+ */
+export const PARSIMONY = 0.03;
+
+/**
  * Cluster students into shared failure modes.
  *
  * Two design decisions here matter more than the choice of algorithm.
@@ -123,16 +132,8 @@ function unit(v) {
  * @returns {{labels:number[], k:number, secureLabel:number, secure:number[],
  *            silhouette:number, scan:Array}}
  *   labels covers every student; secure students carry `secureLabel`.
+ *   Also `edge` and `between` per student (see placement).
  */
-/**
- * How far below the best silhouette a smaller k may score and still be chosen.
- * Swept on the stress benchmark (both packs, ten kinds of class, 40 seeds),
- * the share of classes given the right number of groups was 0.79 at 0,
- * 0.83 at 0.01, 0.875 at 0.02, 0.884 at 0.03, 0.83 at 0.05 and 0.68 at 0.07;
- * group recovery (ARI) was flat to 0.03 and fell after it.
- */
-export const PARSIMONY = 0.03;
-
 export function clusterStudents(posterior, {
   kMin = 2, kMax = 6, restarts = 12, seed = 42, threshold = PARAMS.decisionThreshold, margin = PARSIMONY
 } = {}) {
