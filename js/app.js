@@ -26,7 +26,7 @@ import { classFile, readClassFile, testFile } from './session.js';
 import { compareSittings, comparePredictions, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
 import { escapeHtml, mathHtml, setMath } from './notation.js';
-import { unlabelledPatterns } from './discover.js';
+import { unlabelledPatterns, labelPattern, withoutTracked } from './discover.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter, normName
@@ -123,7 +123,9 @@ function run() {
   } else {
     const seed = Math.max(1, parseInt($('#seed').value, 10) || 7);
     const size = Math.min(120, Math.max(12, parseInt($('#size').value, 10) || 28));
-    cls = generateClass(pack, { seed, size });
+    // Simulated on the test as it was before any labels the teacher added,
+    // so naming a pattern does not re-roll the class it was found in.
+    cls = { ...generateClass(withoutTracked(pack), { seed, size }), pack };
   }
 
   const inf = inferMisconceptions(pack, cls.responses);
@@ -678,7 +680,7 @@ function renderGroups() {
   sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
   state.groups.forEach((g, i) => host.appendChild(groupCard(g, i)));
-  (state.found || []).forEach(f => host.appendChild(unlabelledCard(f)));
+  (state.found || []).forEach(f => host.appendChild(unlabelledCard(f, { trackable: true })));
 }
 
 /**
@@ -686,7 +688,7 @@ function renderGroups() {
  * same unlabelled wrong answers together, more than reshuffled classes do.
  * It names the answers and the students and leaves the meaning to the teacher.
  */
-function unlabelledCard(f) {
+function unlabelledCard(f, { trackable = false } = {}) {
   const { pack, cls } = state;
   const card = el('div', 'group unlabelled');
   const top = el('div', 'group-top');
@@ -729,8 +731,58 @@ function unlabelledCard(f) {
   show.type = 'button';
   show.addEventListener('click', () => { showView('matrix'); showPattern(f); scrollToView(); });
   body.appendChild(show);
+
+  // Once the teacher knows what the answers share, the test can say so: the
+  // pattern becomes a misunderstanding the analysis tracks like any other.
+  if (trackable) {
+    const form = el('form', 'track');
+    const label = el('label', 'track-l', 'If you can tell what links them, name it and the analysis will track it like the others');
+    const input = el('input', 'track-i');
+    input.type = 'text';
+    input.maxLength = 80;
+    input.required = true;
+    input.placeholder = 'e.g. Adds the squares instead of expanding';
+    input.id = `track-${f.options.map(o => `${o.i}-${o.oi}`).join('_')}`;
+    label.htmlFor = input.id;
+    const go = el('button', 'btn btn-primary', 'Track this pattern');
+    go.type = 'submit';
+    const msg = el('p', 'track-msg');
+    msg.setAttribute('role', 'status');
+    form.append(label, input, go, msg);
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      const res = trackPattern(f, name);
+      if (!res.ok) msg.textContent = res.error;
+    });
+    body.appendChild(form);
+  }
   card.appendChild(body);
   return card;
+}
+
+/**
+ * Label a found pattern's answers with a new misunderstanding and re-run.
+ *
+ * A built-in test is copied first (it ships with the page and stays as it
+ * is); a teacher's own test is changed in place. Question ids, option text
+ * and the key are untouched, so a saved class still opens against it, and
+ * because the copy is not built in, a saved class carries it inside the file.
+ */
+function trackPattern(f, name) {
+  const { pack: copy, id } = labelPattern(state.pack, f, name, { builtIn: isBuiltIn(state.pack) });
+  const check = validatePack(copy);
+  if (!check.ok) return { ok: false, error: `That label could not be added: ${check.errors[0]}` };
+
+  addPack(copy);
+  state.pack = copy;
+  renderPackOptions(copy.id);
+  run();
+  if (state.imported) markUnsaved(true);
+  showView('groups');
+  $('#strip-note').textContent = `Now tracking “${name}” (${id}) on ${f.options.length} questions. ` + $('#strip-note').textContent;
+  return { ok: true, id };
 }
 
 function groupCard(g, idx) {

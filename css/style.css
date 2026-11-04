@@ -1745,3 +1745,12 @@ html.key-above .legend { padding-bottom: 20px; }
 .hide-test .sub { margin-bottom: 14px; }
 .hide-res { font-weight: 600; color: var(--ink); margin: 0 0 16px; }
 .hide-test .group { margin-bottom: 16px; border: 1px solid var(--line); }
+
+/* ---------------------- tracking a found pattern ---------------------- */
+.track { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
+.track-l { grid-column: 1 / -1; font-size: 14.5px; font-weight: 600; color: var(--ink-2); }
+.track-i { font: inherit; font-size: 15.5px; padding: 8px 12px; border: 1px solid var(--line-hi); border-radius: var(--r-s); background: var(--surface); color: var(--ink); min-width: 0; }
+.track-i:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.track-msg { grid-column: 1 / -1; margin: 0; color: var(--bad); font-size: 14px; }
+.track-msg:empty { display: none; }
+@media (max-width: 560px) { .track { grid-template-columns: 1fr; } }

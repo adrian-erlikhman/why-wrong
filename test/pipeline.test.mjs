@@ -20,7 +20,7 @@ import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normN
 import { generatePack } from '../js/generate.js';
 import { rewritePlan, setKey } from '../js/llm.js';
 import { escapeHtml, mathHtml } from '../js/notation.js';
-import { unlabelledPatterns, binomialTail } from '../js/discover.js';
+import { unlabelledPatterns, binomialTail, labelPattern, withoutTracked } from '../js/discover.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -495,7 +495,8 @@ for (const pack of BUILT_IN) {
   const blind = {
     ...pack,
     misconceptions: pack.misconceptions.filter(m => m.id !== hidden),
-    items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (o.mis === hidden ? { ...o, mis: undefined } : o)) }))
+    items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (o.mis === hidden ? { ...o, mis: undefined } : o)) })),
+    archetypes: pack.archetypes.map(a => ({ ...a, core: (a.core || []).filter(m => m !== hidden) }))
   };
   const r = unlabelledPatterns(blind, c.responses);
   const top = r.patterns[0];
@@ -514,6 +515,26 @@ for (const pack of BUILT_IN) {
   check('the groups CSV ends with the pattern, its students and its answers',
     last.startsWith('Not in the question set,') && top.students.every(s => last.includes(c.students[s].name)) &&
     top.options.every(o => last.includes(pack.items[o.i].id)));
+
+  // Naming the pattern makes it a misunderstanding like any other.
+  const { pack: named, id: tid } = labelPattern(blind, top, 'Treats a power as multiplication', { builtIn: true });
+  check('a named pattern becomes T1 on a copy of a built-in test, labelled on its answers',
+    tid === 'T1' && named.id === `${blind.id}-mine` && blind.misconceptions.every(m => m.id !== 'T1') &&
+    top.options.every(o => named.items[o.i].opts[o.oi].mis === 'T1') &&
+    named.misconceptions.find(m => m.id === 'T1').tracked === true);
+  check('…the labelled test is valid and a class saved on the old one still opens',
+    validatePack(named).ok && fingerprint(named) === fingerprint(blind));
+  const namedDx = diagnose(posteriorForReporting(inferMisconceptions(named, c.responses)), named.misconceptions.map(m => m.id));
+  const nowHeld = top.students.filter(s => namedDx[s].has('T1')).length;
+  check('…and the students who showed it are now diagnosed with it', nowHeld >= 0.8 * top.students.length,
+    `${nowHeld} of ${top.students.length}`);
+  const second = labelPattern(named, top, 'Another name');
+  check('a second label is T2 and a teacher\'s own test keeps its id',
+    second.id === 'T2' && second.pack.id === named.id);
+  check('the simulator sees the test without the labels, so the same seed gives the same class',
+    JSON.stringify(generateClass(withoutTracked(named), { seed: 3, size: 28 }).responses) ===
+    JSON.stringify(generateClass(blind, { seed: 3, size: 28 }).responses) &&
+    withoutTracked(blind) === blind);
 
   const flipped = c.responses.map((_, s) => c.responses[c.responses.length - 1 - s]);
   const r2 = unlabelledPatterns(blind, flipped);

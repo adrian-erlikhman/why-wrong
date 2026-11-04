@@ -206,3 +206,47 @@ export function unlabelledPatterns(pack, responses, { reshuffles = RESHUFFLES, s
     }));
   return { patterns, reshuffles, cut };
 }
+
+/**
+ * A copy of `pack` with a found pattern's answers labelled as a new
+ * misunderstanding, named by the teacher. Ids run T1, T2, ... and the new
+ * entry is marked `tracked` so a simulator can leave it out (see
+ * withoutTracked). Question ids, option text and the key are untouched, so a
+ * class saved against the test still opens. A built-in test becomes a new
+ * one (`<id>-mine`); any other keeps its id and is replaced.
+ */
+export function labelPattern(pack, pattern, name, { builtIn = false } = {}) {
+  const used = new Set(pack.misconceptions.map(m => m.id));
+  let n = 1;
+  while (used.has(`T${n}`)) n++;
+  const id = `T${n}`;
+
+  const copy = structuredClone(pack);
+  if (builtIn) {
+    copy.id = `${pack.id}-mine`;
+    copy.name = `${pack.name} (with my labels)`;
+  }
+  const answers = pattern.options.map(o => `${pack.items[o.i].id} “${pack.items[o.i].opts[o.oi].t}”`).join(', ');
+  copy.misconceptions.push({
+    id, name, short: name.length > 40 ? `${name.slice(0, 38)}…` : name,
+    belief: `Named by you after these answers were picked together: ${answers}.`,
+    reteach: '', verify: [], tracked: true
+  });
+  pattern.options.forEach(o => { copy.items[o.i].opts[o.oi].mis = id; });
+  return { pack: copy, id };
+}
+
+/**
+ * The test without labels a teacher added from found patterns. A simulator
+ * draws once per misunderstanding, so an extra one would shift every draw
+ * after it and produce a different class from the same seed.
+ */
+export function withoutTracked(pack) {
+  const added = new Set(pack.misconceptions.filter(m => m.tracked).map(m => m.id));
+  if (!added.size) return pack;
+  return {
+    ...pack,
+    misconceptions: pack.misconceptions.filter(m => !added.has(m.id)),
+    items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (added.has(o.mis) ? { ...o, mis: undefined } : o)) }))
+  };
+}
