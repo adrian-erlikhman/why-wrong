@@ -760,6 +760,28 @@ html.key-above .legend { padding-bottom: 20px; }
 }
 .group.secure { --gc: var(--good); }
 .group.thin { --gc: var(--warn); }
+/* The grey of an unlabelled wrong answer on the class map, because that is what it is built from. */
+.group.unlabelled { --gc: var(--slip); }
+.group.unlabelled .group-top { border-top-style: dashed; }
+
+.unl-list { list-style: none; margin: 4px 0 6px; padding: 0; }
+.unl-list li { padding: 7px 0; border-bottom: 1px solid var(--line-soft); line-height: 1.45; }
+.unl-list li:last-child { border-bottom: none; }
+.unl-q {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-line);
+  border-radius: 6px;
+  padding: 0 7px;
+  cursor: pointer;
+}
+.unl-q:hover { background: var(--accent); color: #fff; }
+.unl-stem { color: var(--ink-2); }
+.unl-pick { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.unl-pick b { color: var(--ink); font-weight: 600; }
 
 .group-n {
   font-size: 14.5px;
@@ -1713,3 +1735,10 @@ html.key-above .legend { padding-bottom: 20px; }
   .view-head h2 { font-size: 16pt; margin-bottom: 6pt; }
   a[href]::after { content: ""; }
 }
+
+/* ---------------------- Does it work?: the hidden-belief test ---------------------- */
+.hide-test { margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--line); max-width: 860px; }
+.hide-test h3 { font-size: 21px; margin: 0 0 8px; }
+.hide-test .sub { margin-bottom: 14px; }
+.hide-res { font-weight: 600; color: var(--ink); margin: 0 0 16px; }
+.hide-test .group { margin-bottom: 16px; border: 1px solid var(--line); }

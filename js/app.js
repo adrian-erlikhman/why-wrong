@@ -26,6 +26,7 @@ import { classFile, readClassFile, testFile } from './session.js';
 import { compareSittings, comparePredictions, progressCsv, READING } from './compare.js';
 import { trapTab, focusInto } from './a11y.js';
 import { escapeHtml, mathHtml, setMath } from './notation.js';
+import { unlabelledPatterns } from './discover.js';
 import {
   templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter, normName
@@ -136,7 +137,11 @@ function run() {
   // export and the student list all read the same answer.
   const dx = diagnose(reportPosterior, inf.misIds);
 
-  Object.assign(state, { cls, inf, dx, cl, groups, stats, cov, sorted: false, filterMis: null, studentGroup: null });
+  // Wrong answers the test has no label for, picked together beyond chance.
+  const search = unlabelledPatterns(pack, cls.responses);
+  const found = search.patterns.map(p => ({ ...p, reshuffles: search.reshuffles }));
+
+  Object.assign(state, { cls, inf, dx, cl, groups, stats, cov, found, sorted: false, filterMis: null, studentGroup: null });
 
   fitMapToClass(cls.students.length);
   showTestNudge();
@@ -641,6 +646,53 @@ function renderGroups() {
   sub.querySelector('.x-anchor').appendChild(infoButton('failureMode'));
 
   state.groups.forEach((g, i) => host.appendChild(groupCard(g, i)));
+  (state.found || []).forEach(f => host.appendChild(unlabelledCard(f)));
+}
+
+/**
+ * A pattern the question set has no label for: the same students picking the
+ * same unlabelled wrong answers together, more than reshuffled classes do.
+ * It names the answers and the students and leaves the meaning to the teacher.
+ */
+function unlabelledCard(f) {
+  const { pack, cls } = state;
+  const card = el('div', 'group unlabelled');
+  const top = el('div', 'group-top');
+  const nline = el('div', 'group-n');
+  nline.appendChild(el('span', null, 'Not in the question set'));
+  nline.appendChild(el('span', null, `${f.count} student${f.count === 1 ? '' : 's'}`));
+  top.appendChild(nline);
+  top.appendChild(el('h3', null, 'Wrong answers picked together'));
+  card.appendChild(top);
+
+  const body = el('div', 'group-body');
+  const ties = f.reshuffles - f.beats;
+  body.appendChild(el('p', 'belief',
+    `These students kept choosing the same wrong answers, ones the question set does not link to any misunderstanding. ` +
+    `The same class with its wrong answers shuffled at random gave a pattern this large ${ties ? `in only ${ties} of ${f.reshuffles} tries` : `in none of ${f.reshuffles} tries`}, ` +
+    `so it may be a shared idea the questions were not written to detect. Look at what these answers have in common, then ask the students how they got them.`));
+
+  body.appendChild(el('div', 'lab', 'The answers'));
+  const ul = el('ul', 'unl-list');
+  f.options.forEach(({ i, oi }) => {
+    const item = pack.items[i];
+    const li = el('li');
+    const q = el('button', 'unl-q', item.id);
+    q.title = 'See how the class answered this question';
+    q.addEventListener('click', () => openQuestion(ctx(), i));
+    li.appendChild(q);
+    li.appendChild(setMath(el('span', 'unl-stem'), ` ${item.stem}`));
+    const pick = el('div', 'unl-pick');
+    pick.appendChild(document.createTextNode(`Picked ${paperLetter(item, oi)}: `));
+    pick.appendChild(setMath(el('b'), `“${item.opts[oi].t}”`));
+    li.appendChild(pick);
+    ul.appendChild(li);
+  });
+  body.appendChild(ul);
+
+  body.appendChild(roster({ members: f.students }));
+  card.appendChild(body);
+  return card;
 }
 
 function groupCard(g, idx) {
@@ -1372,6 +1424,59 @@ function renderValidation() {
 
   $('#validation-note').textContent =
     'Change the class variant in the toolbar to re-roll a different sample class. The figures are computed live each time, so a bad run shows a bad number.';
+
+  renderHideTest();
+}
+
+/**
+ * The search for unlabelled patterns, tested live: take the labels off one of
+ * this class's commoner misunderstandings, so the tool can only see it as
+ * unlabelled wrong answers, and look for it.
+ */
+function renderHideTest(rank = 0) {
+  const host = $('#hide-test');
+  host.innerHTML = '';
+  const { pack, cls } = state;
+  if (!cls.truth) return;
+
+  const counts = new Map();
+  cls.truth.forEach(t => t.held.forEach(m => counts.set(m, (counts.get(m) || 0) + 1)));
+  const common = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3);
+  if (!common.length) return;
+  const [hidden, holders] = common[rank % common.length];
+  const byId = misById(pack);
+
+  host.appendChild(el('h3', null, 'Can it find a misunderstanding it was never told about?'));
+  host.appendChild(setMath(el('p', 'sub'),
+    `Here the labels for “${byId[hidden]?.name ?? hidden}” (held by ${holders} of these students) are taken off every question, ` +
+    `so its answers look like any other unlabelled wrong answer. The search below has to find it from which students picked them together.`));
+
+  const blind = {
+    ...pack,
+    misconceptions: pack.misconceptions.filter(m => m.id !== hidden),
+    items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (o.mis === hidden ? { ...o, mis: undefined } : o)) }))
+  };
+  const search = unlabelledPatterns(blind, cls.responses);
+  const top = search.patterns[0];
+
+  const res = el('p', 'hide-res');
+  if (!top) {
+    res.textContent = 'Not found in this class. In the benchmark, with a class of 28, a belief hidden like this is found in about 2 of 5 Algebra classes and 1 of 10 Biology ones, and ordinary classes give a false find about 1 time in 30.';
+  } else {
+    const own = top.options.filter(o => pack.items[o.i].opts[o.oi].mis === hidden).length;
+    const hold = top.students.filter(s => cls.truth[s].held.has(hidden)).length;
+    res.textContent = `Found: ${own} of the ${top.options.length} answers in the pattern are the hidden misunderstanding’s, ` +
+      `and ${hold} of the ${top.count} students it names really hold it.`;
+  }
+  host.appendChild(res);
+  if (top) host.appendChild(unlabelledCard({ ...top, reshuffles: search.reshuffles }));
+
+  if (common.length > 1) {
+    const again = el('button', 'btn', 'Hide a different one');
+    again.type = 'button';
+    again.addEventListener('click', () => renderHideTest(rank + 1));
+    host.appendChild(again);
+  }
 }
 
 /** Compare the teacher's recorded predictions with patterns in the class. */
