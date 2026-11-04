@@ -562,6 +562,7 @@ function applyFilter(mid) {
   host.classList.toggle('filtered', !!mid);
   host.querySelectorAll('.m-cell').forEach(c => {
     c.classList.toggle('lit', !!mid && c.dataset.mis === mid);
+    c.classList.remove('lit-unl');
   });
   $$('.leg').forEach(l => l.classList.toggle('is-on', !!mid && l.dataset.mis === mid));
   $('#clear-filter').hidden = !mid;
@@ -576,6 +577,31 @@ function applyFilter(mid) {
     setMatrixNote(state.sorted);
   }
 }
+
+/**
+ * Light the answers of one unlabelled pattern (js/discover.js) on the map:
+ * every pick of its options, so the teacher sees the same students' grey
+ * cells line up across the questions.
+ */
+function showPattern(f) {
+  state.filterMis = PATTERN;
+  const host = $('#matrix');
+  host.classList.add('filtered');
+  const want = new Map(f.options.map(o => [o.i, o.oi]));
+  host.querySelectorAll('.m-cell').forEach(c => {
+    const i = Number(c.dataset.item);
+    const s = Number(c.closest('.m-row').dataset.student);
+    const on = want.has(i) && state.cls.responses[s][i] === want.get(i);
+    c.classList.toggle('lit', on);
+    c.classList.toggle('lit-unl', on);
+  });
+  $$('.leg').forEach(l => l.classList.remove('is-on'));
+  $('#clear-filter').hidden = false;
+  $('#matrix-note').textContent =
+    `Showing ${f.options.length} wrong answers the question set does not label (${f.options.map(o => state.pack.items[o.i].id).join(', ')}). ` +
+    `${f.count} students picked two or more of them.`;
+}
+const PATTERN = '\u0000pattern';   // never a misconception id
 
 function renderLegend() {
   const host = $('#legend');
@@ -700,6 +726,11 @@ function unlabelledCard(f) {
   body.appendChild(ul);
 
   body.appendChild(roster({ members: f.students }));
+
+  const show = el('button', 'btn', 'Show on the class map');
+  show.type = 'button';
+  show.addEventListener('click', () => { showView('matrix'); showPattern(f); scrollToView(); });
+  body.appendChild(show);
   card.appendChild(body);
   return card;
 }
