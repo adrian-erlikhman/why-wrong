@@ -371,7 +371,6 @@ Almost as close to ${groupLabel(near)} as to their own group`;
       // The underline and the tooltip are visual; say it to a screen reader too.
       name.setAttribute('aria-label', `${cls.students[s].name}, almost as close to ${groupLabel(near)} as to their own group`);
     }
-    name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s, rowOrder()); });
     const head = el('span', 'm-head');
     head.setAttribute('role', 'rowheader');
     head.appendChild(name);
@@ -403,7 +402,6 @@ Almost as close to ${groupLabel(near)} as to their own group`;
 
       c.title = `${cls.students[s].name} · ${item.id}\n${choice >= 0 ? `chose ${paperLetter(item, choice)} “${item.opts[choice].t}”` : 'left blank'} (${what})`;
       c.setAttribute('aria-label', c.title.replace('\n', ', '));
-      c.addEventListener('click', e => { e.stopPropagation(); openQuestion(ctx(), i); });
       r.appendChild(c);
     });
 
@@ -2071,6 +2069,14 @@ function moveInTabs(e) {
 $('#run').addEventListener('click', run);
 $('#reorder').addEventListener('click', toggleSort);
 $('#matrix').addEventListener('keydown', moveInMatrix);
+// One listener for the whole map rather than one per cell: a class of 120 is
+// 4,320 cells, rebuilt on every run.
+$('#matrix').addEventListener('click', e => {
+  const name = e.target.closest('.m-name');
+  if (name) { openStudent(ctx(), Number(name.closest('.m-row').dataset.student), rowOrder()); return; }
+  const cell = e.target.closest('.m-cell');
+  if (cell) openQuestion(ctx(), Number(cell.dataset.item));
+});
 $('.tabs-in').addEventListener('keydown', moveInTabs);
 $('#clear-filter').addEventListener('click', () => applyFilter(null));
 
