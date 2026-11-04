@@ -106,6 +106,19 @@ export function analyseItems(pack, responses, inference = null) {
   }
 
   const ITEMS = pack.items;
+  for (let s = 0; s < responses.length; s++) {
+    const row = responses[s];
+    if (!Array.isArray(row) || row.length !== ITEMS.length) {
+      throw new RangeError(`Response row ${s + 1} must contain exactly ${ITEMS.length} answers.`);
+    }
+    row.forEach((choice, i) => {
+      if (choice == null || choice === -1) return;
+      if (!Number.isInteger(choice) || choice < 0 || choice >= ITEMS[i].opts.length) {
+        throw new RangeError(`Response ${i + 1} for student ${s + 1} is not a valid option index or blank.`);
+      }
+    });
+  }
+
   const nStudents = responses.length;
   const ci = ITEMS.map(correctIndex);
   const scored = responses.map(row => row.map((c, i) => (c === ci[i] ? 1 : 0)));

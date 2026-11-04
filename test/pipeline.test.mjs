@@ -145,6 +145,15 @@ check('inference accepts undefined and sparse answer cells as blanks',
   inferMisconceptions(allDiagnosticPack, [Array(1)]).posterior[0][0] === PARAMS.prior);
 check('item analysis rejects an empty response class instead of producing NaN shares',
   throwsAs(() => analyseItems(allDiagnosticPack, []), RangeError));
+check('item analysis rejects a non-array response row',
+  throwsAs(() => analyseItems(allDiagnosticPack, [null]), RangeError));
+check('item analysis rejects a row with a missing answer column',
+  throwsAs(() => analyseItems(allDiagnosticPack, [[]]), RangeError));
+check('item analysis rejects out-of-range response indices',
+  throwsAs(() => analyseItems(allDiagnosticPack, [[4]]), RangeError));
+check('item analysis accepts null and sparse answers as blanks',
+  analyseItems(allDiagnosticPack, [[null]]).every(item => item.answered === 0) &&
+  analyseItems(allDiagnosticPack, [Array(1)]).every(item => item.answered === 0));
 const specialIdPack = {
   misconceptions: [{ id: '__proto__', name: 'Special identifier' }],
   items: [{
