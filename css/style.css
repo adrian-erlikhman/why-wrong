@@ -591,6 +591,8 @@ body.has-import .import-only { display: inline-flex; }
   transition: padding-left .45s var(--ease), width .45s var(--ease), flex-basis .45s var(--ease), color .3s;
 }
 .matrix.sorted .m-name { width: 194px; flex-basis: 194px; padding-left: 88px; }
+/* Almost as close to another group: only worth marking once the map shows groups. */
+.matrix.sorted .m-name.m-between { text-decoration: underline dashed var(--warn); text-underline-offset: 3px; }
 
 /* Names stay put when the map scrolls sideways, or on a phone you lose track of
    whose row you are reading by the tenth question. The background only covers

@@ -176,7 +176,8 @@ export function clusterStudents(posterior, {
     active.forEach(({ i }) => { labels[i] = 0; });
     const secureLabel = active.length ? 1 : 0;
     secure.forEach(i => { labels[i] = secureLabel; });
-    return { labels, k: active.length ? 1 : 0, secureLabel, secure, silhouette: 0, scan: [], degenerate: true };
+    const none = new Array(posterior.length).fill(null);
+    return { labels, k: active.length ? 1 : 0, secureLabel, secure, silhouette: 0, scan: [], degenerate: true, edge: none, between: none };
   }
 
   const points = active.map(a => a.v);
@@ -237,7 +238,7 @@ export function clusterStudents(posterior, {
     secure,
     silhouette: chosen.silhouette,
     minClusterSize,
-    between: betweenGroups(points, chosen.run.labels, chosen.k, active.map(a => a.i), posterior.length),
+    ...placement(points, chosen.run.labels, chosen.k, active.map(a => a.i), posterior.length),
     scan: scan.map(({ k, silhouette, inertia, minSize }) => ({ k, silhouette, inertia, minSize }))
   };
 }
@@ -255,13 +256,16 @@ export function clusterStudents(posterior, {
 export const BETWEEN = 0.8;
 
 /**
- * For each grouped student, the nearest other group and how close it is.
- * @returns {Array<null|{alt:number, ratio:number}>} indexed by student;
- *   null for students outside the groups or clearly inside their own.
+ * How firmly each grouped student sits in their group.
+ * @returns {{edge: Array<null|number>, between: Array<null|{alt:number, ratio:number}>}}
+ *   both indexed by student. `edge` is the distance to their own group's centre
+ *   over the distance to the next nearest (0 at the centre, 1 halfway), null
+ *   outside the groups; `between` is set from BETWEEN up, with that group.
  */
-function betweenGroups(points, labels, k, ids, n) {
-  const out = new Array(n).fill(null);
-  if (k < 2) return out;
+function placement(points, labels, k, ids, n) {
+  const edge = new Array(n).fill(null);
+  const between = new Array(n).fill(null);
+  if (k < 2) return { edge, between };
   const dims = points[0].length;
   const centres = Array.from({ length: k }, () => new Array(dims).fill(0));
   const counts = new Array(k).fill(0);
@@ -280,9 +284,10 @@ function betweenGroups(points, labels, k, ids, n) {
       if (d < near) { near = d; alt = g; }
     });
     const ratio = near > 1e-9 ? own / near : 0;
-    if (alt >= 0 && ratio >= BETWEEN) out[ids[i]] = { alt, ratio };
+    edge[ids[i]] = ratio;
+    if (alt >= 0 && ratio >= BETWEEN) between[ids[i]] = { alt, ratio };
   });
-  return out;
+  return { edge, between };
 }
 
 /**

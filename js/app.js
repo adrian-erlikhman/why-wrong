@@ -351,7 +351,13 @@ function renderMatrix() {
 
     const name = el('button', 'm-name', cls.students[s].name);
     name.tabIndex = -1;
+    const near = nearGroup(s);
     name.title = `${cls.students[s].name} — click for the full evidence trail`;
+    if (near) {
+      name.classList.add('m-between');
+      name.title += `
+Almost as close to ${groupLabel(near)} as to their own group`;
+    }
     name.addEventListener('click', e => { e.stopPropagation(); openStudent(ctx(), s, rowOrder()); });
     const head = el('span', 'm-head');
     head.setAttribute('role', 'rowheader');
@@ -405,9 +411,16 @@ function resetMatrixStop(student) {
   state.rows[student].querySelector('.m-name').tabIndex = 0;
 }
 
+/**
+ * A group's members in map order: closest to the group's centre first, so its
+ * shared stripes read as one block and anyone near another group sits at the
+ * band's edge. Students outside the groups keep register order.
+ */
+const bandOrder = g => g.members.slice().sort((a, b) => (state.cl.edge?.[a] ?? 0) - (state.cl.edge?.[b] ?? 0));
+
 /** Students in the order they sit on screen. */
 const rowOrder = () => (state.sorted
-  ? state.groups.flatMap(g => g.members)
+  ? state.groups.flatMap(bandOrder)
   : state.cls.responses.map((_, i) => i));
 
 /**
@@ -471,7 +484,7 @@ function sortRows() {
 
   state.groups.forEach(g => {
     bands.push({ g, start: order.length, count: g.members.length });
-    g.members.forEach(m => order.push(m));
+    bandOrder(g).forEach(m => order.push(m));
   });
 
   layout(order);
