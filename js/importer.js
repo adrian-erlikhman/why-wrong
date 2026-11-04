@@ -431,6 +431,19 @@ export function normName(name) {
     .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
+/**
+ * Forms, Docs and Word retype what a teacher writes: "-" becomes a minus sign
+ * or a dash, quotes curl, x^2 becomes x². An answer is matched to its option
+ * after both are folded the same way, so "−8" is still "-8". No two options of
+ * a built-in question fold to the same text.
+ */
+const typed = s => String(s).normalize('NFKC')
+  .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-')
+  .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+  .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"');
+export const foldAnswer = s => typed(s).toLowerCase()
+  .replace(/\u00F7/g, '/').replace(/\u221A/g, 'sqrt').replace(/\^/g, '').replace(/\s+/g, '');
+
 const isBlank = v => !v || v === '-' || v === '.';
 /** "A", "a)", "(B)", "C.", "Option D" and "A. x+3" all name a letter. */
 const LETTERED = /^(?:(?:option|choice|answer)\s+)?\(?([a-h])(?:[).:]+(?:\s.*)?)?$/i;
@@ -473,12 +486,12 @@ function detectCoding(pack, rows, cols) {
  * @returns {number|null} index, OMITTED for blank, or null if unreadable.
  */
 function readCell(raw, item, coding = 'letters') {
-  const v = String(raw ?? '').trim();
+  const v = typed(raw ?? '').trim();
   if (isBlank(v)) return OMITTED;
 
   const n = item.opts.length;
   const order = paperOrder(item);
-  const norm = s => String(s).toLowerCase().replace(/\s+/g, '');
+  const norm = foldAnswer;
 
   // "A. x+3" says what was chosen twice. The words are the safer of the two,
   // since a form of the teacher's own may letter its options differently.

@@ -14,7 +14,7 @@ import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, is
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
-import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, followUpHtml, csvCell, groupsCsv } from '../js/importer.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, followUpHtml, csvCell, groupsCsv, foldAnswer } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint, testFile } from '../js/session.js';
 import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
@@ -895,6 +895,26 @@ for (const pack of BUILT_IN) {
   check('a Google Forms export reads back exactly', same(f), f.errors.join('; '));
   check('it is matched by the question text', f.matchedBy === 'question text');
   check('its names come from the Name column', f.students[3]?.name === c.students[3].name);
+
+  // Forms, Docs and Word retype answers: minus signs, dashes, curly quotes, superscripts.
+  {
+    const alg = BUILT_IN[0];
+    const ca = generateClass(alg, { seed: 2, size: 12 });
+    const retype = t => String(t).replace(/-/g, (_, k) => (k % 2 ? '–' : '−'))
+      .replace(/\^(\d)/g, (_, d) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])
+      .replace(/'/g, '’');
+    const changed = alg.items.flatMap(it => it.opts).filter(o => retype(o.t) !== o.t).length;
+    const sheet = [
+      ['Name', ...alg.items.map(i => i.id)].join(','),
+      ...ca.students.map((st, s) => [q(st.name), ...ca.responses[s].map((v, i) => q(retype(alg.items[i].opts[v].t)))].join(','))
+    ].join('\n');
+    const rt = parseResponses(alg, sheet);
+    check('answers retyped with minus signs, dashes and superscripts read back exactly',
+      changed > 20 && rt.ok && rt.responses.every((row, s) => row.every((v, i) => v === ca.responses[s][i])),
+      `${changed} options retyped; ${rt.errors.join('; ')} ${rt.warnings.join('; ')}`.slice(0, 200));
+    check('no two options of a built-in question read as the same answer',
+      BUILT_IN.every(p => p.items.every(it => new Set(it.opts.map(o => foldAnswer(o.t))).size === it.opts.length)));
+  }
 
   const numbered = [
     ['Timestamp', 'Name', ...pack.items.map((it, i) => q(`${i + 1}. ${it.stem}`)), 'Feedback [Score]'].join(','),
