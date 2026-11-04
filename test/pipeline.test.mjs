@@ -564,6 +564,14 @@ for (const pack of BUILT_IN) {
   check('discrimination is unavailable without an independent score variation',
     unestimable.discrimination === null && unestimable.quality === 'insufficient' &&
     unestimable.flags.some(f => f.kind === 'insufficient-discrimination-data'));
+
+  const sparseClass = analyseItems(chancePack, [
+    [0, 1, 0], [-1, 0, 1], [-1, 1, 0], [-1, 0, 1], [-1, 1, 0]
+  ])[0];
+  check('a near-perfect item with one response is not labelled uninformative',
+    sparseClass.answered === 1 && sparseClass.quality === 'insufficient' &&
+    sparseClass.discrimination === null &&
+    !sparseClass.flags.some(f => f.kind === 'no-information'));
 }
 
 // -------------------------------------------------------------- row order

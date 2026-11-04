@@ -22,6 +22,7 @@
 import { correctIndex } from './pack.js';
 import { posteriorWithout, PARAMS, MIN_PROBES_ANSWERED } from './infer.js';
 
+const MIN_ITEM_RESPONSES = 5; // corrUpper treats fewer as too small to judge.
 const isAnswered = c => c != null && c >= 0;
 
 function pearson(x, y) {
@@ -251,7 +252,7 @@ export function analyseItems(pack, responses, inference = null) {
 
     // Judged on the percentage the teacher sees: 13 of 14 shows as 93% and is
     // treated as 93%, not as the 92.9% it is.
-    const nearlyAll = Math.round(p * 100) >= 93;
+    const nearlyAll = answered >= MIN_ITEM_RESPONSES && Math.round(p * 100) >= 93;
 
     const flags = [];
     if (keyCheck) flags.push({ kind: 'miskey', text: `Your strongest students chose "${item.opts[keyCheck.option].t}" (${keyCheck.favN} of the top ${keyCheck.topN}) more often than the keyed answer (${keyCheck.keyN}), and nothing else on the paper suggests they hold the belief that option was written for. Check the answer key.` });
