@@ -1211,8 +1211,17 @@ function renderProgress() {
   }
 
   host.appendChild(el('h3', 'prog-h', 'By misunderstanding'));
+  const shown = cmp.misconceptions.filter(m => m.before || m.after);
+  // One pattern is a handful of students, so most rows can read "could be
+  // chance" while the class as a whole clearly moved. Say so, or the rows
+  // read as contradicting the headline.
+  const unclear = shown.filter(m => m.reading === 'unclear').length;
+  if (unclear >= 2) {
+    host.appendChild(el('p', 'note prog-note',
+      `Each pattern below is tested on its own, using only the few students who showed it, so ${unclear} of ${shown.length} read “${READING.unclear}” even where the class as a whole changed. The whole-class result above rests on every student and is the stronger evidence.`));
+  }
   const list = el('div', 'progs');
-  cmp.misconceptions.filter(m => m.before || m.after).forEach(m => list.appendChild(progressCard(m, byId, t.students)));
+  shown.forEach(m => list.appendChild(progressCard(m, byId, t.students)));
   host.appendChild(list);
 
   if (matchNotes.length) host.appendChild(el('p', 'note', matchNotes.join(' ')));
