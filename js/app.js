@@ -754,6 +754,27 @@ function groupCard(g, idx) {
 
   body.appendChild(roster(g));
 
+  // Students whose answers sit almost as close to another group. On the
+  // stress benchmark about half of them were in the wrong one, so the card
+  // names the other group rather than leaving the placement to look certain.
+  const near = (g.between || [])
+    .map(b => ({ s: b.s, other: state.groups.find(x => x.index === b.alt && !x.isSecure && !x.isThin) }))
+    .filter(b => b.other);
+  if (near.length) {
+    const box = el('div', 'roster roster-between');
+    box.appendChild(el('div', 'lab', `Check where they fit · ${near.length}`));
+    box.appendChild(el('p', 'roster-note', 'Their answers are almost as close to another group. Look at their evidence before deciding which lesson they join.'));
+    const list = el('div', 'roster-names');
+    near.forEach(({ s, other }) => {
+      const b = el('button', 'rname', state.cls.students[s].name);
+      b.appendChild(el('span', 'rname-alt', ` or ${groupLabel(other)}`));
+      b.addEventListener('click', () => openStudent(ctx(), s, near.map(x => x.s)));
+      list.appendChild(b);
+    });
+    box.appendChild(list);
+    body.appendChild(box);
+  }
+
   // A reteach reaches only the students in the room for it. Anyone else who
   // holds the belief, but was grouped by a different one, belongs there too.
   const outside = lead ? alsoBringIn(g) : [];

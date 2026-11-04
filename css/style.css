@@ -847,6 +847,9 @@ html.key-above .legend { padding-bottom: 20px; }
   transition: background .12s, color .12s, border-color .12s;
 }
 .rname:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.roster-between .rname { border-style: dashed; border-color: var(--warn-line); background: var(--warn-tint); }
+.rname-alt { color: var(--warn); }
+.rname:hover .rname-alt { color: inherit; }
 
 .pill {
   display: inline-block;
