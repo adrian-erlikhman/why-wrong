@@ -253,13 +253,26 @@ the stress benchmark (below) showed it helped:
   the class.
 - **Tempting options.** Where each question's slips land is estimated from the
   class, so a wrong answer that tempts everyone is not read as a misconception.
+  A question has only a handful of slips to learn from, so it is shrunk toward
+  the paper's own split: whether the options written for a misconception catch
+  careless errors more than the other wrong options, pooled over every
+  question (`fitted.slipLift`, shown on the Method tab). An ordinary class fits
+  0.7–1.6; one where those options tempt everyone fits 2.1–6.3. With tempting
+  options this cut false labels on Algebra's weakest quarter from 0.90 to 0.50
+  per student and lifted precision from 0.83 to 0.87, at a cost in recall
+  there (0.83 → 0.75).
 
 Both estimates need five students; below that the fixed parameters stand. An
 estimate is reported above 0.6 **and on at least two answers that point to it**:
 on the benchmark, one resting on a single answer was right 42% of the time, on
-two 79%, on three or more 97%. Fitting the fire rate and each misconception's
-prevalence to the class was tried and left out: it lowered F1 and group
-recovery. The likelihood parameters are exported and shown in the UI rather
+two 79%, on three or more 97%. A belief over the line on one answer is shown as
+**worth one more question**, with the check question that would settle it; so
+is one between 0.45 and the line on two or more answers, which is right 57% of
+the time. Neither changes a diagnosis or a group. Fitting the fire rate and
+each misconception's prevalence to the class was tried and left out: it lowered
+F1 and group recovery, and fitting the fire rate alone (shrunk toward 0.76, at
+four strengths) helped classes whose beliefs fire less and hurt ordinary ones,
+never beating the fixed rate overall. The likelihood parameters are exported and shown in the UI rather
 than buried, because they are assumptions rather than facts.
 
 **3 · Class structure** *(no LLM — `js/cluster.js`)*
@@ -285,7 +298,33 @@ are marked **between groups**: on the benchmark (both packs, all ten scenarios,
 20 seeds, 11,420 grouped students) 6% of students land there and 56% of them
 were in the wrong group, against 12% of the rest and 3% below a ratio of 0.5.
 The group card lists them under "Check where they fit" with the other group,
-and so do the student panel, the Students filter and the CSV.
+and so do the student panel (which offers the other group's first check
+question to settle it), the Students filter, the CSV and the sorted map, where
+each band runs from its most typical student to these at its edge. Testing
+each group's stability by rerunning the analysis on resampled questions was
+tried and left out: most of what it flagged was simply small groups.
+
+**3b · What the test doesn't label** *(no LLM — `js/discover.js`)*
+A question set cannot anticipate every misconception. When students share one
+it does not label, the same students keep picking the same unlabelled wrong
+answers across questions. Two unlabelled options on different questions are
+linked when the students who picked an unlabelled option on both picked these
+two together more often than their shares predict (binomial tail); linked
+options form candidate patterns, counted by the students who picked two or more
+of them. Comparing only among students who picked an unlabelled option removes
+two things a class does by itself: weaker students pick more wrong answers,
+and holders of a question's labelled belief leave its unlabelled options to
+everyone else. (Without the second, Algebra classes of 90 gave false finds in
+11 of 40.) The search is then rerun on 100 copies of the class with each
+question's unlabelled answers reshuffled among the students who gave them, and
+a pattern is reported only above the 95th percentile of their largest one.
+
+Hiding one of a class's commoner beliefs (taking its labels off every
+question), the search finds it in 33% of Algebra classes of 28 and 10% of
+Biology ones, where most questions have only one unlabelled option, which says
+nothing beyond being wrong. It never named a wrong pattern, the students it
+names almost all hold the hidden belief, and with nothing hidden 2 of 80
+classes gave a false find. "Does it work?" runs this test live.
 
 **4 · Next steps.** Each indicated group gets a reteach suggestion and
 verification items. The paper can then be given again and results compared for
@@ -354,11 +393,11 @@ whatever seed is loaded:
 
 | Metric (mean over 40 seeds) | Algebra 1 | Evolution & Inheritance |
 | --- | --- | --- |
-| Diagnosis precision | 92.5% | 94.5% |
-| Diagnosis recall | 83.2% | 88.0% |
-| Diagnosis F1 | **0.875** | **0.910** |
-| Group recovery (Adjusted Rand Index) | **0.691** | **0.649** |
-| Correct number of groups recovered | 36/40 | 36/40 |
+| Diagnosis precision | 92.2% | 94.6% |
+| Diagnosis recall | 83.4% | 87.7% |
+| Diagnosis F1 | **0.875** | **0.909** |
+| Group recovery (Adjusted Rand Index) | **0.699** | **0.647** |
+| Correct number of groups recovered | 37/40 | 36/40 |
 
 Deliberately weak questions are planted in the item bank — one trivial, one
 ambiguously worded — and marked nowhere in the analysis data. The item analysis
@@ -376,16 +415,17 @@ class, rarer misconceptions, 15% blanks, and classes of 14 and 90. It also
 plants a flat question and a miskeyed one next to the built-in weak questions.
 Averaged over every scenario, 40 seeds each:
 
-| | Before (main, 3 Nov afternoon) | Now |
-| --- | --- | --- |
-| Diagnosis F1 | 0.799 | **0.868** |
-| False diagnoses per student, weakest quarter of the class | 0.42 | **0.34** |
-| … in a weaker class (Algebra) | 1.31 | **0.40** |
-| … with tempting options (Algebra) | 1.55 | **0.90** |
-| Calibration error (when it says 80%, is it right 80%?) | 0.048 | **0.020** |
-| Group recovery (ARI) | 0.588 | **0.650** |
-| Sound questions flagged for review, per class | 4.03 | **1.30** |
-| Miskeyed questions named as such | never | **40–93%** |
+| | Main, 3 Nov afternoon | 3 Nov evening | Now |
+| --- | --- | --- | --- |
+| Diagnosis F1 | 0.799 | 0.868 | **0.867** |
+| False diagnoses per student, weakest quarter of the class | 0.42 | 0.34 | **0.32** |
+| … in a weaker class (Algebra) | 1.31 | **0.40** | 0.43 |
+| … with tempting options (Algebra) | 1.55 | 0.90 | **0.50** |
+| Calibration error (when it says 80%, is it right 80%?) | 0.048 | 0.020 | **0.019** |
+| Group recovery (ARI) | 0.588 | 0.650 | **0.654** |
+| Right number of groups, tempting options (Algebra) | | 85% | **93%** |
+| Sound questions flagged for review, per class | 4.03 | 1.30 | **1.28** |
+| Miskeyed questions named as such | never | 40–93% | **40–93%** |
 
 Where it costs something: flat questions (strong and weak students alike) are
 flagged less often in small classes, about half the time at 28 students, with
@@ -433,7 +473,8 @@ js/packs/biology.js     8 misconceptions, 24 items
 js/generate.js         model-authored packs for any subject, with a repair loop
 js/simulate.js         generative class model + planted ground truth
 js/infer.js            misconception inference, evidence levels
-js/cluster.js          cosine k-means, silhouette, adjusted Rand index
+js/cluster.js          cosine k-means, silhouette, between-group students, ARI
+js/discover.js         unlabelled wrong answers picked together, reshuffle test
 js/itemstats.js        item analysis, leave-one-out agreement, key check
 js/validate.js         recovery scoring against planted truth
 js/drawer.js           per-student evidence trail, per-question breakdown
@@ -451,7 +492,8 @@ og.png                 link-preview card
 test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
                        on blanks, spreadsheets, saved classes, retests and the
                        model layer
-test/benchmark.mjs     stress scenarios, planted flat and miskeyed questions
+test/benchmark.mjs     stress scenarios, planted flat and miskeyed questions,
+                       a hidden belief for the unlabelled-pattern search
 ```
 
 ## Honest limitations
