@@ -111,6 +111,8 @@ function subsetsFor(probe, m) {
 
 /** Coordinate-ascent passes over one student's misconceptions per round. */
 const PASSES = 4;
+/** A pass that moves no estimate by more than this has converged. */
+const SETTLED = 1e-6;
 /** Rounds of re-estimating each student's accuracy from their beliefs and back. */
 const ROUNDS = 6;
 
@@ -251,8 +253,17 @@ export function inferMisconceptions(pack, responses, { fit = true } = {}) {
 
   // Each misconception's posterior depends on the others through the
   // questions they share, so a row is solved by passes until nothing moves.
+  // A row whose estimates have stopped moving needs no more passes.
   const solveRows = () => responses.forEach((_, s) => {
-    for (let pass = 0; pass < PASSES; pass++) misIds.forEach((__, m) => update(s, m, false));
+    for (let pass = 0; pass < PASSES; pass++) {
+      let moved = 0;
+      misIds.forEach((__, m) => {
+        const was = Q[s][m];
+        update(s, m, false);
+        moved = Math.max(moved, Math.abs(Q[s][m] - was));
+      });
+      if (moved < SETTLED) break;
+    }
   });
 
   // A right answer can only come from a question where no belief fired, so
