@@ -143,6 +143,8 @@ check('inference accepts null as a blank and leaves the prior unchanged',
 check('inference accepts undefined and sparse answer cells as blanks',
   inferMisconceptions(allDiagnosticPack, [[undefined]]).posterior[0][0] === PARAMS.prior &&
   inferMisconceptions(allDiagnosticPack, [Array(1)]).posterior[0][0] === PARAMS.prior);
+check('item analysis rejects an empty response class instead of producing NaN shares',
+  throwsAs(() => analyseItems(allDiagnosticPack, []), RangeError));
 const specialIdPack = {
   misconceptions: [{ id: '__proto__', name: 'Special identifier' }],
   items: [{

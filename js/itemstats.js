@@ -98,6 +98,13 @@ const AUDIT = {
  * @returns {Array} one record per item, in item order.
  */
 export function analyseItems(pack, responses, inference = null) {
+  if (!Array.isArray(responses)) {
+    throw new TypeError('Responses must be an array of student answer rows.');
+  }
+  if (responses.length === 0) {
+    throw new RangeError('Item analysis requires at least one student response row.');
+  }
+
   const ITEMS = pack.items;
   const nStudents = responses.length;
   const ci = ITEMS.map(correctIndex);
