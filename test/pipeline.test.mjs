@@ -14,7 +14,7 @@ import { inferMisconceptions, posteriorWithout, diagnose, coverage, untested, is
 import { clusterStudents, describeClusters, separateThin, reteachGroups, adjustedRandIndex as scoreClusteringPair } from '../js/cluster.js';
 import { analyseItems, problemItems, diagnosticItems, cronbachAlpha } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
-import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, csvCell, groupsCsv } from '../js/importer.js';
+import { paperOrder, paperLetter, parseResponses, quizHtml, reviewHtml, slipsHtml, followUpHtml, csvCell, groupsCsv } from '../js/importer.js';
 import { classFile, readClassFile, fingerprint, testFile } from '../js/session.js';
 import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normName, progressCsv } from '../js/compare.js';
 import { generatePack } from '../js/generate.js';
@@ -851,6 +851,16 @@ for (const pack of BUILT_IN) {
   const b = groups22.flatMap(g => g.between)[0];
   check('the groups CSV says who to check and which other group they are near',
     !!b && csv22.includes(`${c22.students[b.s].name} (or Group ${groups22.findIndex(g => g.index === b.alt) + 1})`));
+  // The follow-up sheet: every open call, with the question that settles it.
+  const fu = followUpHtml(pack, c22, inf22, groups22);
+  const checks22 = c22.students.flatMap((st, s) => inf22.misIds.filter((_, k) => strength(inf22, s, k).level === 'check').map(() => st.name));
+  check('the follow-up sheet lists every student with a belief worth one more question',
+    checks22.every(name => fu.includes(escapeHtml(name))), `${checks22.length} open`);
+  check('…and each between-groups student with the group they are near',
+    groups22.flatMap(g => g.between).every(x => fu.includes(escapeHtml(c22.students[x.s].name))) && /almost as close to Group \d/.test(fu));
+  check('…and its rows are one per open call',
+    (fu.match(/<tr><td>/g) || []).length === checks22.length + groups22.flatMap(g => g.between).length);
+
   const cellCount = row => {
     let n = 1, quoted = false;
     for (const ch of row) {

@@ -275,6 +275,65 @@ ${slips}
 </body></html>`;
 }
 
+/**
+ * The open calls on one page, for the teacher: every student with a belief
+ * worth one more question, or placed almost as close to another group, with
+ * the question that would settle it and room to note the answer. A few
+ * minutes at the start of the next lesson, instead of rereading thirty papers.
+ */
+export function followUpHtml(pack, cls, inf, groups) {
+  const byId = Object.fromEntries(pack.misconceptions.map(m => [m.id, m]));
+  const real = groups.filter(g => !g.isSecure && !g.isThin);
+  const label = g => `Group ${groups.indexOf(g) + 1}`;
+  const ask = m => (m?.verify?.[0] ? mathHtml(m.verify[0]) : '<i>Ask them to talk you through one of these questions.</i>');
+
+  const rows = [];
+  cls.students.forEach((st, s) => {
+    inf.misIds.forEach((id, k) => {
+      const lv = strength(inf, s, k);
+      if (lv.level !== 'check') return;
+      rows.push({ s, what: `Might hold “${mathHtml(byId[id]?.name ?? id)}” (${lv.telling} answer${lv.telling === 1 ? '' : 's'} point${lv.telling === 1 ? 's' : ''} to it)`, ask: ask(byId[id]) });
+    });
+    const home = real.find(g => g.members.includes(s));
+    const b = home?.between?.find(x => x.s === s);
+    const other = b && real.find(g => g.index === b.alt);
+    if (other) {
+      const lead = byId[other.signature[0]?.id];
+      rows.push({ s, what: `In ${label(home)}, almost as close to ${label(other)}: a wrong answer here points to ${label(other)}`, ask: ask(lead) });
+    }
+  });
+
+  const body = rows.length
+    ? `<table><thead><tr><th>Student</th><th>What is still open</th><th>Ask</th><th>Their answer</th></tr></thead><tbody>${
+      rows.map((r, j) => `<tr><td>${j && rows[j - 1].s === r.s ? '' : escapeHtml(cls.students[r.s].name)}</td><td>${r.what}</td><td>${r.ask}</td><td class="ans"></td></tr>`).join('')
+    }</tbody></table>`
+    : '<p>Nothing is open: no student has a belief worth one more question, and no one sits between two groups.</p>';
+
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<title>${escapeHtml(pack.name)} — follow-up questions</title>
+<style>
+  body{font:13.5px/1.45 Georgia,'Times New Roman',serif;max-width:60em;margin:32px auto;padding:0 24px;color:#111}
+  h1{font-size:20px;margin:0 0 4px}
+  .meta{font-size:12px;color:#555;margin-bottom:14px}
+  table{border-collapse:collapse;width:100%}
+  th,td{border:1px solid #999;padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:#f2f2f2;font-size:12.5px}
+  td.ans{width:22%}
+  td:first-child{white-space:nowrap}
+  tr{page-break-inside:avoid;break-inside:avoid}
+  @media print{body{margin:0}.noprint{display:none}}
+  .noprint{margin-bottom:16px}
+  button{font:inherit;padding:6px 13px;cursor:pointer}
+</style></head><body>
+<div class="noprint"><button onclick="window.print()">Print</button></div>
+<main>
+<h1>${escapeHtml(pack.name)} — follow-up questions</h1>
+<div class="meta">${rows.length} open call${rows.length === 1 ? '' : 's'} for ${new Set(rows.map(r => r.s)).size} student${new Set(rows.map(r => r.s)).size === 1 ? '' : 's'}. One question each settles most of them; note the answer and look again at that student's result.</div>
+${body}
+</main>
+</body></html>`;
+}
+
 /** Trigger a download of `text` without leaving the page. */
 export function download(filename, text, mime = 'text/csv') {
   const blob = new Blob([text], { type: `${mime};charset=utf-8` });

@@ -28,7 +28,7 @@ import { trapTab, focusInto } from './a11y.js';
 import { escapeHtml, mathHtml, setMath } from './notation.js';
 import { unlabelledPatterns, labelPattern, withoutTracked } from './discover.js';
 import {
-  templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, download, openPrintable,
+  templateCsv, answerKeyCsv, quizHtml, reviewHtml, slipsHtml, followUpHtml, download, openPrintable,
   parseResponses, groupsCsv, OMITTED, paperOrder, paperLetter, normName
 } from './importer.js';
 
@@ -2195,6 +2195,9 @@ $('#print-plan').addEventListener('click', printPlan);
 $('#export-plan').addEventListener('click', exportPlan);
 $('#regen').addEventListener('click', adaptPlans);
 $('#student-search').addEventListener('input', renderStudents);
+$('#print-followup').addEventListener('click', () => {
+  if (!openPrintable(followUpHtml(state.pack, state.cls, state.inf, state.groups))) alert('Allow pop-ups to print the follow-up questions.');
+});
 $('#print-slips').addEventListener('click', () => {
   if (!openPrintable(slipsHtml(state.pack, state.cls, state.inf, state.cov, state.slipsFor))) alert('Allow pop-ups to print the slips.');
 });
