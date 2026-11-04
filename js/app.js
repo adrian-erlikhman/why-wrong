@@ -812,6 +812,13 @@ function roster(g) {
 /*  Students                                                                */
 /* ======================================================================== */
 
+/** The other group a student's answers sit almost as close to, if any. */
+function nearGroup(s) {
+  const g = state.groups.find(x => x.members.includes(s));
+  const b = g?.between?.find(x => x.s === s);
+  return b ? state.groups.find(x => x.index === b.alt && !x.isSecure && !x.isThin) || null : null;
+}
+
 /** What a group is called wherever students are listed. */
 function groupLabel(g) {
   return g.isThin ? 'Not enough answers'
@@ -848,6 +855,8 @@ function renderStudentFilter() {
   if (support) add('Getting most wrong', support, 'support');
   const check = cls.students.filter((_, s) => state.inf.misIds.some((__, k) => strength(state.inf, s, k).level === 'check')).length;
   if (check) add('One more question', check, 'check');
+  const between = cls.students.filter((_, s) => nearGroup(s)).length;
+  if (between) add('Between groups', between, 'between');
   host.hidden = host.children.length < 3;
 }
 
@@ -878,6 +887,7 @@ function renderStudents() {
   const picked = state.studentGroup == null ? rows
     : state.studentGroup === 'support' ? rows.filter(r => r.group?.isSecure && r.group.support?.includes(r.s))
     : state.studentGroup === 'check' ? rows.filter(r => r.check.length > 0)
+    : state.studentGroup === 'between' ? rows.filter(r => nearGroup(r.s))
     : rows.filter(r => r.group === groups[state.studentGroup]);
   const shown = h ? picked.filter(r => normName(r.st.name).includes(h)) : picked;
 
@@ -901,7 +911,9 @@ function renderStudents() {
 
     const l = el('div', 'stu-l');
     l.appendChild(el('div', 'stu-name', r.st.name));
-    const placed = !r.group ? '' : r.group.isSecure && r.group.support?.includes(r.s) ? 'Getting most wrong' : groupLabel(r.group);
+    const near = nearGroup(r.s);
+    const placed = !r.group ? '' : r.group.isSecure && r.group.support?.includes(r.s) ? 'Getting most wrong'
+      : near ? `${groupLabel(r.group)} or ${state.groups.indexOf(near) + 1}?` : groupLabel(r.group);
     const blank = cov[r.s].total - cov[r.s].answered;
     l.appendChild(el('div', 'stu-meta', blank ? `${placed} · ${blank} left blank` : placed));
     card.appendChild(l);
