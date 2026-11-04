@@ -535,6 +535,15 @@ test/benchmark.mjs     stress scenarios, planted flat and miskeyed questions,
 - Misconceptions are treated as conditionally independent. In practice, some
   response patterns may overlap or share an underlying cause; the model does
   not represent those dependencies.
+- The search for patterns the test doesn't label misses more than it finds:
+  on simulated classes of 28 it recovered a hidden belief a third of the time
+  in Algebra and a tenth in Biology, and it can only see answers a question
+  leaves unlabelled. About one ordinary class in twenty shows a pattern by
+  chance, which the card says. Naming a pattern makes it a misunderstanding
+  the model then trusts like the hand-written ones, without the reteach plan
+  or check questions those have.
+- "Between groups" is a distance rule measured on simulated classes, not a
+  probability that the placement is wrong for a particular student.
 
 ## License
 
