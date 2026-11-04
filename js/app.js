@@ -2199,14 +2199,24 @@ $('#mats-close').addEventListener('click', () => closeM('#mats'));
 $('#source').addEventListener('change', e => {
   if (e.target.value === 'import') { openImport('class'); e.target.value = state.imported ? 'import' : 'sample'; }
   else if (state.imported) {
-    if (state.unsaved && !window.confirm('This class has not been saved. Switch back to the sample class and lose it?')) {
+    // A wrong click on a yes/no box loses a class typed in by hand, so an
+    // unsaved one gets three choices, saving first among them.
+    if (state.unsaved) {
       e.target.value = 'import';
+      openM('#leave');
       return;
     }
-    dropClass();
-    run();
+    leaveForSample();
   }
 });
+
+function leaveForSample() {
+  dropClass();
+  run();
+}
+$('#leave-cancel').addEventListener('click', () => closeM('#leave'));
+$('#leave-discard').addEventListener('click', () => { closeM('#leave'); leaveForSample(); });
+$('#leave-save').addEventListener('click', () => { saveClass(); closeM('#leave'); leaveForSample(); });
 
 $('#modal-cancel').addEventListener('click', () => closeM('#modal'));
 $('#modal-go').addEventListener('click', doGenerate);
