@@ -20,6 +20,7 @@ import { compareSittings, comparePredictions, matchStudents, mcnemarExact, normN
 import { generatePack } from '../js/generate.js';
 import { rewritePlan, setKey } from '../js/llm.js';
 import { escapeHtml, mathHtml } from '../js/notation.js';
+import { unlabelledPatterns, binomialTail } from '../js/discover.js';
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -471,6 +472,45 @@ for (const pack of BUILT_IN) {
   check('the review sheet lists every misconception and question',
     bare.misconceptions.every(m => sheet.includes(m.name)) && bare.items.every(it => sheet.includes(it.stem)));
   check('the review sheet marks unmapped options as unlinked', (sheet.match(/not linked to a known pattern<\/span>/g) || []).length === 4);
+}
+
+// ------------------------------------------------------ unlabelled patterns
+// A belief the test does not label still shows: the same students pick the
+// same unlabelled options together. Ordinary classes must come back empty.
+{
+  console.log(`\n${'='.repeat(66)}\nUnlabelled patterns\n${'='.repeat(66)}`);
+  check('binomial tail: certain, impossible and a known value',
+    binomialTail(0, 5, 0.3) === 1 && binomialTail(6, 5, 0.3) === 0 &&
+    Math.abs(binomialTail(3, 4, 0.5) - 5 / 16) < 1e-12);
+
+  BUILT_IN.forEach(pack => {
+    const finds = [1, 2, 3, 4, 5].map(seed =>
+      unlabelledPatterns(pack, generateClass(pack, { seed, size: 28 }).responses).patterns.length);
+    check(`${pack.id}: ordinary classes show no unlabelled pattern`, finds.every(n => n === 0), finds.join(' '));
+  });
+
+  const pack = BUILT_IN[0];
+  const c = generateClass(pack, { seed: 3, size: 28 });
+  const hidden = 'M02';
+  const blind = {
+    ...pack,
+    misconceptions: pack.misconceptions.filter(m => m.id !== hidden),
+    items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (o.mis === hidden ? { ...o, mis: undefined } : o)) }))
+  };
+  const r = unlabelledPatterns(blind, c.responses);
+  const top = r.patterns[0];
+  check('a belief with its labels taken off is found from the answers alone',
+    !!top && top.options.length >= 2 && top.options.every(o => pack.items[o.i].opts[o.oi].mis === hidden),
+    top && top.options.map(o => pack.items[o.i].id).join(' '));
+  check('…and the students it names hold that belief',
+    !!top && top.students.every(s => c.truth[s].held.has(hidden)), top && `${top.students.length} named`);
+  check('…and it beat at least 95 of the 100 reshuffled classes', !!top && top.beats >= 95);
+
+  const flipped = c.responses.map((_, s) => c.responses[c.responses.length - 1 - s]);
+  const r2 = unlabelledPatterns(blind, flipped);
+  check('the same class in another row order finds the same pattern and students',
+    JSON.stringify(r2.patterns.map(p => p.options)) === JSON.stringify(r.patterns.map(p => p.options)) &&
+    JSON.stringify(r2.patterns[0]?.students.map(s => c.responses.length - 1 - s).sort((a, b) => a - b)) === JSON.stringify(top?.students));
 }
 
 // ------------------------------------------------------ tempting wrong options

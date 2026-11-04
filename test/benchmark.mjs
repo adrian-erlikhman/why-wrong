@@ -16,6 +16,9 @@
  *   ARI, k ok     group recovery, and how often the number of groups is right
  *   false flags   sound questions flagged for rewriting, per class
  *   planted       planted defective questions caught
+ *
+ * Then the search for unlabelled patterns, on a class with one belief's
+ * labels hidden and on the ordinary class (see runDiscovery).
  */
 
 import { BUILT_IN } from '../js/packs/index.js';
@@ -24,6 +27,7 @@ import { inferMisconceptions, diagnose, posteriorForReporting } from '../js/infe
 import { clusterStudents } from '../js/cluster.js';
 import { analyseItems, problemItems } from '../js/itemstats.js';
 import { scoreDiagnosis, scoreClustering } from '../js/validate.js';
+import { unlabelledPatterns } from '../js/discover.js';
 
 const SEEDS = Number(process.argv[2]) || 40;
 
@@ -125,6 +129,35 @@ export function runAudit(pack, sc, seeds = SEEDS) {
   };
 }
 
+/**
+ * Unlabelled patterns (js/discover.js). One of the class's commoner beliefs
+ * has its labels taken off the questions, so the tool cannot see it as a
+ * belief; does the search find its options, and only its options? And on
+ * the ordinary class, with every label in place, how often does it find
+ * anything at all (every find there is false)?
+ */
+export function runDiscovery(pack, { size = 28, seeds = SEEDS } = {}) {
+  let falseFind = 0, found = 0, wrong = 0;
+  for (let seed = 1; seed <= seeds; seed++) {
+    const c = generateClass(pack, { seed, size });
+    if (unlabelledPatterns(pack, c.responses).patterns.length) falseFind++;
+
+    const counts = {};
+    c.truth.forEach(t => t.held.forEach(m => { counts[m] = (counts[m] || 0) + 1; }));
+    const hidden = Object.entries(counts).sort((a, b) => b[1] - a[1])[seed % 3][0];
+    const blind = {
+      ...pack,
+      misconceptions: pack.misconceptions.filter(m => m.id !== hidden),
+      items: pack.items.map(it => ({ ...it, opts: it.opts.map(o => (o.mis === hidden ? { ...o, mis: undefined } : o)) }))
+    };
+    const top = unlabelledPatterns(blind, c.responses).patterns[0];
+    if (!top) continue;
+    const share = top.options.filter(o => pack.items[o.i].opts[o.oi].mis === hidden).length / top.options.length;
+    if (share >= 0.5) found++; else wrong++;
+  }
+  return { falseFind: falseFind / seeds, found: found / seeds, wrong: wrong / seeds };
+}
+
 const fmt = (x, d = 3) => (x == null ? '  -  ' : x.toFixed(d));
 
 // Print the table only when run directly, not when imported.
@@ -142,6 +175,12 @@ if (/benchmark\.mjs$/.test(process.argv[1] || '')) {
     }
   }
   const rows = Object.values(all);
+  console.log('\nUnlabelled patterns (one common belief\'s labels hidden) — class of 28');
+  console.log('pack                  hidden found   wrong pattern   false find, nothing hidden');
+  for (const pack of BUILT_IN) {
+    const d = runDiscovery(pack);
+    console.log(`${pack.id.padEnd(20)}  ${fmt(d.found, 2)}           ${fmt(d.wrong, 2)}            ${fmt(d.falseFind, 2)}`);
+  }
   console.log(`\nacross every row: F1 ${fmt(mean(rows.map(r => r.f1)))}  weak-FP ${fmt(mean(rows.map(r => r.weakFp)), 2)}  ` +
     `ECE ${fmt(mean(rows.map(r => r.ece)))}  ARI ${fmt(mean(rows.map(r => r.ari)))}  false flags ${fmt(mean(rows.map(r => r.falseFlags)), 2)}`);
 }
