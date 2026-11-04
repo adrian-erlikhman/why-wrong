@@ -678,7 +678,7 @@ export function parseResponses(pack, text, otherPacks = []) {
  * reported for each student), each group also lists the students outside it
  * who show its main pattern and belong in the lesson too.
  */
-export function groupsCsv(pack, cls, groups, misIndex, dx = null) {
+export function groupsCsv(pack, cls, groups, misIndex, dx = null, found = []) {
   const head = ['Group', 'Students', 'Size', 'Misunderstandings', 'Reteach', 'Check 1', 'Check 2', 'Check 3', 'Also bring in', 'Check where they fit'];
   const rows = groups.flatMap((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
@@ -714,5 +714,14 @@ export function groupsCsv(pack, cls, groups, misIndex, dx = null) {
       }).filter(Boolean).join('; ')
     ]];
   });
-  return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n');
+  // Wrong answers the question set has no label for, picked together (js/discover.js).
+  const unlabelled = found.map(f => [
+    'Not in the question set',
+    f.students.map(m => cls.students[m].name).join('; '),
+    f.count,
+    f.options.map(({ i, oi }) => `${pack.items[i].id} ${paperLetter(pack.items[i], oi)} "${pack.items[i].opts[oi].t}"`).join('; '),
+    'These wrong answers were picked together more than chance allows, and the question set links them to no misunderstanding. Ask the students how they got them.',
+    '', '', '', '', ''
+  ]);
+  return [head, ...rows, ...unlabelled].map(r => r.map(csvCell).join(',')).join('\n');
 }

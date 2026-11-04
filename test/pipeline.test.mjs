@@ -506,6 +506,15 @@ for (const pack of BUILT_IN) {
     !!top && top.students.every(s => c.truth[s].held.has(hidden)), top && `${top.students.length} named`);
   check('…and it beat at least 95 of the 100 reshuffled classes', !!top && top.beats >= 95);
 
+  const inf = inferMisconceptions(blind, c.responses);
+  const rp = posteriorForReporting(inf);
+  const cl = clusterStudents(rp, { seed: 42 });
+  const csv = groupsCsv(blind, c, describeClusters(rp, cl.labels, inf.misIds, cl), Object.fromEntries(blind.misconceptions.map(m => [m.id, m])), null, r.patterns);
+  const last = csv.split('\n').pop();
+  check('the groups CSV ends with the pattern, its students and its answers',
+    last.startsWith('Not in the question set,') && top.students.every(s => last.includes(c.students[s].name)) &&
+    top.options.every(o => last.includes(pack.items[o.i].id)));
+
   const flipped = c.responses.map((_, s) => c.responses[c.responses.length - 1 - s]);
   const r2 = unlabelledPatterns(blind, flipped);
   check('the same class in another row order finds the same pattern and students',

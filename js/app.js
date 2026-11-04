@@ -1873,7 +1873,7 @@ function wireMaterials() {
 
 function exportPlan() {
   download(`${state.pack.id}-reteach-plan.csv`,
-    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack), state.dx));
+    groupsCsv(state.pack, state.cls, state.groups, misById(state.pack), state.dx, state.found || []));
 }
 
 /** Print with everything unfolded, since paper has no way to open a section. */
