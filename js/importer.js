@@ -720,7 +720,7 @@ export function groupsCsv(pack, cls, groups, misIndex, dx = null, found = []) {
     f.students.map(m => cls.students[m].name).join('; '),
     f.count,
     f.options.map(({ i, oi }) => `${pack.items[i].id} ${paperLetter(pack.items[i], oi)} "${pack.items[i].opts[oi].t}"`).join('; '),
-    'These wrong answers were picked together more than chance allows, and the question set links them to no misunderstanding. Ask the students how they got them.',
+    'These wrong answers were picked together more often than in 95 of 100 shuffled copies of the class, and the question set links them to no misunderstanding. Ask the students how they got them.',
     '', '', '', '', ''
   ]);
   return [head, ...rows, ...unlabelled].map(r => r.map(csvCell).join(',')).join('\n');

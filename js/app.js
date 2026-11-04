@@ -311,9 +311,15 @@ function renderSummary() {
   const noGroups = !answered ? ''
     : correct === answered ? 'All recorded answers are correct; this test has not identified a reteach need.'
     : 'No clear shared pattern emerged. Review individual evidence; scattered answers alone do not show why a student missed a question.';
+  // A pattern the question set has no label for sits at the end of Reteach
+  // groups, below every group card; the note is how a teacher learns it is there.
+  const found = state.found?.length || 0;
+  const unlabelled = found
+    ? ` ${found === 1 ? 'One group of students also' : `${found} groups of students also`} picked the same unlabelled wrong answers together, more often than in 95 of 100 shuffled copies of the class: see the end of Reteach groups.`
+    : '';
   $('#strip-note').textContent = ((real.length
     ? `Start with the biggest group. ${topName ? `The most widespread pattern is “${topName}”.` : ''}`
-    : noGroups) + blanks).trim();
+    : noGroups) + blanks + unlabelled).trim();
 }
 
 /* ======================================================================== */
@@ -670,7 +676,8 @@ function unlabelledCard(f) {
   body.appendChild(el('p', 'belief',
     `These students kept choosing the same wrong answers, ones the question set does not link to any misunderstanding. ` +
     `The same class with its wrong answers shuffled at random gave a pattern this large ${ties ? `in only ${ties} of ${f.reshuffles} tries` : `in none of ${f.reshuffles} tries`}, ` +
-    `so it may be a shared idea the questions were not written to detect. Look at what these answers have in common, then ask the students how they got them.`));
+    `so it may be a shared idea the questions were not written to detect. Look at what these answers have in common, then ask the students how they got them. ` +
+    `About one ordinary class in twenty shows a pattern like this by chance, so treat it as a lead rather than a finding.`));
 
   body.appendChild(el('div', 'lab', 'The answers'));
   const ul = el('ul', 'unl-list');
