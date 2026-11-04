@@ -589,7 +589,16 @@ export function parseResponses(pack, text, otherPacks = []) {
     if (at >= 0) idIndex[it.id] = at;
   });
 
-  const matchedById = Object.keys(idIndex).length >= Math.ceil(pack.items.length * 0.8);
+  const named = Object.keys(idIndex).length;
+  // A teacher often gives one unit of a test, not all of it. A header that
+  // names some of its questions, by id or by text, is that, as long as no
+  // other loaded test's questions are named more often.
+  const otherBest = Math.max(0, ...otherPacks.filter(o => o.id !== pack.id).map(o => {
+    const heads = new Set(header.map(h => h.trim().toLowerCase()));
+    return o.items.filter(it => heads.has(it.id.toLowerCase())).length;
+  }));
+  const partial = named < pack.items.length && named >= MIN_PART && named > otherBest;
+  const matchedById = partial || named >= Math.ceil(pack.items.length * 0.8);
 
   // A header naming another loaded test's questions is the wrong subject, not a
   // sheet to read by position. Saying which one saves a confusing error at best
@@ -610,7 +619,7 @@ export function parseResponses(pack, text, otherPacks = []) {
 
   if (matchedById) {
     const missing = pack.items.filter(it => idIndex[it.id] === undefined);
-    if (missing.length) {
+    if (missing.length && !partial) {
       errors.push(`These questions are missing from the header: ${missing.slice(0, 6).map(m => m.id).join(', ')}${missing.length > 6 ? `, +${missing.length - 6} more` : ''}.`);
     }
     cols = pack.items.map(it => idIndex[it.id]);
@@ -692,7 +701,8 @@ export function parseResponses(pack, text, otherPacks = []) {
         bad.push(`row ${r + dataStart + 1} (${name}), ${it.id}: “${String(cell).slice(0, 14)}”`);
         out.push(OMITTED);
       } else {
-        if (idx === OMITTED) omitted++;
+        // A question with no column was not given, which is not a blank.
+        if (idx === OMITTED && cols[i] !== undefined) omitted++;
         out.push(idx);
       }
     });
@@ -738,10 +748,54 @@ export function parseResponses(pack, text, otherPacks = []) {
     warnings.push(`${omitted} blank answer${omitted === 1 ? '' : 's'} treated as unanswered. These carry no evidence either way rather than counting against the student.`);
   }
 
+  // Only some of the questions were given: the class is read against a copy of
+  // the test cut down to them, so nothing is counted as left blank that was
+  // never asked, and only the misunderstandings those questions test are tracked.
+  if (partial) {
+    const asked = pack.items.map((it, i) => (idIndex[it.id] !== undefined ? i : -1)).filter(i => i >= 0);
+    const part = partOfPack(pack, asked);
+    const dropped = pack.misconceptions.length - part.misconceptions.length;
+    warnings.unshift(`Only ${asked.length} of the ${pack.items.length} questions are in the paste, so the class is read against just those ${asked.length}` +
+      (dropped ? `. ${dropped} misunderstanding${dropped === 1 ? ' is' : 's are'} not tested by them and ${dropped === 1 ? 'is' : 'are'} left out.` : '.'));
+    return {
+      ok: errors.length === 0,
+      errors, warnings, students, responses: responses.map(row => asked.map(i => row[i])), omitted, coding,
+      matchedBy: byText ? 'question text' : 'question id',
+      pack: part, asked
+    };
+  }
+
   return {
     ok: errors.length === 0,
     errors, warnings, students, responses, omitted, coding,
     matchedBy: matchedById ? (byText ? 'question text' : 'question id') : 'column order'
+  };
+}
+
+/** Fewest of a test's questions a header must name to be read as part of it. */
+export const MIN_PART = 3;
+
+/**
+ * A copy of `pack` with only the questions at `asked`, for a class that was
+ * given part of it. Question ids, option text and printed letters are kept;
+ * misunderstandings none of those questions test are left out, and so are
+ * they from the simulated profiles. It is a test of its own, so a saved class
+ * carries it inside the file.
+ */
+export function partOfPack(pack, asked) {
+  const items = asked.map(i => pack.items[i]);
+  const tested = new Set(items.flatMap(it => it.opts.map(o => o.mis).filter(Boolean)));
+  const ids = items.map(it => it.id).join(',');
+  let h = 2166136261;
+  for (const ch of ids) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
+  return {
+    ...structuredClone(pack),
+    id: `${pack.id}~${(h >>> 0).toString(36)}`,
+    name: `${pack.name}: ${items.length} of ${pack.items.length} questions`,
+    partOf: pack.id,
+    items: structuredClone(items),
+    misconceptions: structuredClone(pack.misconceptions.filter(m => tested.has(m.id))),
+    archetypes: (pack.archetypes || []).map(a => ({ ...a, core: (a.core || []).filter(m => tested.has(m)) }))
   };
 }
 

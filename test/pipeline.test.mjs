@@ -914,6 +914,37 @@ for (const pack of BUILT_IN) {
       `${changed} options retyped; ${rt.errors.join('; ')} ${rt.warnings.join('; ')}`.slice(0, 200));
     check('no two options of a built-in question read as the same answer',
       BUILT_IN.every(p => p.items.every(it => new Set(it.opts.map(o => foldAnswer(o.t))).size === it.opts.length)));
+
+    // A class given only part of the test: one unit, or a quiz cut from it.
+    const part = (from, to, byText = false) => {
+      const qs = alg.items.slice(from, to);
+      const head = ['Student', ...qs.map(it => (byText ? q(it.stem) : it.id))].join(',');
+      const body = ca.students.map((st, s) => [q(st.name), ...qs.map((it, k) => q(it.opts[ca.responses[s][from + k]].t))].join(','));
+      return parseResponses(alg, [head, ...body].join('\n'), BUILT_IN);
+    };
+    const p10 = part(16, 26);
+    check('a paste of 10 of the 36 questions is read, not refused',
+      p10.ok && p10.pack?.items.length === 10 && p10.responses.every((row, s) => row.length === 10 && row.every((v, k) => v === ca.responses[s][16 + k])),
+      p10.errors.join('; '));
+    check('…against a cut-down copy of the test, and it says so',
+      p10.pack.partOf === alg.id && p10.pack.items.map(it => it.id).join() === alg.items.slice(16, 26).map(it => it.id).join() &&
+      /^Only 10 of the 36 questions/.test(p10.warnings[0]));
+    check('…which keeps only the misunderstandings those questions test, and is a valid test',
+      validatePack(p10.pack).ok &&
+      p10.pack.misconceptions.every(m => p10.pack.items.some(it => it.opts.some(o => o.mis === m.id))) &&
+      p10.pack.misconceptions.length < alg.misconceptions.length);
+    check('…whose printed letters are the same as on the whole test',
+      p10.pack.items.every((it, k) => it.opts.every((_, oi) => paperLetter(it, oi) === paperLetter(alg.items[16 + k], oi))));
+    check('…and none of its students is short of answers for an estimate',
+      coverage(p10.pack, p10.responses).every(c => !c.thin));
+    check('…and the questions that were not given are not counted as blanks',
+      p10.omitted === 0 && !p10.warnings.some(w => /blank answer/.test(w)), p10.warnings.join(' | ').slice(0, 160));
+    const p18 = part(0, 18, true);
+    check('a paste of 18 questions named by their text is read too', p18.ok && p18.pack?.items.length === 18 && p18.matchedBy === 'question text');
+    const p30 = part(0, 30);
+    check('a paste of 30 of 36 no longer stops at "missing from the header"', p30.ok && p30.pack?.items.length === 30);
+    check('the same questions make the same cut-down test', part(16, 26).pack.id === p10.pack.id && p18.pack.id !== p10.pack.id);
+    check('two named questions are not enough to read as part of the test', !part(16, 18).pack);
   }
 
   const numbered = [
