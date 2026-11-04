@@ -71,31 +71,57 @@ function unlabelledOptions(pack) {
   });
 }
 
+/** Set bits in a word. */
+function popcount(x) {
+  x -= (x >>> 1) & 0x55555555;
+  x = (x & 0x33333333) + ((x >>> 2) & 0x33333333);
+  return (((x + (x >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24;
+}
+
+/** Students in both sets, each set a bitset over the class. */
+function together(a, b) {
+  let n = 0;
+  for (let w = 0; w < a.length; w++) n += popcount(a[w] & b[w]);
+  return n;
+}
+
+/** A bitset of the students for whom `test(row)` holds. */
+function bits(responses, test) {
+  const out = new Uint32Array(Math.ceil(responses.length / 32) || 1);
+  responses.forEach((r, s) => { if (test(r)) out[s >>> 5] |= 1 << (s & 31); });
+  return out;
+}
+
 /** One pass of the search: every candidate pattern with its count. */
 function search(pack, responses, unl) {
   const U = [];
   unl.forEach((opts, i) => opts.forEach(oi => U.push({ i, oi })));
-  const picked = unl.map((opts, i) => responses.map(r => opts.includes(r[i])));
-  const chose = U.map(u => responses.map(r => r[u.i] === u.oi));
+  // Bitsets over the class: who picked any unlabelled option on each
+  // question, and who picked each option. A reshuffle reruns this whole
+  // function a hundred times, so the counting is done a word at a time.
+  const picked = unl.map((opts, i) => bits(responses, r => opts.includes(r[i])));
+  const chose = U.map(u => bits(responses, r => r[u.i] === u.oi));
   const share = U.map((u, x) => {
-    const n = picked[u.i].filter(Boolean).length;
-    return n ? chose[x].filter(Boolean).length / n : 0;
+    const n = together(picked[u.i], picked[u.i]);
+    return n ? together(chose[x], chose[x]) / n : 0;
   });
+  const both = new Map();   // students with an unlabelled pick on both questions, per pair
+  const bothOf = (i, j) => {
+    const key = i * 4096 + j;
+    if (!both.has(key)) both.set(key, together(picked[i], picked[j]));
+    return both.get(key);
+  };
 
   const links = U.map(() => []);
   for (let a = 0; a < U.length; a++) {
     for (let b = a + 1; b < U.length; b++) {
       if (U[a].i === U[b].i) continue;
-      let n = 0, k = 0;
-      for (let s = 0; s < responses.length; s++) {
-        if (!picked[U[a].i][s] || !picked[U[b].i][s]) continue;
-        n++;
-        if (chose[a][s] && chose[b][s]) k++;
-      }
+      const k = together(chose[a], chose[b]);
       if (k < MIN_TOGETHER) continue;
-      if (binomialTail(k, n, share[a] * share[b]) < LINK_P) { links[a].push(b); links[b].push(a); }
+      if (binomialTail(k, bothOf(U[a].i, U[b].i), share[a] * share[b]) < LINK_P) { links[a].push(b); links[b].push(a); }
     }
   }
+  const has = (set, s) => (set[s >>> 5] >>> (s & 31)) & 1;
 
   const seen = new Set(), patterns = [];
   U.forEach((_, a) => {
@@ -107,7 +133,7 @@ function search(pack, responses, unl) {
       members.push(x);
       links[x].forEach(y => { if (!seen.has(y)) { seen.add(y); stack.push(y); } });
     }
-    const students = responses.map((_, s) => s).filter(s => members.filter(x => chose[x][s]).length >= 2);
+    const students = responses.map((_, s) => s).filter(s => members.filter(x => has(chose[x], s)).length >= 2);
     patterns.push({
       options: members.map(x => U[x]).sort((p, q) => p.i - q.i || p.oi - q.oi),
       students,

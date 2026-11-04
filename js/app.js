@@ -1461,7 +1461,7 @@ function renderHideTest(rank = 0) {
 
   const res = el('p', 'hide-res');
   if (!top) {
-    res.textContent = 'Not found in this class. In the benchmark, with a class of 28, a belief hidden like this is found in about 2 of 5 Algebra classes and 1 of 10 Biology ones, and ordinary classes give a false find about 1 time in 30.';
+    res.textContent = 'Not found in this class. In the benchmark, with classes of 28, a belief hidden like this was found in 1 of 3 Algebra classes and 1 of 10 Biology ones (most Biology questions have only one unlabelled answer, which says nothing beyond being wrong), and 2 of 80 ordinary classes gave a false find.';
   } else {
     const own = top.options.filter(o => pack.items[o.i].opts[o.oi].mis === hidden).length;
     const hold = top.students.filter(s => cls.truth[s].held.has(hidden)).length;
