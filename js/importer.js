@@ -679,19 +679,19 @@ export function parseResponses(pack, text, otherPacks = []) {
  * who show its main pattern and belong in the lesson too.
  */
 export function groupsCsv(pack, cls, groups, misIndex, dx = null) {
-  const head = ['Group', 'Students', 'Size', 'Misunderstandings', 'Reteach', 'Check 1', 'Check 2', 'Check 3', 'Also bring in'];
+  const head = ['Group', 'Students', 'Size', 'Misunderstandings', 'Reteach', 'Check 1', 'Check 2', 'Check 3', 'Also bring in', 'Check where they fit'];
   const rows = groups.flatMap((g, n) => {
     const names = g.members.map(m => cls.students[m].name).join('; ');
     if (g.isThin) {
-      return [['Not enough answers', names, g.size, '—', 'At least half the paper is blank. Collect more answers or check in with these students before drawing conclusions.', '', '', '', '']];
+      return [['Not enough answers', names, g.size, '—', 'At least half the paper is blank. Collect more answers or check in with these students before drawing conclusions.', '', '', '', '', '']];
     }
     if (g.isSecure) {
       const nameOf = list => list.map(m => cls.students[m].name).join('; ');
       const support = g.support || [];
       const rest = g.onTrack || g.members;
       return [
-        ...(support.length ? [['Getting most wrong', nameOf(support), support.length, '—', 'No clear pattern, but right on fewer than 60% of the questions their errors do not explain. Work through a few problems with them and see where it breaks down.', '', '', '', '']] : []),
-        ...(rest.length ? [['No clear pattern', nameOf(rest), rest.length, '—', 'The answers did not show a clear pattern on this test. Review the evidence before deciding what support would help.', '', '', '', '']] : [])
+        ...(support.length ? [['Getting most wrong', nameOf(support), support.length, '—', 'No clear pattern, but right on fewer than 60% of the questions their errors do not explain. Work through a few problems with them and see where it breaks down.', '', '', '', '', '']] : []),
+        ...(rest.length ? [['No clear pattern', nameOf(rest), rest.length, '—', 'The answers did not show a clear pattern on this test. Review the evidence before deciding what support would help.', '', '', '', '', '']] : [])
       ];
     }
     const top = misIndex[g.signature[0]?.id];
@@ -706,7 +706,12 @@ export function groupsCsv(pack, cls, groups, misIndex, dx = null) {
       g.signature.map(s => `${s.id} ${misIndex[s.id]?.name ?? ''}`).join('; '),
       g.aiPlan?.plan || top?.reteach || '',
       ...[...(g.aiPlan?.verify || top?.verify || []), '', '', ''].slice(0, 3),
-      outside.join('; ')
+      outside.join('; '),
+      // Members almost as close to another group, with that group's number.
+      (g.between || []).map(b => {
+        const n2 = groups.findIndex(x => x.index === b.alt && !x.isSecure && !x.isThin);
+        return n2 < 0 ? null : `${cls.students[b.s].name} (or Group ${n2 + 1})`;
+      }).filter(Boolean).join('; ')
     ]];
   });
   return [head, ...rows].map(r => r.map(csvCell).join(',')).join('\n');

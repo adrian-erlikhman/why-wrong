@@ -708,6 +708,28 @@ for (const pack of BUILT_IN) {
   const cl = clusterStudents(inf.posterior, { seed: 42 });
   const csv = groupsCsv(pack, c, describeClusters(inf.posterior, cl.labels, inf.misIds, cl), Object.fromEntries(pack.misconceptions.map(m => [m.id, m])));
   check('a group that starts with that name is safe', !csv.split('\n').some(row => row.split(',')[1] === '=1+1'));
+
+  // A between student is listed with the other group's number, on every row width.
+  const c22 = generateClass(pack, { seed: 22, size: 28 });
+  const inf22 = inferMisconceptions(pack, c22.responses);
+  const rep22 = posteriorForReporting(inf22);
+  const cl22 = clusterStudents(rep22, { seed: 42 });
+  const groups22 = describeClusters(rep22, cl22.labels, inf22.misIds, cl22, { ability: inf22.ability });
+  const csv22 = groupsCsv(pack, c22, groups22, Object.fromEntries(pack.misconceptions.map(m => [m.id, m])));
+  const b = groups22.flatMap(g => g.between)[0];
+  check('the groups CSV says who to check and which other group they are near',
+    !!b && csv22.includes(`${c22.students[b.s].name} (or Group ${groups22.findIndex(g => g.index === b.alt) + 1})`));
+  const cellCount = row => {
+    let n = 1, quoted = false;
+    for (const ch of row) {
+      if (ch === '"') quoted = !quoted;
+      else if (ch === ',' && !quoted) n++;
+    }
+    return n;
+  };
+  const widths = csv22.split('\n').map(cellCount);
+  check('every groups CSV row has the same number of columns',
+    widths.every(w => w === 10), JSON.stringify(widths));
 }
 
 // -------------------------------------------------------- messy spreadsheets
