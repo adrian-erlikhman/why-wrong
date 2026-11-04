@@ -1481,7 +1481,11 @@ function renderHideTest(rank = 0) {
   if (common.length > 1) {
     const again = el('button', 'btn', 'Hide a different one');
     again.type = 'button';
-    again.addEventListener('click', () => renderHideTest(rank + 1));
+    again.addEventListener('click', () => {
+      renderHideTest(rank + 1);
+      // The section is rebuilt, button and all: keep a keyboard user on it.
+      [...$('#hide-test').querySelectorAll('button')].pop()?.focus({ preventScroll: true });
+    });
     host.appendChild(again);
   }
 }
