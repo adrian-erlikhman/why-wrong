@@ -7,7 +7,7 @@ import { correctIndex, misById } from './pack.js';
 import { untested, strength } from './infer.js';
 import { SUPPORT_BELOW } from './cluster.js';
 import { shownFlags } from './itemstats.js';
-import { infoButton } from './explain.js';
+import { infoButton, closeExplainer } from './explain.js';
 import { paperOrder } from './importer.js';
 import { setMath } from './notation.js';
 import { trapTab } from './a11y.js';
@@ -59,6 +59,7 @@ function step(d, fromButton) {
 
 export function closeDrawer() {
   if (!host || host.hidden) return;
+  closeExplainer();
   host.classList.remove('is-open');
   setTimeout(() => { host.hidden = true; }, 200);
   nav = null;
@@ -69,6 +70,8 @@ export function closeDrawer() {
 
 function openWith(node, onClose, label, navigation = null) {
   ensureHost();
+  // An explanation belongs to the content being replaced.
+  closeExplainer();
   // Already open: this is a step to the next student or question, so the panel
   // stays put, only its content changes, and focus still returns to whatever
   // opened it in the first place.

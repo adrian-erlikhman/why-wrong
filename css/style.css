@@ -1432,6 +1432,8 @@ html.key-above .legend { padding-bottom: 20px; }
   padding: 16px 18px;
   box-shadow: var(--shadow-2);
 }
+/* It takes focus when it opens; keep its own corners under the focus ring. */
+.pop:focus-visible { border-radius: 12px; }
 .pop-h { font-family: var(--display); font-size: 16.5px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em; }
 .pop-also {
   display: block;

@@ -84,8 +84,13 @@ export const TERMS = {
 let open = null;
 let openFrom = null;   // the "?" that opened it
 
-function close() {
+/** `refocus`: hand focus back to the "?", as when Escape or Tab leaves it. */
+function close(refocus = false) {
   if (open) { open.remove(); open = null; }
+  if (openFrom) {
+    openFrom.setAttribute('aria-expanded', 'false');
+    if (refocus) openFrom.focus();
+  }
   openFrom = null;
   document.removeEventListener('keydown', onKey, true);
   document.removeEventListener('click', onDocClick, true);
@@ -94,10 +99,16 @@ function close() {
 
 // Escape closes the explanation only. Caught on the way down and stopped there,
 // it does not also close the student panel or dialog the "?" sits in.
+// Tab from inside it goes back to its "?" and on from there, so the keyboard
+// carries on where it was rather than at the end of the page.
 function onKey(e) {
-  if (e.key !== 'Escape' || !open) return;
-  e.stopPropagation();
-  close();
+  if (!open) return;
+  if (e.key === 'Escape') {
+    e.stopPropagation();
+    close(true);
+  } else if (e.key === 'Tab' && open.contains(document.activeElement)) {
+    close(true);
+  }
 }
 function onDocClick(e) {
   if (open && !open.contains(e.target) && !e.target.closest('.info')) close();
@@ -116,9 +127,12 @@ function show(anchor, key) {
   const pop = document.createElement('div');
   pop.className = 'pop';
   pop.setAttribute('role', 'dialog');
+  pop.setAttribute('aria-labelledby', 'pop-h');
+  pop.tabIndex = -1;
 
   const h = document.createElement('div');
   h.className = 'pop-h';
+  h.id = 'pop-h';
   h.textContent = t.term;
   if (t.also) {
     const s = document.createElement('span');
@@ -155,6 +169,9 @@ function show(anchor, key) {
 
   open = pop;
   openFrom = anchor;
+  anchor.setAttribute('aria-expanded', 'true');
+  // Into the explanation, so a screen reader reads it out.
+  pop.focus({ preventScroll: true });
   document.addEventListener('keydown', onKey, true);
   document.addEventListener('scroll', onScroll, true);
   setTimeout(() => document.addEventListener('click', onDocClick, true), 0);
@@ -167,9 +184,11 @@ export function infoButton(key) {
   b.type = 'button';
   b.textContent = '?';
   b.setAttribute('aria-label', `What is ${TERMS[key]?.term ?? key}?`);
+  b.setAttribute('aria-expanded', 'false');
   b.addEventListener('click', e => {
     e.stopPropagation();
-    if (open) { close(); return; }
+    // A second click on the same "?" closes it; another "?" opens its own.
+    if (open && openFrom === b) { close(); return; }
     show(b, key);
   });
   return b;
