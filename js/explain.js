@@ -87,12 +87,18 @@ let openFrom = null;   // the "?" that opened it
 function close() {
   if (open) { open.remove(); open = null; }
   openFrom = null;
-  document.removeEventListener('keydown', onKey);
+  document.removeEventListener('keydown', onKey, true);
   document.removeEventListener('click', onDocClick, true);
   document.removeEventListener('scroll', onScroll, true);
 }
 
-function onKey(e) { if (e.key === 'Escape') close(); }
+// Escape closes the explanation only. Caught on the way down and stopped there,
+// it does not also close the student panel or dialog the "?" sits in.
+function onKey(e) {
+  if (e.key !== 'Escape' || !open) return;
+  e.stopPropagation();
+  close();
+}
 function onDocClick(e) {
   if (open && !open.contains(e.target) && !e.target.closest('.info')) close();
 }
@@ -149,7 +155,7 @@ function show(anchor, key) {
 
   open = pop;
   openFrom = anchor;
-  document.addEventListener('keydown', onKey);
+  document.addEventListener('keydown', onKey, true);
   document.addEventListener('scroll', onScroll, true);
   setTimeout(() => document.addEventListener('click', onDocClick, true), 0);
 }
