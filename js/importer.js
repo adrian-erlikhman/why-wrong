@@ -592,8 +592,11 @@ export function parseResponses(pack, text, otherPacks = []) {
   const named = Object.keys(idIndex).length;
   // A teacher often gives one unit of a test, not all of it. A header that
   // names some of its questions, by id or by text, is that, as long as no
-  // other loaded test's questions are named more often.
-  const otherBest = Math.max(0, ...otherPacks.filter(o => o.id !== pack.id).map(o => {
+  // other loaded test's questions are named more often. A test with exactly
+  // these question ids is a copy of this one (a pattern named on a built-in
+  // test makes one), which a header cannot tell apart, so the selected one wins.
+  const ids = pack.items.map(it => it.id).join('\n');
+  const otherBest = Math.max(0, ...otherPacks.filter(o => o.id !== pack.id && o.items.map(it => it.id).join('\n') !== ids).map(o => {
     const heads = new Set(header.map(h => h.trim().toLowerCase()));
     return o.items.filter(it => heads.has(it.id.toLowerCase())).length;
   }));

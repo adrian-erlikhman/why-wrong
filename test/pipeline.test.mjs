@@ -949,6 +949,16 @@ for (const pack of BUILT_IN) {
     check('a paste of 30 of 36 no longer stops at "missing from the header"', p30.ok && p30.pack?.items.length === 30);
     check('the same questions make the same cut-down test', part(16, 26).pack.id === p10.pack.id && p18.pack.id !== p10.pack.id);
     check('two named questions are not enough to read as part of the test', !part(16, 18).pack);
+    // Naming a found pattern on a built-in test loads a copy with the same
+    // question ids. A header cannot tell the two apart, so neither blocks the other.
+    const mine = { ...structuredClone(alg), id: `${alg.id}-mine`, name: `${alg.name} (with my labels)` };
+    const ten = alg.items.slice(16, 26);
+    const tenText = [['Student', ...ten.map(it => it.id)].join(','),
+      ...ca.students.map((st, s) => [q(st.name), ...ten.map((it, k) => q(it.opts[ca.responses[s][16 + k]].t))].join(','))].join('\n');
+    const withCopy = [alg, mine].map(p => parseResponses(p, tenText, [...BUILT_IN, mine]));
+    check('part of a test is still read with a labelled copy of it loaded',
+      withCopy.every((r, k) => r.ok && r.pack?.items.length === 10 && r.pack.partOf === [alg, mine][k].id),
+      withCopy.map(r => r.errors.join('; ')).join(' / '));
   }
 
   const numbered = [
