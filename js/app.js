@@ -1736,6 +1736,16 @@ function switchPack(id) {
   run();
 }
 
+/**
+ * Opening or building another test replaces the class on screen, as switching
+ * subject does, so it asks first too. An unsaved class would be gone for good.
+ */
+function okToDropClass(action) {
+  if (!state.imported) return true;
+  return window.confirm(`${action} drops your pasted class and returns to the sample class.` +
+    (state.unsaved ? ' The class is not saved, so its answers will be lost.' : '') + ' Continue?');
+}
+
 /* ======================================================================== */
 /*  Modals                                                                  */
 /* ======================================================================== */
@@ -1787,6 +1797,7 @@ async function openPackFile(file) {
     err.textContent = `${file.name} can't be used: ${report.errors.slice(0, 3).join(' ')}${report.errors.length > 3 ? ` (${report.errors.length - 3} more)` : ''}`;
     return;
   }
+  if (!okToDropClass(`Opening ${file.name}`)) return;
   if (pack.keepOrder !== false) pack.keepOrder = true;
   pack.id = pack.id || `file-${file.name.replace(/\.json$/i, '')}`;
   pack.name = pack.name || file.name;
@@ -1814,6 +1825,7 @@ async function doGenerate() {
 
   if (!topic) { err.textContent = 'Name a subject or topic first.'; return; }
   if (!key) { err.textContent = 'A key is needed to build a new subject. The built-in subjects need no key.'; return; }
+  if (!okToDropClass('Building a new subject')) return;
 
   state.apiKey = key;
   setKey(key);
