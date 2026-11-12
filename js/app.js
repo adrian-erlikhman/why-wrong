@@ -121,8 +121,11 @@ function run() {
       meta: { seed: null, size: state.imported.students.length, nItems: pack.items.length, packId: pack.id, imported: true }
     };
   } else {
-    const seed = Math.max(1, parseInt($('#seed').value, 10) || 7);
+    const seed = Math.min(9999, Math.max(1, parseInt($('#seed').value, 10) || 7));
     const size = Math.min(120, Math.max(12, parseInt($('#size').value, 10) || 28));
+    // Typed 500, got 120: the fields show the class that was actually built.
+    $('#seed').value = seed;
+    $('#size').value = size;
     // Simulated on the test as it was before any labels the teacher added,
     // so naming a pattern does not re-roll the class it was found in.
     cls = { ...generateClass(withoutTracked(pack), { seed, size }), pack };
