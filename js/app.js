@@ -567,7 +567,11 @@ function applyFilter(mid) {
     c.classList.toggle('lit', !!mid && c.dataset.mis === mid);
     c.classList.remove('lit-unl');
   });
-  $$('.leg').forEach(l => l.classList.toggle('is-on', !!mid && l.dataset.mis === mid));
+  $$('.leg').forEach(l => {
+    const on = !!mid && l.dataset.mis === mid;
+    l.classList.toggle('is-on', on);
+    if (l.dataset.mis) l.setAttribute('aria-pressed', String(on));
+  });
   $('#clear-filter').hidden = !mid;
 
   if (mid) {
@@ -598,7 +602,10 @@ function showPattern(f) {
     c.classList.toggle('lit', on);
     c.classList.toggle('lit-unl', on);
   });
-  $$('.leg').forEach(l => l.classList.remove('is-on'));
+  $$('.leg').forEach(l => {
+    l.classList.toggle('is-on', false);
+    if (l.dataset.mis) l.setAttribute('aria-pressed', 'false');
+  });
   $('#clear-filter').hidden = false;
   $('#matrix-note').textContent =
     `Showing ${f.options.length} wrong answers the question set does not label (${f.options.map(o => state.pack.items[o.i].id).join(', ')}). ` +
@@ -624,6 +631,10 @@ function renderLegend() {
     n.appendChild(setMath(el('span'), m.short || m.name));
     n.appendChild(el('span', 'leg-c', String(p.confident)));
     n.title = m.belief || m.name;
+    // Read aloud, the id, the notation and the count run together ("M10x+5=12
+    // to x=1710"), so a screen reader gets the name and the count instead.
+    n.setAttribute('aria-label', `${m.name}: indicated for ${students(p.confident)}. Show only this on the class map`);
+    n.setAttribute('aria-pressed', 'false');
     n.addEventListener('click', () => {
       applyFilter(state.filterMis === p.id ? null : p.id);
       // On a phone the key is long, and by its last rows the map has left the screen.
