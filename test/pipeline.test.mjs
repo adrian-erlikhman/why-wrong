@@ -788,6 +788,10 @@ for (const pack of BUILT_IN) {
   check('a slip names the pattern most strongly indicated',
     slips[heldBy].includes(pack.misconceptions.find(m => m.id === top).name));
   check('names are escaped', slips[1].includes('&lt;b&gt;Bo&lt;/b&gt; &amp; Co'));
+  const named = slip => (slip.match(/<h3>/g) || []).length;
+  check('a slip naming two mix-ups says "these", one says "this"',
+    slips.some(s => named(s) === 2) && slips.some(s => named(s) === 1) &&
+    slips.every(s => !named(s) || s.includes(named(s) === 1 ? 'point to this mix-up:' : 'point to these mix-ups:')));
 
   const all = BUILT_IN.flatMap(p => p.misconceptions);
   check('every built-in misunderstanding has a line for students', all.every(m => /^(You may|When )/.test(m.student ?? '')));

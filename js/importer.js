@@ -225,7 +225,7 @@ export function slipsHtml(pack, cls, inf, cov, only = null) {
 
     let body;
     if (held.length) {
-      body = `<p class="lead">Your answers may point to this mix-up:</p>` + held.map(({ m }) => {
+      body = `<p class="lead">Your answers may point to ${held.length === 1 ? 'this mix-up' : 'these mix-ups'}:</p>` + held.map(({ m }) => {
         const tryThese = (m.verify || []).map(v => `<li>${mathHtml(v)}</li>`).join('');
         // Use the student-facing wording on slips, not the teacher-facing belief.
         return `<h3>${mathHtml(m.name)}</h3>
