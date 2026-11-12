@@ -140,7 +140,9 @@ export function initTour(app) {
     const s = STEPS[i];
 
     app.closeDrawer();
-    if (s.view) app.show(s.view);
+    // Only on a change of tab: showing the open tab again jumps to its top,
+    // and on a phone that jump cancels the scroll down to this step's target.
+    if (s.view && !document.getElementById(`view-${s.view}`)?.classList.contains('is-active')) app.show(s.view);
     if ('sorted' in s) app.setSorted(s.sorted);
     if (s.final) app.openToolbar();
 
