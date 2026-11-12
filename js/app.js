@@ -1882,7 +1882,12 @@ function showPasteNotes(res) {
 }
 
 function doImport() {
-  const res = parseResponses(state.pack, $('#import-text').value, allPacks());
+  // A class given part of a test is shown against a cut-down copy of it. The
+  // next class pasted may have had the whole test, or a different part, so it
+  // is read against the whole one; cut-down copies of it are not other tests.
+  const whole = state.importFor === 'class' && state.pack.partOf ? findPack(state.pack.partOf) : null;
+  const base = whole || state.pack;
+  const res = parseResponses(base, $('#import-text').value, allPacks().filter(p => p.partOf !== base.id));
   // A retest is compared question by question with the class, so it has to
   // cover the same questions; only a class can be read against part of a test.
   if (res.pack && state.importFor === 'retest') {
@@ -1895,10 +1900,10 @@ function doImport() {
   if (state.importFor === 'retest') useRetest(res);
   else {
     // Part of a test: read and shown against just the questions that were given.
-    if (res.pack) {
-      addPack(res.pack);
-      state.pack = res.pack;
-      renderPackOptions(res.pack.id);
+    const read = res.pack ? addPack(res.pack) : base;
+    if (read !== state.pack) {
+      state.pack = read;
+      renderPackOptions(read.id);
     }
     useClass(res);
     showView('groups');
