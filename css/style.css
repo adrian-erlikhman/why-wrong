@@ -1424,7 +1424,9 @@ html.key-above .legend { padding-bottom: 20px; }
 
 .pop {
   position: absolute;
-  z-index: 70;
+  /* Above the student and question panel (80), whose "?" buttons open these
+     too, and below the tour (90). */
+  z-index: 85;
   width: min(360px, calc(100vw - 24px));
   border-radius: 12px;
   padding: 16px 18px;

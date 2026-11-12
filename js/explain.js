@@ -82,16 +82,24 @@ export const TERMS = {
 };
 
 let open = null;
+let openFrom = null;   // the "?" that opened it
 
 function close() {
   if (open) { open.remove(); open = null; }
+  openFrom = null;
   document.removeEventListener('keydown', onKey);
   document.removeEventListener('click', onDocClick, true);
+  document.removeEventListener('scroll', onScroll, true);
 }
 
 function onKey(e) { if (e.key === 'Escape') close(); }
 function onDocClick(e) {
   if (open && !open.contains(e.target) && !e.target.closest('.info')) close();
+}
+// The popup sits on the page, so when the student panel it was opened from
+// scrolls, its "?" moves away and the popup would be left pointing at nothing.
+function onScroll(e) {
+  if (openFrom && e.target !== document && e.target.contains?.(openFrom)) close();
 }
 
 function show(anchor, key) {
@@ -140,7 +148,9 @@ function show(anchor, key) {
   pop.style.top = `${r.bottom + window.scrollY + 8}px`;
 
   open = pop;
+  openFrom = anchor;
   document.addEventListener('keydown', onKey);
+  document.addEventListener('scroll', onScroll, true);
   setTimeout(() => document.addEventListener('click', onDocClick, true), 0);
 }
 
