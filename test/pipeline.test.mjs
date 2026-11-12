@@ -1279,5 +1279,32 @@ for (const pack of BUILT_IN) {
   check('an unusable rewrite gives a readable error', bad === 'Model did not return usable JSON.');
 }
 
+// -------------------------------------------------------------- page loading
+// index.html preloads every module app.js imports, so the browser fetches them
+// all at once instead of one level of imports at a time. A module added or
+// renamed without updating that list would quietly slow the page or 404.
+{
+  console.log(`\n${'='.repeat(66)}\nPage loading\n${'='.repeat(66)}`);
+  const { readFileSync } = await import('node:fs');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, join, relative, sep } = await import('node:path');
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const html = readFileSync(join(root, 'index.html'), 'utf8');
+  const listed = [...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(m => m[1]);
+  const reached = new Set();
+  const walk = file => {
+    const rel = relative(root, file).split(sep).join('/');
+    if (reached.has(rel)) return;
+    reached.add(rel);
+    const src = readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/(?:from|import)\s*'(\.{1,2}\/[^']+\.js)'/g)) walk(join(dirname(file), m[1]));
+  };
+  walk(join(root, 'js', 'app.js'));
+  check('every module app.js imports is preloaded', [...reached].every(f => listed.includes(f)),
+    [...reached].filter(f => !listed.includes(f)).join(', '));
+  check('nothing preloaded that the page does not import', listed.every(f => reached.has(f)),
+    listed.filter(f => !reached.has(f)).join(', '));
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}\n`);
 process.exit(failures === 0 ? 0 : 1);
