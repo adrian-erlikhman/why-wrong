@@ -2339,10 +2339,13 @@ window.addEventListener('resize', () => {
 function tourFacts() {
   const real = reteachGroups(state.groups);
   const byId = misById(state.pack);
-  const bad = problemItems(state.stats);
+  // As on the Your questions tab: under TOO_FEW students nothing is judged.
+  const tooFew = state.cls.students.length < TOO_FEW;
+  const bad = tooFew ? [] : problemItems(state.stats);
   const top = real[0];
   const f = {
     students: state.cls.students.length,
+    tooFew,
     groups: real.length,
     topSize: top?.size ?? 0,
     topName: top ? (byId[top.signature[0]?.id]?.name ?? null) : null,

@@ -32,8 +32,10 @@ const STEPS = [
   {
     title: 'Review the questions too',
     view: 'items', target: '#items .item',
-    text: f => f.bad
-      ? `${f.bad} of ${f.items} questions are flagged for review. ${f.worstId} is marked “${f.worstVerdict}”. Some questions that target one misunderstanding can look weak by overall score but still carry useful information.`
+    text: f => f.tooFew
+      ? `With ${plural(f.students, 'student')}, there are too few answers to judge the questions. Click a cell on the class map to see how students answered one.`
+      : f.bad
+      ? `${f.bad} of ${f.items} questions ${f.bad === 1 ? 'is' : 'are'} flagged for review. ${f.worstId} is marked “${f.worstVerdict}”. Some questions that target one misunderstanding can look weak by overall score but still carry useful information.`
       : `No questions were flagged for review in this class. Click any question to see how students answered it.`
   },
   {
