@@ -166,7 +166,8 @@ students who picked it**.
   whole class map. **Show letters** marks every cell with a letter as well, for
   anyone who cannot tell the colours apart.
 - **Every statistic has a "?"** next to it. Plain-language explanation of what it
-  means, and what to do about the number in front of you.
+  means, and what to do about the number in front of you. It takes focus when it
+  opens, so a screen reader reads it, and Escape returns to the "?".
 - **Students** shows one group at a time, and search finds a name typed without
   its accents.
 - **A whole year group fits.** Over 40 students the map's rows tighten, and on a
@@ -509,8 +510,8 @@ js/rng.js              seeded random numbers, so a class can be re-rolled
 js/app.js              orchestration and rendering
 og.png                 link-preview card
 test/pipeline.test.mjs every built-in pack, the paper round trip, and the checks
-                       on blanks, spreadsheets, saved classes, retests and the
-                       model layer
+                       on blanks, spreadsheets, saved classes, retests, the
+                       model layer and the page's module preload list
 test/benchmark.mjs     stress scenarios, planted flat and miskeyed questions,
                        a hidden belief for the unlabelled-pattern search
 ```
