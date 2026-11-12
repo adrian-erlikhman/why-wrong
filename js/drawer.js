@@ -8,7 +8,7 @@ import { untested, strength } from './infer.js';
 import { SUPPORT_BELOW } from './cluster.js';
 import { shownFlags } from './itemstats.js';
 import { infoButton, closeExplainer } from './explain.js';
-import { paperOrder } from './importer.js';
+import { paperOrder, paperLetter } from './importer.js';
 import { setMath } from './notation.js';
 import { trapTab } from './a11y.js';
 
@@ -276,6 +276,12 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
   evh.appendChild(infoButton('evidence'));
   list.appendChild(evh);
 
+  // The letter as printed on the paper, so the trail can be checked against it.
+  const itemById = new Map(ctx.pack.items.map(it => [it.id, it]));
+  const letter = c => {
+    const it = itemById.get(c.itemId);
+    return it && c.choice >= 0 ? `${paperLetter(it, c.choice)} ` : '';
+  };
   ev.slice()
     .sort((a, b) => Math.abs(b.logOdds) - Math.abs(a.logOdds))
     .forEach(c => {
@@ -283,7 +289,7 @@ function diagnosisCard(ctx, s, r, byId, colourOf, strong) {
       row.appendChild(el('span', 'ev-id', c.itemId));
       const what = c.omitted ? 'left blank'
         : c.isCorrect ? 'answered correctly'
-        : (c.isDiagnostic ? `chose “${c.chose}”` : `chose “${c.chose}” (not linked to this pattern)`);
+        : (c.isDiagnostic ? `chose ${letter(c)}“${c.chose}”` : `chose ${letter(c)}“${c.chose}” (not linked to this pattern)`);
       row.appendChild(setMath(el('span', 'ev-what'), what));
       row.appendChild(el('span', 'ev-w', c.omitted ? 'no evidence' : c.logOdds > 0 ? 'supports' : 'argues against'));
       list.appendChild(row);
