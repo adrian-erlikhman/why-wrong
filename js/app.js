@@ -2390,7 +2390,8 @@ run();
 {
   const h = new URLSearchParams(location.search);
   const v = h.get('view');
-  if (v && $(`#view-${v}`)) showView(v);
+  // By id, not selector: "?view=[" would otherwise throw before the tour check.
+  if (v && document.getElementById(`view-${v}`)) showView(v);
   if (h.get('sorted') === '1' && !state.sorted) toggleSort();
 }
 
